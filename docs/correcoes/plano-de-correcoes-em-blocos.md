@@ -641,8 +641,8 @@ de semana. **Uma migration, que só acrescenta** (`20261028182926_estudo_individ
 4. **`PEND-025-5`**: a janela da carga recortada pelo período da turma (a CAHO 2027 entra no alerta de 2027).
 5. **`PEND-026-1`**: o saldo e a capacidade pelo regime da semana do DSA (no remoto: 0 turmas mudam hoje).
 6. **`PEND-026-2`**: o seletor de instrutor vazio diz o motivo certo.
-7. **RT-8**: a turma arquivada conta nas estatísticas e nos cartões do ano dela (no remoto, 2026: [pendente: os cartões
-   do Início medidos na cópia]).
+7. **RT-8**: a turma arquivada conta nas estatísticas e nos cartões do ano dela (medido na cópia do remoto, 2026, sem
+   recorte: Concluídas 0 → 13 e Canceladas 0 → 8 nos cartões do Início).
 8. **Início em nova ordem**: os DSA publicados no topo, com o papel enquadrado na janela; depois os cartões e o carrossel.
 
 **Pendências novas, achadas e não corrigidas** (texto na spec 029, §9): **`PEND-029-1`** (a «Atrasada» do DSA usa a

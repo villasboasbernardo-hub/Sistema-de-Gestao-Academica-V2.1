@@ -260,8 +260,8 @@ Nenhuma linha muda (todas têm descrição) e nenhuma operação aceita hoje pas
 - **SC-005**: com «desde» ou «só esta semana», o saldo de Início, Avisos, `/turmas` e ficha muda só pelos dias daquelas
   semanas; sem eles, nenhum número muda (medido no remoto: 0 turmas).
 - **SC-006**: nenhum seletor de instrutor vazio diz *"Nada cadastrado ainda"* quando o vazio vem de filtro.
-- **SC-007**: em 2026, os cartões Concluídas e Canceladas do Início contam as arquivadas (no remoto: [pendente: medido
-  na cópia]); o carrossel continua sem elas.
+- **SC-007**: em 2026, os cartões Concluídas e Canceladas do Início contam as arquivadas (medido na cópia
+  `remoto-20261028-214051.sql`, sem recorte: Concluídas 0 → 13, Canceladas 0 → 8); o carrossel continua sem elas.
 - **SC-008**: em 1366×768 e 1920×1080 o papel do DSA publicado aparece inteiro, sem rolar, no topo do Início.
 
 ## 9. Fora de escopo / pendências
@@ -287,3 +287,32 @@ Pendências novas, achadas e **não** corrigidas:
   atribuição cuja previsão cai em outro ano não aparece no alerta de ano nenhum (o caso CHK005 do pgTAP 094).
 - **`PEND-029-5`** — *o documento 04 descreve um tipo `TipoTeto` que o código nunca teve* (nem antes da emenda, com o modo
   `rigido`): a nota de implementação da RN-DIST-03 fala de um tipo que não existe. Texto, não comportamento.
+
+## 10. Verificação
+
+- **Vistos reprovar na `main` antes da mudança** (28/10/2026): os testes de unidade e o pgTAP 153 de cada item; e a ponta
+  a ponta nova contra a `main` intacta (`07d84c3`, construída numa pasta à parte, porta 3100, base limpa): **14 de 15**
+  casos reprovaram pela asserção que prova o pedido — *"o teto de TFM é 6"* (2), *"o navegador barra o «O que é» vazio"*,
+  o `salvar-alteracao` ausente, a janela de 2026 e o alerta ausente, *Concluídas* 0 em vez de 1 e *total* 5 em vez de 7
+  (4), o pé do papel em **1.474 px** numa janela de 768, a frase do panorama no cabeçalho, o saldo de um TA/dia só e
+  *"Nada cadastrado ainda"*. O 15º (o vazio do Início sem área grande) passou na `main`, como previsto: é guarda, não o
+  caso que discrimina.
+- **Local, depois da implementação e das correções:** `pnpm verificar` verde — **221** arquivos, **3.023** testes de
+  unidade, tipos, lint, formatação e build; pgTAP **1.161** asserções em 73 arquivos e RLS/invariantes **486** + 1 pulado,
+  sobre a base limpa, com os tipos gerados conferidos. A ponta a ponta dos arquivos tocados, com 1 processo, foi
+  **interrompida pelo sistema por falta de memória** depois de **29 casos verdes e nenhum vermelho** (`bloco-10` 14,
+  `bloco-11-dsa` 9 — o FR-004, os três do FR-008 com os dois papéis da D-20 e o FR-005 —, `dsa-cartao-unico` 6, com os
+  dois do TFM); não foi reiniciada. O resto fica com o CI (regra de 26/10/2026).
+- **Defeitos plantados (T022)**, cada um desfeito e conferido byte a byte: o ramo do TFM de volta (7 de 26 reprovam), a
+  descrição obrigatória em toda categoria (4 de 19), `alteracaoSalva` sempre falso (3), a janela sem recorte (6 de 23), a
+  capacidade sem as semanas (9 de 48), o seletor sem o motivo (2 de 8), os cartões e os indicadores sem a arquivada (5 de
+  10 e 2 de 14), a escala só pela largura (6 de 19). No item 6 também a ligação da permissão em cada chamador (8 defeitos,
+  todos pegos).
+- **Revisão adversarial** (cinco lentes e um cético por achado): **25** achados, **16** confirmados (dois eram o mesmo) e
+  corrigidos no mesmo PR — 3 de severidade média (o vazio do carrossel desmentia *Turmas ativas*; o erro de leitura do
+  regime das semanas era descartado; a prova da D-20 era condicional) e os demais baixos (testes da edição do EI, do «você
+  não vê» e da RT-8 em Cursos e Instrutores; textos que afirmavam o contrário do código; o papel sem script com o pé
+  cortado e a escala que podia alternar; o caso do saldo que quebraria em dezembro; o rótulo acessível do EI; o
+  `CLAUDE.md` com RP-9 e RT-8). **9** derrubados.
+- **CI** do ramo sobre `a2bc1b5` (antes das correções): verde nos três blocos — **601** de ponta a ponta + 2 instáveis
+  fora deste bloco (`inicio.spec.ts:363`, `lateral.spec.ts:316`) + 7 pulados; pgTAP 1.161.
