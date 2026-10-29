@@ -271,6 +271,8 @@ test("item 6 · o cartão do lançamento: Salvar · Cancelar · Excluir em ícon
   await abrirOsDsaDaTurma(page, SEMANA_LIVRE);
   const dia = segundaDe(SEMANA_LIVRE);
   await lancarAula(page, 2, dia, topico("cartao"));
+  /* ⚠️ Esperar a grade redesenhar com a aula: clicar antes abria «Lançar» na célula ainda vazia. */
+  await expect(celula(page, 2, dia).locator('[data-slot="dsa-cartao"]')).toBeVisible();
   await celula(page, 2, dia).click();
   const cartao = page.locator('[data-slot="acoes-do-bloco"]');
   await expect(cartao).toBeVisible();

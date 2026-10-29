@@ -68,8 +68,8 @@ ponta a ponta inteira fica com o CI; localmente, só os arquivos tocados, com 1 
     confirmação escrita); o título com o código, o nome por extenso e quem ministra, quebrando a linha.
   - `components/ciaara/grade-dsa.tsx`: sai o texto *"no papel, sem lançamento"* e o caminho da linha fixa (o cartão de
     EI sem lançamento não existe mais).
-- **Papel (item 8):** `app/print/dsa/documento.css` — `.dsa4-previa` com `z-index: 0` e o conteúdo da folha acima dele,
-  `opacity: 0.15`.
+- **Papel (item 8):** `app/print/dsa/documento.css` — a folha com `isolation: isolate` e `.dsa4-previa` com `z-index: -1`
+  (pinta sobre o branco da folha e sob todo o resto), `opacity: 0.18`; só na prévia as colunas ficam translúcidas.
 - **Editar turma (item 9):** o código no título vira o link da ficha; sai *Voltar à ficha da turma*.
 - **Vocabulário dos ícones** (`components/ciaara/botao-de-icone.tsx`): `voltar`, `avancar`, `esta-semana`,
   `abrir-sabado`, `fechar-sabado`, `lancar-ei`, `remover-ei`, `cancelar`, `fechar`, `sair-da-tela-cheia`, `pausar`,

@@ -361,6 +361,11 @@ test.describe("`RF-NAV-04` · a navegação empilha, e a vigência resolve pela 
     await expect(page.locator('[data-slot="semana-atual"]')).toContainText("06/04 a ");
 
     /* ── ⚠️ A virada do ano ISO: 01/01/2027 é da semana 53 de 2026 ──────────────────────────── */
+    /*
+     * ⚠️ Escolhido o dia, a semana nova FECHA o calendário (a seção da semana é remontada pela `key` de semana, que zera
+     * a edição das assinaturas): para escolher outro dia, abre-se o ícone de novo — como a pessoa faz.
+     */
+    await abrirOCampoDaSemana(page);
     await campo.fill("2027-01-01");
     await expect.poll(() => parametro("semana")).toBe("53");
     expect(parametro("ano"), "o ano da URL é o ISO, não o do calendário").toBe("2026");
@@ -372,6 +377,7 @@ test.describe("`RF-NAV-04` · a navegação empilha, e a vigência resolve pela 
     await expect(page.locator('[data-slot="semana-atual"]')).toContainText("28/12/2026 a ");
 
     /* Saindo do campo, ele volta a mostrar a segunda-feira da semana aberta. */
+    await abrirOCampoDaSemana(page);
     await campo.blur();
     await expect(campo).toHaveValue("2026-12-28");
 
@@ -381,6 +387,7 @@ test.describe("`RF-NAV-04` · a navegação empilha, e a vigência resolve pela 
     await expect(page.locator('[data-slot="semana-atual"]')).toContainText(
       semanaDaSemente(ANO, SEMANA),
     );
+    await abrirOCampoDaSemana(page);
     await expect(campo).toHaveValue(SEGUNDA);
   });
 

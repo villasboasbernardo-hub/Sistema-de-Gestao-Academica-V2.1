@@ -187,8 +187,9 @@ Cada decisão foi **adotada por padrão — Bernardo confere no fim** (fluxo `/c
 - D-15 · Q: Como a aba fica na URL? → A: **`?versao=`**: vazio é a Minuta, `0` a Original, `N` a ALT N; empilha no
   histórico, como as abas da turma. A barra fica no cabeçalho em **todas** as abas; o selo vai **na aba Minuta**.
 - D-16 · Q: Os avisos da publicação (RP-4 e a linha da RP-9)? → A: **acima das abas**, como hoje acima da lista.
-- D-17 · Q: Quão transparente fica a PRÉVIA? → A: **opacidade 0,15** (era 0,35), mesmo tamanho e inclinação, **atrás**
-  do conteúdo.
+- D-17 · Q: Quão transparente fica a PRÉVIA? → A: **opacidade 0,18** (era 0,35), mesmo tamanho e inclinação, **atrás**
+  do conteúdo. *(O clarify registrou 0,15; a implementação fixou 0,18, dentro do teto de 0,2 do SC-008 — o valor que
+  vale é o do `documento.css`.)*
 - D-18 · Q: O formato das datas da linha única? → A: **curto quando o ano é o mesmo** (*"26/10 a 31/10/2026"*), inteiro
   quando a semana atravessa o ano (*"29/12/2025 a 03/01/2026"*) — um formatador só, em `lib/formato/data.ts`.
 - D-19 · Q: O que fica do *Parar dia* fora da barra? → A: as **paradas e feriados da semana** (com *Desfazer*) continuam

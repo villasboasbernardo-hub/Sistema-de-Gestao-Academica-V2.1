@@ -543,9 +543,13 @@ test.describe("`SC-014` · o rodapé traz só o que aparece na semana", () => {
     /* ⚠️ A disciplina de TFM existe no curso e **não** é lançada nesta semana: não entra. */
     await expect(quadro).not.toContainText(SEMEADO.codDisciplinaTfm);
 
-    const legenda = page.locator('[data-slot="dsa-legenda"]');
-    await expect(legenda).toContainText("TÉCNICAS DE ENSINO");
-    await expect(legenda).toContainText("EI —");
+    /*
+     * ⚠️ **SÓ AS SIGLAS USADAS — E O «EI» SÓ COM ESTUDO INDIVIDUAL LANÇADO** (Bloco 15, `FR-004`): até 29/10/2026 a linha
+     *    fixa punha o «EI —» na legenda de toda semana. A semente (`dsa-de-teste.ts`) não lança EI nem grava técnica
+     *    nas aulas: nenhuma sigla é usada, e a legenda não aparece.
+     */
+    await expect(page.locator(DOCUMENTO)).toBeVisible();
+    await expect(page.locator('[data-slot="dsa-legenda"]')).toHaveCount(0);
   });
 
   test("a nota do Estudo Individual e a linha de OBSERVAÇÕES, em branco", async ({ page }) => {
