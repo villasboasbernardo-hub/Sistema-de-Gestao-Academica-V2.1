@@ -504,9 +504,7 @@ export function avisosAntesDeImprimir(entrada: {
     );
   }
   if (entrada.linhasImpressas === 0) {
-    avisos.push(
-      "Nenhum Tempo de Aula está lançado nesta semana: o documento sai só com os dias.",
-    );
+    avisos.push("Nenhum Tempo de Aula está lançado nesta semana: o documento sai só com os dias.");
   }
   return avisos;
 }
