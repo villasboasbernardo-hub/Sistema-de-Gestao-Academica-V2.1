@@ -154,10 +154,18 @@ async function lancarDescritaESalvar(
   await salvarASemana(page);
 }
 
-/** Abre o cartão de edição do lançamento da célula — e confere que é o lançamento certo, pelo «O que é» gravado. */
+/**
+ * Abre o cartão de edição do lançamento da célula — e confere que é o lançamento certo, pelo «O que é» gravado.
+ * ⚠️ O clique vem logo depois do *Salvar minuta*, que redesenha a grade: no CI de 29/10/2026 (PR #105) o clique chegou
+ *    no meio do redesenho, o cartão não abriu, e os dois casos de edição passaram só na repetição. Clicar de novo até o
+ *    cartão abrir mede o que importa — que a célula abre o cartão — sem depender de quando a grade termina de chegar.
+ */
 async function abrirCartaoDescrito(page: Page, celula: string, descricao: string): Promise<void> {
-  await page.locator(`${GRADE} td[data-celula="${celula}"]`).click();
-  await expect(page.locator(CARTAO)).toBeVisible();
+  const celulaDaGrade = page.locator(`${GRADE} td[data-celula="${celula}"]`);
+  await expect(async () => {
+    await celulaDaGrade.click();
+    await expect(page.locator(CARTAO)).toBeVisible({ timeout: 2_000 });
+  }).toPass({ timeout: 30_000 });
   await expect(page.locator("#dsa-editar-conteudo")).toHaveValue(descricao);
 }
 
