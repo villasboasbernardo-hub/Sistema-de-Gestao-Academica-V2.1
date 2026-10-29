@@ -272,7 +272,8 @@ arquivos afetados com 1 processo; a suíte inteira no CI. Roteiro de conferênci
   depois de uma tecla, o foco é visível e abre a dica do ícone, que é uma camada própria — o primeiro `Esc` fechava só a
   dica. Achado pelo caso da vitrine que abre o que só existe aberto (o diálogo seguia aberto depois do `Esc`).
   **Conserto:** ao abrir, o foco vai para a própria sobreposição, que também ouve `←`/`→`. **Guarda:** no caso dos
-  itens 1 e 2, `Enter` no papel e um `Esc` fecham — [pendente: visto reprovar com o foco padrão de volta].
+  itens 1 e 2, `Enter` no papel e um `Esc` fecham; com o foco padrão de volta, ele reprovou com *"um Esc não fechou a
+  tela cheia aberta pelo teclado — esperado 0, recebido 1"*, e o da vitrine, com o diálogo cobrindo o item seguinte.
 - **A-3 · A tela cheia tem dois títulos** — o do diálogo e o do papel do DSA dentro dele; o caso mira o do diálogo por
   `data-slot="titulo-da-tela-cheia"`.
 - **A-4 · Escolhido o dia pelo calendário da barra, a semana nova fecha o calendário**: a seção da semana é remontada
