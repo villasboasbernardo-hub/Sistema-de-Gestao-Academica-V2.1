@@ -175,11 +175,27 @@ async function lancarDescritaESalvar(
  * ⚠️ E SÓ CLICA SE O CARTÃO AINDA NÃO ESTÁ ABERTO, COM PRAZO PRÓPRIO NO CLIQUE (medido no local em 29/10/2026): o
  *    segundo clique de uma primeira versão chegava com o diálogo já abrindo, a camada do diálogo interceptava o
  *    ponteiro, e o clique esperava a vez até estourar o prazo do caso — o cartão estava aberto atrás dele.
+ * ⚠️ E O DIÁLOGO PODE SER OUTRO (CI de 56d5b1f, 29/10/2026): o registro do Playwright mostrou a camada de um diálogo
+ *    aberto, sem o cartão, interceptando todo clique. O clique que chega enquanto a grade se refaz depois do Salvar acha a
+ *    célula «vazia» e abre o formulário de NOVO lançamento. Por isso: espera a célula mostrar o lançamento salvo antes de
+ *    clicar e, se outro diálogo estiver aberto, registra qual e o fecha com Esc antes de clicar de novo.
  */
 async function abrirCartaoDescrito(page: Page, celula: string, descricao: string): Promise<void> {
   const celulaDaGrade = page.locator(`${GRADE} td[data-celula="${celula}"]`);
+  await expect(celulaDaGrade).toHaveAttribute("data-tom", "nao_letivo");
+  const outroDialogo = page.locator('[role="dialog"]').filter({ hasNot: page.locator(CARTAO) });
   await expect(async () => {
-    if ((await page.locator(CARTAO).count()) === 0) await celulaDaGrade.click({ timeout: 3_000 });
+    if ((await page.locator(CARTAO).count()) === 0) {
+      if ((await outroDialogo.count()) > 0) {
+        const texto = (await outroDialogo.first().innerText()).replace(/\s+/g, " ").slice(0, 160);
+        console.log(
+          `[dsa-estudo-individual] outro diálogo aberto antes do cartão (${celula}): ${texto}`,
+        );
+        await page.keyboard.press("Escape");
+        await expect(outroDialogo).toHaveCount(0, { timeout: 3_000 });
+      }
+      await celulaDaGrade.click({ timeout: 3_000 });
+    }
     await expect(page.locator(CARTAO)).toBeVisible({ timeout: 3_000 });
   }).toPass({ timeout: 45_000 });
   await expect(page.locator("#dsa-editar-conteudo")).toHaveValue(descricao);
