@@ -14,8 +14,12 @@
  *
  * ⚠️ **O ANO MORA AQUI DESDE O BLOCO 15** (spec 030, `FR-003`, RT-6 emendada): *"um seletor de ano só, na barra
  * superior, junto do sininho e do tema claro/escuro, valendo para o sistema todo"* — Bernardo Villas Boas, 29/10/2026.
- * Ele saiu das sete páginas que o desenhavam. O `Suspense` é o que `useSearchParams` pede; a reserva é o mesmo seletor,
- * sem o ano do link.
+ * Ele saiu das sete páginas que o desenhavam.
+ * ⚠️ **SEM `Suspense` EM VOLTA, DE PROPÓSITO** (medido em 29/10/2026): com uma reserva, o servidor mandava o seletor em
+ *    dois pedaços — a reserva, com o ano guardado, e o conteúdo, com o do `?ano=` —, e logo depois de abrir
+ *    `/instrutores?ano=2027` o DOM tinha os dois `<select>` (um oculto) e o visível dizia 2026 até a troca. Toda página
+ *    que desenha este cabeçalho é dinâmica (o layout lê o cookie da sessão e o do ano), então `useSearchParams` não
+ *    suspende e o `Suspense` não protegia nada.
  *
  * ⚠️ **O TEXTO SOLTO `nome · perfil` VIROU MENU EM 29/09/2026** (`FR-002` da spec 011), e é
  * substituição, não acréscimo. Ele identificava quem estava dentro **e não oferecia saída nenhuma**:
@@ -23,16 +27,11 @@
  * nome continua à vista em telas largas; o que mudou é que agora ele abre.
  */
 import Image from "next/image";
-import { Suspense } from "react";
 
 import { MenuDoAvatar } from "@/components/casca/menu-do-avatar";
 import { SeletorDeTema } from "@/components/casca/seletor-de-tema";
 import { SininhoDeAvisos } from "@/components/casca/sininho-de-avisos";
-import {
-  SeletorDeAno,
-  SeletorDeAnoSemBusca,
-  type PropsDoSeletorDeAno,
-} from "@/components/ciaara/seletor-de-ano";
+import { SeletorDeAno, type PropsDoSeletorDeAno } from "@/components/ciaara/seletor-de-ano";
 import { rotuloDoPerfil } from "@/lib/dominio/perfis";
 
 export function CabecalhoDoApp({
@@ -79,9 +78,7 @@ export function CabecalhoDoApp({
           {nome} · {rotuloDoPerfil(perfil)}
         </span>
         {/* Bloco 15 (spec 030, `FR-003`): o ano do sistema todo, junto do sininho e do tema. */}
-        <Suspense fallback={<SeletorDeAnoSemBusca {...anoEscolhido} />}>
-          <SeletorDeAno {...anoEscolhido} />
-        </Suspense>
+        <SeletorDeAno {...anoEscolhido} />
         {/* Spec 022 (Bloco 7, FR-004.1): o sininho de avisos, em toda tela autenticada. */}
         <SininhoDeAvisos />
         <SeletorDeTema />

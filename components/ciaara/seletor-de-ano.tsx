@@ -21,8 +21,8 @@
  *    Turmas lista as turmas do ano escolhido, e o layout não é redesenhado na navegação comum (C-16 da spec 019).
  * ⚠️ **ANO QUE VEIO DO COOKIE APARECE NA URL** ao abrir a tela que tem ano (sem ida ao servidor): o link copiado dali
  *    mostra o mesmo ano a quem o receber.
- * ⚠️ **`useSearchParams` PEDE UM `Suspense` ACIMA** — o cabeçalho o põe, com o mesmo seletor sem o ano do link de
- *    reserva.
+ * ⚠️ **SEM `Suspense` ACIMA** (`cabecalho-do-app.tsx` diz por quê): toda página que o desenha é dinâmica, e a reserva
+ *    punha no DOM um segundo `<select>` com o ano guardado até a troca.
  */
 "use client";
 
@@ -52,7 +52,7 @@ export function SeletorDeAno(props: PropsDoSeletorDeAno) {
   return <SeletorDeAnoSemBusca {...props} daUrl={busca.get("ano")} />;
 }
 
-/** O mesmo seletor, sem ler o `?ano=` — a reserva do `Suspense` e o que a vitrine mostra. */
+/** O mesmo seletor, sem ler o `?ano=` — o que a vitrine mostra (`/estilo`, sem sessão e sem ano no endereço). */
 export function SeletorDeAnoSemBusca({
   ano: guardado,
   vigente,

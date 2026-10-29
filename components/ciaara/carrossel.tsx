@@ -338,7 +338,10 @@ function TelaCheia({
           }}
         >
           <div className="flex items-center justify-between gap-3 px-4 py-2">
-            <DialogPrimitivo.Title className="text-texto-suave text-sm">
+            <DialogPrimitivo.Title
+              className="text-texto-suave text-sm"
+              data-slot="titulo-da-tela-cheia"
+            >
               {titulo}
               {comSetas ? ` · ${posicao}` : ""}
             </DialogPrimitivo.Title>

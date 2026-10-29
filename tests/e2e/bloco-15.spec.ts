@@ -424,6 +424,21 @@ test("item 3 · o ano no cabeçalho: trocar em Turmas e conferir Início, Turmas
   /* De volta ao ano de hoje: a escolha some. */
   await escolha.selectOption(String(ANO));
   await expect.poll(() => new URL(page.url()).searchParams.get("ano")).toBeNull();
+
+  /*
+   * ⚠️ E ABERTA POR ENDEREÇO, UM SELETOR SÓ DESDE O CARREGAMENTO (`SC-003`, medido em 29/10/2026): com um `Suspense` em
+   *    volta dele, o servidor mandava a reserva (o ano guardado) e o conteúdo (o do `?ano=`) em pedaços separados, e no
+   *    `load` de `/instrutores?ano=…`, `/turmas` e `/inicio` o DOM tinha dois `<select>`. A contagem é IMEDIATA: a espera
+   *    do `expect` aguardaria a troca e passaria com o defeito.
+   */
+  for (const caminho of [`/instrutores?ano=${ANO + 1}`, "/turmas", "/inicio"]) {
+    await page.goto(caminho);
+    await page.waitForLoadState("load");
+    expect(
+      await page.locator('select[data-slot="ano-do-painel-escolha"]').count(),
+      `${caminho}: mais de um seletor de ano no carregamento`,
+    ).toBe(1);
+  }
 });
 
 test("itens 1 e 2 · no Início: as setas nos cantos e nas laterais, e a tela cheia do papel", async ({
@@ -513,8 +528,11 @@ test("itens 1 e 2 · no Início: as setas nos cantos e nas laterais, e a tela ch
     );
     expect(folhaNaTela && folhaNaTela.x + folhaNaTela.width).toBeLessThanOrEqual(janela.width + 1);
 
-    /* As setas dentro dela: → e o ícone trocam o papel. */
-    const titulo = tela.getByRole("heading");
+    /*
+     * As setas dentro dela: → e o ícone trocam o papel. ⚠️ O título é o do DIÁLOGO, por `data-slot`: o papel do DSA dentro
+     * dela tem o seu, e `getByRole("heading")` casava com os dois.
+     */
+    const titulo = tela.locator('[data-slot="titulo-da-tela-cheia"]');
     const primeiro = await titulo.innerText();
     await page.keyboard.press("ArrowRight");
     await expect(titulo).not.toHaveText(primeiro);
