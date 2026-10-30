@@ -162,7 +162,7 @@ async function lancarDescritaESalvar(
   expect(await desfechoDoLancar(page), "o lançamento foi recusado").not.toMatch(/^recusou/);
   /* Com aviso (`RN-DEG-02`) o formulário fica aberto e o lançamento GRAVOU: fecha para chegar à barra. */
   if ((await page.locator(FORMULARIO).count()) > 0) {
-    await page.locator(FORMULARIO).getByRole("button", { name: "Cancelar" }).click();
+    await page.locator(FORMULARIO).locator('[data-slot="fechar-formulario"]').click();
   }
   await salvarASemana(page);
 }

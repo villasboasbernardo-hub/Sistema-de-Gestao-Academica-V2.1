@@ -140,7 +140,7 @@ async function lancarAula(
   const avisos =
     r === "avisou" ? await page.locator('[data-slot="avisos-do-lancamento"]').innerText() : "";
   if ((await page.locator(FORMULARIO).count()) > 0) {
-    await page.locator(FORMULARIO).getByRole("button", { name: "Cancelar" }).click();
+    await page.locator(FORMULARIO).locator('[data-slot="fechar-formulario"]').click();
   }
   await expect.poll(async () => (await aulaPorTopico(topico)) !== null).toBe(true);
   return avisos;

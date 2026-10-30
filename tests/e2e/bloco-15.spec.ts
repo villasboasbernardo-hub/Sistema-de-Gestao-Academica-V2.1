@@ -334,8 +334,12 @@ test("itens 5 e 7 · editar antes de publicar sem ALT; as abas de versão", asyn
   const dia = segundaDe(SEMANA_PUBLICADA);
 
   /* Semana nunca publicada: só a aba Minuta (FR-007.2). */
-  await expect(page.locator('[data-slot="abas-de-versao"] > [role="tablist"] [role="tab"]')).toHaveCount(1);
-  await expect(page.locator('[data-slot="abas-de-versao"] > [role="tablist"] [role="tab"]')).toContainText("Minuta");
+  await expect(
+    page.locator('[data-slot="abas-de-versao"] > [role="tablist"] [role="tab"]'),
+  ).toHaveCount(1);
+  await expect(
+    page.locator('[data-slot="abas-de-versao"] > [role="tablist"] [role="tab"]'),
+  ).toContainText("Minuta");
 
   /* Item 5: lançar → salvar → prévia → editar → salvar → prévia → publicar = Original, sem ALT. */
   await lancarAula(page, 1, dia, topico("previa"));
@@ -761,7 +765,9 @@ test("item 8 · semana com todos os tempos lançados: a PRÉVIA na frente dos ca
       ponto,
     );
     expect(recebe, "o clique no cartão sob a PRÉVIA não chega ao cartão").toBe(true);
-    await cartao.locator(".dsa4-cartao-pe > span").dblclick({ timeout: 5_000 });
+    await cartao
+      .locator('.dsa4-cartao-pe > [data-slot="cartao-instrutor"]')
+      .dblclick({ timeout: 5_000 });
     const selecao = await page.evaluate(() => {
       const s = window.getSelection();
       const no = s?.anchorNode ?? null;
