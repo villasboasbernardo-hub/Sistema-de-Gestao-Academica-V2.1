@@ -42,6 +42,7 @@ _Decisão de Bernardo Villas Boas, 19/10/2026._ Todo pedido de correção ou mud
 | **13** | Abertura com a moeda do CIAARA na raiz — ✅ **concluído em 28/10/2026** | não | 028 |
 | **14** | DSA (TFM sem teto, EI sem «O que é», Salvar alteração), Início em nova ordem e as pendências dos Blocos 10 e 11 — ✅ **concluído em 29/10/2026** | uma migration, que só acrescenta | 029 |
 | **15** | Início (tela cheia, setas), ano no cabeçalho e ajustes do DSA (EI só lançado, abas de versão, barra única, cabeçalho numa linha) e a `PEND-029-1` — ✅ **concluído em 30/10/2026** | não | 030 |
+| **16** | Lançamento no DSA (ícones, *Início*, avaliação sem técnica, EI sem instrutor), mais de um instrutor por aula (RD-9), papel (Apoio, ORIGINAL/ALT, instrutor e local na mesma linha) e abas de acompanhamento — 🟨 **em conferência** | uma migration, que só acrescenta (efeito zero medido) | 031 |
 
 ---
 
@@ -712,6 +713,38 @@ cheia, aberta pelo teclado, pedia dois `Esc` (o primeiro fechava só a dica do �
 sobreposição. Os dois têm caso de ponta a ponta visto reprovar com o defeito de volta.
 
 **Pendências novas:** nenhuma. A `PEND-025-2` (a lateral não lê o `?ano=`) continua como estava (D-8).
+
+---
+
+## Bloco 16 — Lançamento no DSA, mais de um instrutor, papel e abas de acompanhamento (spec própria) — 🟨 EM CONFERÊNCIA
+
+_Pedido de Bernardo Villas Boas, 30/10/2026, pelo `/corrigir`._ Spec `031-bloco-16-dsa-instrutores-papel-abas`, ramo
+`fix/BLOCO-16-dsa-instrutores-papel-abas`, um PR. Regras: **RD-9** (nova) e nota na **RD-1** em
+`regras-do-dsa-lancamento.md`; **RP-1** (o campo ALT) em `regras-da-publicacao-do-dsa.md`; nota datada na **`RN-INST-04`**
+do documento 04. **Uma migration, que só acrescenta** (`20261030224204`), com a recriação de `vw_instrutor_carga_anual`
+de efeito zero medido na cópia do remoto. ⚠️ **O papel do DSA muda** (itens 5, 6, 7 e 8): o merge espera a virada.
+
+1. **Lançar e Cancelar em ícones** no formulário de lançamento (todos os tipos; *Fechar* depois de gravar com aviso).
+2. ***Início*** no lugar de *Em qual tempo começa* (lançamento e edição).
+3. **Avaliação sem *Técnica de ensino*** (lançamento e edição). ⛔ **Tipo × Instrumento ficou PARADO**, por instrução do
+   pedido: no remoto, *Prova Escrita* aparece com PE, PM, PO e TI, e o tipo vai ao papel e ao casamento com o planejado
+   (`PEND-031-3`).
+4. **Estudo Individual sem instrutor** (a ação grava nulo).
+5. **Apoio Individualizado** sem *"alunos específicos"*; o RP-4 lê o texto antigo do retrato publicado como o novo.
+6. **Mais de um instrutor por aula (RD-9)**: *Instrutores adicionais* do cadastro, só habilitados; a CH da turma conta
+   uma vez, a carga ministrada de cada um conta os TA inteiros; papel e cartão com todos os nomes.
+7. **ORIGINAL / ALT N / PRÉVIA** no campo ALT do papel.
+8. **Instrutor e local na mesma linha** do cartão (o local sumia no cartão de 1 TA).
+9. **Abas de acompanhamento**: *Disciplinas* (igual) · *Avaliações* · *APOINST* · *Palestras* (*Em breve*), em
+   `?acompanhamento=`.
+
+**Pendências novas:**
+
+| # | Pendência | Bloqueia |
+|---|---|---|
+| **PEND-031-1** | **As 25 aulas com «Demais instrutores» em texto livre não contam na carga** *(medido no remoto, só leitura, 30/10/2026)*: o texto (`outros_instrutores`, spec 014 FR-046) guarda o código do 2º instrutor; trazê-las para os adicionais daria **+72 TA** ao instrutor de código 162 e **+34 TA** ao 40 em 2026, e **1** código não casa com instrutor nenhum. É migration que muda resultado de tela: portão 9.4, decisão de Bernardo | Nada |
+| **PEND-031-2** | **O conflito de instrutor (`RN-CONF-01`) não olha os adicionais** *(spec 031, D-12)*: um adicional em duas turmas no mesmo tempo não acusa conflito. Recriar `vw_ocupacao_ta` | Nada |
+| **PEND-031-3** | **Tipo de avaliação × Instrumento** *(item 3a do pedido, parado por instrução)*: guardam informação diferente (no remoto: *Prova Escrita* com PE, PM, PO e TI; *Prova Prática* com PP e PM; *Trabalho* com TG, TI e PM), e os dois são lidos — o tipo pelo papel, pela planilha e pelo casamento com o planejado (`RN-AVAL-01`); o instrumento pela vista obrigatória (`RN-AV-13`). Decidir se um deve sair, e como | Nada |
 
 ---
 

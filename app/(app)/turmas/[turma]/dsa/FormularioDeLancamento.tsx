@@ -12,7 +12,8 @@
  *   c) **unidade de ensino** da disciplina escolhida — OPCIONAL, com a CH prevista, a lançada e a
  *      restante de cada uma. Sem unidade, um ALERTA visível e o tópico obrigatório; grava assim
  *      mesmo (`RN-DEG-02`: alerta, não bloqueio — e a `D-DSA-1` é o que o banco passou a aceitar);
- *   d) **em qual tempo começa** — os TA do dia com o horário, pré-selecionado pela célula clicada;
+ *   d) **início** (até o Bloco 16, *"em qual tempo começa"*) — os TA do dia com o horário, pré-selecionado pela célula
+ *      clicada;
  *   e) **quantos tempos**.
  * Até ali o formulário pulava direto para a unidade, e o TA inicial vinha só da célula clicada.
  *
@@ -38,6 +39,12 @@
  * ⚠️ **O INSTRUMENTO DA PROVA SEM ITEM** (A2 do mesmo desenho): na avaliação sem item do currículo escolhido, o
  * «Instrumento» é oferecido, opcional (os ativos de `instrumentos_avaliacao`, menos a OD). Com item, ele não aparece
  * e vai nulo — o instrumento é o do item.
+ *
+ * ⚠️ **BLOCO 16 (spec 031, 30/10/2026)** *(pedido de Bernardo Villas Boas)*: *Lançar* e *Cancelar* em ícones no canto
+ * inferior esquerdo (`FR-001`), o tempo inicial chamado **Início** (`FR-002`), a avaliação **sem** *Técnica de ensino*
+ * (`FR-003`), o Estudo Individual **sem** instrutor (`FR-004`) e a aula com **instrutores adicionais** do cadastro, no
+ * lugar do texto livre *"Demais instrutores"* (`FR-006`, RD-9). ⛔ *Tipo da avaliação* e *Instrumento* ficam os dois: o
+ * banco mostrou que guardam informação diferente (item 3a, parado para Bernardo).
  */
 "use client";
 
@@ -51,6 +58,7 @@ import * as React from "react";
 
 import type { TipoOferecido } from "./leitura";
 
+import { BotaoDeIcone } from "@/components/ciaara/botao-de-icone";
 import { SeletorInstrutor } from "@/components/ciaara/seletor-instrutor";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -65,7 +73,8 @@ import {
   type AtribuicaoPorUnidade,
   type MotivoDoInstrutorVazio,
 } from "@/lib/dominio/dsa/pre-preenchimento";
-import { LOCAL_DO_ESTUDO_INDIVIDUAL } from "@/lib/dominio/dsa/rotulos";
+import { semQuemMinistra } from "@/lib/dominio/dsa/instrutores-adicionais";
+import { LOCAL_DO_ESTUDO_INDIVIDUAL, ROTULO_DO_APOIO } from "@/lib/dominio/dsa/rotulos";
 import { provasParaSessaoNoDia } from "@/lib/dominio/dsa/sessao-de-aplicacao";
 import type { TempoParaEscolher } from "@/lib/dominio/dsa/tempos-do-dia";
 import type { InstrutorParaExibir } from "@/lib/dominio/nome-instrutor";
@@ -73,6 +82,7 @@ import { regraDoResponsavel } from "@/lib/dominio/responsavel";
 import { dataComDiaDaSemana, dataParaLeitura } from "@/lib/formato/data";
 
 import { EscolhaSimples } from "./EscolhaSimples";
+import { InstrutoresAdicionais } from "./InstrutoresAdicionais";
 import { ResponsavelOuNomeLivre } from "./ResponsavelOuNomeLivre";
 
 /** Uma unidade oferecida, com os **três números** que a operação acompanha (`FR-018`, `P-3`). */
@@ -218,7 +228,7 @@ const ROTULO_DA_CATEGORIA: Readonly<Record<string, string>> = {
   TAD: "TAD",
   TR: "TR",
   Estudo_Individual: "Estudo Individual (fora da CHT)",
-  Apoio_Individualizado: "Apoio Individualizado — alunos específicos (fora da CHT)",
+  Apoio_Individualizado: `${ROTULO_DO_APOIO} (fora da CHT)`,
 };
 
 /** O alerta do item 1c, com as palavras do comando de 08/10/2026. */
@@ -267,7 +277,14 @@ export function FormularioDeLancamento({
   const [avaliacaoId, definirAvaliacao] = React.useState("");
   const [ta, definirTa] = React.useState(String(taInicial));
   const [tempos, definirTempos] = React.useState(1);
-  const [quemMinistra, definirQuemMinistra] = React.useState("");
+  const [quemMinistra, definirQuemMinistraCru] = React.useState("");
+  /* RD-9 (Bloco 16): os instrutores adicionais da AULA — ids do cadastro, em antiguidade. */
+  const [adicionais, definirAdicionais] = React.useState<string[]>([]);
+  /* Quem ministra nunca é também adicional: escolhê-lo o tira da lista dos adicionais. */
+  function definirQuemMinistra(id: string): void {
+    definirQuemMinistraCru(id);
+    definirAdicionais((atuais) => semQuemMinistra(atuais, id));
+  }
   const [tecnica, definirTecnica] = React.useState("");
   const [local, definirLocal] = React.useState(salaDaTurma ?? "");
   /* O local só acompanha o tipo enquanto ninguém o editou — depois, é escolha da pessoa. */
@@ -371,6 +388,9 @@ export function FormularioDeLancamento({
 
   function escolherDisciplina(id: string): void {
     definirDisciplina(id);
+    /* RD-9: o adicional que não é habilitado na disciplina nova sai, como quem ministra (RD-1). */
+    const habilitadosNaNova = idsDaListaDaAula(instrutores, habilitacoes, id === "" ? null : id);
+    definirAdicionais((atuais) => atuais.filter((a) => habilitadosNaNova.has(a)));
     definirUnidade("");
     definirAvaliacao("");
     definirItem("");
@@ -424,7 +444,8 @@ export function FormularioDeLancamento({
         conteudo: texto(conteudo),
         tecnica: texto(tecnica),
         instrutorId: quemMinistra,
-        outrosInstrutores: listaDeOutros(outros),
+        /* RD-9 (Bloco 16): os adicionais do cadastro — o texto livre saiu da aula. */
+        instrutoresAdicionais: adicionais,
       };
     }
     if (tipo === "avaliacao") {
@@ -436,7 +457,8 @@ export function FormularioDeLancamento({
         tipoAvaliacao,
         instrutorId: quemMinistra,
         conteudo: texto(conteudo),
-        tecnica: texto(tecnica),
+        /* Bloco 16 (FR-003): a avaliação não tem técnica de ensino — grava nula. */
+        tecnica: null,
         /* Com o fiscal do cadastro escolhido, o nome livre não viaja (o esquema recusa os dois). */
         fiscalId: nulo(fiscalId),
         nomeFiscalExterno: fiscalId === "" ? texto(nomeFiscalExterno) : null,
@@ -470,9 +492,11 @@ export function FormularioDeLancamento({
       tipoAtividadeId: subtipo,
       /* Spec 029, D-5: vazio viaja NULO (o EI sem «O que é» grava nulo); fora do EI, a ação recusa com a frase. */
       descricao: texto(descricao),
-      instrutorId: nulo(quemMinistra),
+      /* Bloco 16 (FR-004): o Estudo Individual não tem instrutor nem nome livre. */
+      instrutorId: tipo === "Estudo_Individual" ? null : nulo(quemMinistra),
       /* `RN-RESP-1`: com instrutor do cadastro, o nome livre não viaja (`ativ_responsavel_exclusivo`). */
-      responsavelExterno: quemMinistra === "" ? texto(responsavelExterno) : null,
+      responsavelExterno:
+        tipo === "Estudo_Individual" || quemMinistra !== "" ? null : texto(responsavelExterno),
       /* A disciplina da AEC é opcional, e só da AEC (item 1b). */
       disciplinaId: tipo === "AEC" && !global ? nulo(disciplinaId) : null,
       /* A quantidade de alunos, opcional, só no Apoio (FR-020). */
@@ -722,10 +746,10 @@ export function FormularioDeLancamento({
         />
       ) : null}
 
-      {/* d) EM QUAL TEMPO COMEÇA — pré-selecionado pela célula clicada, e editável. */}
+      {/* d) INÍCIO (Bloco 16, FR-002; era «Em qual tempo começa») — pré-selecionado pela célula clicada, e editável. */}
       <EscolhaSimples
         id="dsa-ta-inicial"
-        rotulo="Em qual tempo começa"
+        rotulo="Início"
         obrigatorio
         valor={ta}
         aoMudar={definirTa}
@@ -778,14 +802,17 @@ export function FormularioDeLancamento({
               onChange={(e) => definirConteudo(e.target.value)}
             />
           </div>
-          <EscolhaSimples
-            id="dsa-tecnica"
-            rotulo="Técnica de ensino"
-            textoVazio="—"
-            valor={tecnica}
-            aoMudar={definirTecnica}
-            opcoes={tecnicas.map((t) => ({ valor: t, rotulo: t }))}
-          />
+          {/* Bloco 16 (FR-003): a técnica de ensino é só da AULA. */}
+          {tipo === "aula" ? (
+            <EscolhaSimples
+              id="dsa-tecnica"
+              rotulo="Técnica de ensino"
+              textoVazio="—"
+              valor={tecnica}
+              aoMudar={definirTecnica}
+              opcoes={tecnicas.map((t) => ({ valor: t, rotulo: t }))}
+            />
+          ) : null}
         </>
       ) : null}
 
@@ -810,7 +837,9 @@ export function FormularioDeLancamento({
           aoMudarNomeLivre={definirConduzExterno}
           slot="quem-conduz-a-vista"
         />
-      ) : tipo === "sessao_aplicacao" ? (
+      ) : tipo ===
+        "Estudo_Individual" /* Bloco 16 (FR-004): o Estudo Individual não tem instrutor — nenhum campo de quem responde. */ ? null : tipo ===
+        "sessao_aplicacao" ? (
         /* `RN-AV-12`: a sessão não tem responsável próprio — e dizer isso evita procurar o campo. */
         <p className="text-texto-suave text-sm" data-slot="responsavel-da-sessao">
           Quem aplica e quem fiscaliza esta sessão são os da prova (a 1ª sessão).
@@ -872,6 +901,19 @@ export function FormularioDeLancamento({
         </p>
       ) : null}
 
+      {/* RD-9 (Bloco 16): na AULA, os instrutores adicionais do cadastro, habilitados na disciplina. */}
+      {tipo === "aula" && listaDaAula.length > 0 ? (
+        <InstrutoresAdicionais
+          id="dsa-instrutores-adicionais"
+          listaDaAula={listaDaAula}
+          quemMinistra={quemMinistra}
+          escolhidos={adicionais}
+          aoMudar={definirAdicionais}
+          escala={escala}
+          podeLerInstrutores={podeLerInstrutores}
+        />
+      ) : null}
+
       {tipo === "avaliacao" ? (
         <div className="flex flex-col gap-1">
           {/* Spec 014, FR-033: a faixa de UEs abordadas, texto, sem consumir TA de UE. */}
@@ -885,9 +927,15 @@ export function FormularioDeLancamento({
         </div>
       ) : null}
 
-      {tipo !== "vista_prova" && tipo !== "sessao_aplicacao" ? (
+      {tipo !== "vista_prova" &&
+      tipo !== "sessao_aplicacao" &&
+      tipo !== "aula" &&
+      tipo !== "Estudo_Individual" ? (
         <div className="flex flex-col gap-1">
-          {/* Spec 014, FR-046: o 2º nome, como no documento; nada vai para observações. */}
+          {/*
+            Spec 014, FR-046: o 2º nome, como no documento; nada vai para observações. Bloco 16: fora da AULA (que tem os
+            adicionais do cadastro, RD-9) e do Estudo Individual (sem instrutor, FR-004).
+          */}
           <Label htmlFor="dsa-outros-instrutores">Demais instrutores (opcional)</Label>
           <Input
             id="dsa-outros-instrutores"
@@ -955,19 +1003,37 @@ export function FormularioDeLancamento({
               <li key={a.codigo}>{a.texto}</li>
             ))}
           </ul>
-          <Button type="button" size="sm" variant="outline" onClick={aoFechar}>
-            Entendi
-          </Button>
         </div>
       ) : null}
 
-      <div className="flex gap-2">
-        <Button type="submit" disabled={gravando} data-slot="gravar-lancamento">
-          {gravando ? "Gravando…" : "Lançar"}
-        </Button>
-        <Button type="button" variant="ghost" onClick={aoFechar}>
-          Cancelar
-        </Button>
+      {/*
+        Bloco 16 (`FR-001`, RT-1): *Lançar* e *Cancelar* SÓ EM ÍCONES, juntos no canto inferior esquerdo — como o cartão de
+        edição. Gravado com aviso, o lançamento já está feito: o *Cancelar* vira *Fechar* (era o botão *Entendi*, D-1).
+      */}
+      <div
+        role="group"
+        aria-label="Ações do formulário"
+        className="border-borda flex flex-wrap items-center justify-start gap-2 border-t pt-2"
+        data-slot="acoes-do-formulario"
+      >
+        {avisos.length === 0 ? (
+          <BotaoDeIcone
+            acao="lancar"
+            rotulo="Lançar"
+            type="submit"
+            variante="padrao"
+            ocupado={gravando}
+            rotuloOcupado="Gravando…"
+            data-slot="gravar-lancamento"
+          />
+        ) : null}
+        <BotaoDeIcone
+          acao={avisos.length > 0 ? "fechar" : "cancelar"}
+          rotulo={avisos.length > 0 ? "Fechar" : "Cancelar"}
+          type="button"
+          onClick={aoFechar}
+          data-slot="fechar-formulario"
+        />
       </div>
     </form>
   );

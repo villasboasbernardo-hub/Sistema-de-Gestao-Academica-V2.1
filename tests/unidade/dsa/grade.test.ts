@@ -247,7 +247,7 @@ describe("spec 014, A-6 · o Apoio Individualizado no mesmo tempo de uma aula", 
     taInicial: 2,
     tempos: 1,
     disciplina: null,
-    conteudo: "Apoio Individualizado — alunos específicos: Monitoria",
+    conteudo: "Apoio Individualizado: Monitoria",
     apoio: true,
   });
 

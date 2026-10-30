@@ -25,6 +25,7 @@ import type { Assinatura } from "@/lib/dominio/dsa/assinaturas";
 import type { CartaoDaGrade, GradeDoPapel } from "@/lib/dominio/dsa/grade-do-papel";
 import type { DiaImpresso, LinhaImpressa } from "@/lib/dominio/dsa/impressao";
 import { NOTA_DO_ESTUDO_INDIVIDUAL, ROTULO_DE_OBSERVACOES } from "@/lib/dominio/dsa/impressao";
+import { rotuloDoAlt } from "@/lib/dominio/dsa/publicacao";
 import { ROTULO_DO_CAMPO_DA_SEMANA } from "@/lib/dominio/dsa/semana-do-curso";
 import {
   dataComDiaDaSemana,
@@ -52,7 +53,7 @@ export function DocumentoDoDsa({
   nomeDeQuemImprime,
   geradoEm,
   assinaturasEditadas = {},
-  alteracao = "ALT —",
+  alteracao = rotuloDoAlt(null),
   previa = false,
   nivelDoTitulo = 1,
 }: {
@@ -66,8 +67,8 @@ export function DocumentoDoDsa({
    */
   readonly assinaturasEditadas?: EdicaoDasAssinaturas;
   /**
-   * Spec 024 (RP-1, ciclo): o campo ALT — *"ALT —"* na original e antes de publicar; *"ALT N"* na alteração N
-   * (`rotuloDoAlt`). Ausente = *"ALT —"*, o papel de antes do Bloco 9.
+   * O campo ALT (`rotuloDoAlt`; RP-1, emenda do Bloco 16): *"ORIGINAL"* na versão 0, *"ALT N"* na alteração N e
+   * *"PRÉVIA"* na prévia. Ausente = a prévia. Até 30/10/2026, *"ALT —"* na original e antes de publicar.
    */
   readonly alteracao?: string;
   /** Spec 024 (FR-010): a PRÉVIA sai com a marca bem visível, e não é versão. */
@@ -497,11 +498,17 @@ function Cartao({
         */}
         <div className="dsa4-cartao-dados">
           <span>{cartao.ta} TA</span>
-          {linha.local === "" ? null : <span>{linha.local}</span>}
           <b className="dsa-te">{linha.te}</b>
         </div>
-        <div className="dsa4-cartao-pe">
-          <span>{linha.instrutor}</span>
+        {/*
+          Bloco 16 (spec 031, `FR-008`): O INSTRUTOR E O LOCAL NA MESMA LINHA — a do pé, que nunca encolhe. No cartão
+          de 1 TA a linha de dados some primeiro, e o local ia junto; com mais de um instrutor, os nomes já vêm com « / ».
+        */}
+        <div className="dsa4-cartao-pe" data-slot="cartao-pe">
+          {linha.instrutor === "" ? null : (
+            <span data-slot="cartao-instrutor">{linha.instrutor}</span>
+          )}
+          {linha.local === "" ? null : <span data-slot="cartao-local">{linha.local}</span>}
         </div>
       </div>
     </div>

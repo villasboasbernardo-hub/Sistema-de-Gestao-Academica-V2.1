@@ -35,6 +35,7 @@
  */
 "use client";
 
+import { semQuemMinistra } from "@/lib/dominio/dsa/instrutores-adicionais";
 import {
   fraseDaListaDaAula,
   instrutoresDaAula,
@@ -64,6 +65,7 @@ import {
   type ResultadoDaAcao,
   type UnidadeOferecida,
 } from "./FormularioDeLancamento";
+import { InstrutoresAdicionais } from "./InstrutoresAdicionais";
 import { ResponsavelOuNomeLivre } from "./ResponsavelOuNomeLivre";
 
 /** O fato escolhido, como a grade o conhece. */
@@ -84,6 +86,8 @@ export type FatoEscolhido = {
   readonly semPosicao: boolean;
   /** O GRAVADO, cru — a fonte de todo campo deste cartão (ajuste 2). */
   readonly gravado: ValoresGravados | undefined;
+  /** Bloco 16 (FR-004): o Estudo Individual — sem instrutor nem nome livre no cartão. */
+  readonly estudoIndividual?: boolean;
 };
 
 export type AcoesDoBlocoProps = {
@@ -151,7 +155,9 @@ export function AcoesDoBloco({
         : { tipo: "atividade", categoria: null },
   );
   const temTopico = fato.origem === "aula" || fato.origem === "avaliacao";
-  const temQuemMinistra = fato.origem !== "vista_prova" && !ehSessaoDeAplicacao;
+  /* Bloco 16 (FR-004): o Estudo Individual não tem quem ministre — o cartão não pergunta. */
+  const temQuemMinistra =
+    fato.origem !== "vista_prova" && !ehSessaoDeAplicacao && fato.estudoIndividual !== true;
   /* A2: o instrumento só na AVALIAÇÃO sem item do currículo — com item, é o do item. */
   const temInstrumento =
     fato.origem === "avaliacao" &&
@@ -171,7 +177,16 @@ export function AcoesDoBloco({
   const [unidadeId, definirUnidade] = React.useState(g.unidadeEnsinoId ?? "");
   const [conteudo, definirConteudo] = React.useState(g.conteudo ?? "");
   const [tecnica, definirTecnica] = React.useState(g.tecnica ?? "");
-  const [instrutorId, definirInstrutor] = React.useState(g.instrutorId ?? "");
+  const [instrutorId, definirInstrutorCru] = React.useState(g.instrutorId ?? "");
+  /* RD-9 (Bloco 16): os instrutores adicionais da AULA, como gravados. */
+  const [adicionais, definirAdicionais] = React.useState<string[]>([
+    ...(g.instrutoresAdicionais ?? []),
+  ]);
+  /* Quem ministra nunca é também adicional (como no lançamento). */
+  function definirInstrutor(id: string): void {
+    definirInstrutorCru(id);
+    definirAdicionais((atuais) => semQuemMinistra(atuais, id));
+  }
   const [nomeLivre, definirNomeLivre] = React.useState(g.responsavelExterno ?? "");
   const [local, definirLocal] = React.useState(g.local ?? "");
   const [instrumentoId, definirInstrumento] = React.useState(g.instrumentoId ?? "");
@@ -231,7 +246,12 @@ export function AcoesDoBloco({
     if (temTopico || fato.origem === "atividade_nao_letiva") {
       if (texto(conteudo) !== g.conteudo) m["conteudo"] = texto(conteudo);
     }
-    if (temTopico && texto(tecnica) !== g.tecnica) m["tecnica"] = texto(tecnica);
+    /* Bloco 16 (FR-003, D-4): a técnica só se edita na AULA; a da avaliação gravada antes fica como está. */
+    if (ehAula && texto(tecnica) !== g.tecnica) m["tecnica"] = texto(tecnica);
+    /* RD-9: os adicionais, só se mudaram (a ordem gravada é a de antiguidade). */
+    if (ehAula && adicionais.join(",") !== (g.instrutoresAdicionais ?? []).join(",")) {
+      m["instrutoresAdicionais"] = adicionais;
+    }
     if (temInstrumento) {
       const novo = instrumentoId === "" ? null : instrumentoId;
       if (novo !== (g.instrumentoId ?? null)) m["instrumentoId"] = novo;
@@ -297,7 +317,7 @@ export function AcoesDoBloco({
         />
         <EscolhaSimples
           id="dsa-mover-ta"
-          rotulo="Em qual tempo começa"
+          rotulo="Início"
           valor={ta}
           aoMudar={definirTa}
           opcoes={temposParaEscolher(diaEscolhido, Math.max(linhas, 1)).map((t) => ({
@@ -371,14 +391,17 @@ export function AcoesDoBloco({
               onChange={(e) => definirConteudo(e.target.value)}
             />
           </div>
-          <EscolhaSimples
-            id="dsa-editar-tecnica"
-            rotulo="Técnica de ensino"
-            textoVazio="—"
-            valor={tecnica}
-            aoMudar={definirTecnica}
-            opcoes={tecnicas.map((t) => ({ valor: t, rotulo: t }))}
-          />
+          {/* Bloco 16 (FR-003): a técnica de ensino é só da AULA. */}
+          {ehAula ? (
+            <EscolhaSimples
+              id="dsa-editar-tecnica"
+              rotulo="Técnica de ensino"
+              textoVazio="—"
+              valor={tecnica}
+              aoMudar={definirTecnica}
+              opcoes={tecnicas.map((t) => ({ valor: t, rotulo: t }))}
+            />
+          ) : null}
         </>
       ) : null}
 
@@ -456,6 +479,18 @@ export function AcoesDoBloco({
           nomeLivre={nomeLivre}
           aoMudarNomeLivre={definirNomeLivre}
           slot="responsavel-do-lancamento"
+        />
+      ) : null}
+      {/* RD-9 (Bloco 16): os instrutores adicionais da AULA, habilitados na disciplina escolhida. */}
+      {ehAula && listaDeQuemMinistra.length > 0 ? (
+        <InstrutoresAdicionais
+          id="dsa-editar-instrutores-adicionais"
+          listaDaAula={listaDeQuemMinistra}
+          quemMinistra={instrutorId}
+          escolhidos={adicionais}
+          aoMudar={definirAdicionais}
+          escala={escala}
+          podeLerInstrutores={podeLerInstrutores}
         />
       ) : null}
       {gravadoForaDaLista ? (

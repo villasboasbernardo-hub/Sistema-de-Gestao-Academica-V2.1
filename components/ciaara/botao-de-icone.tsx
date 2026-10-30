@@ -70,6 +70,7 @@ import {
   Printer,
   RotateCcw,
   Save,
+  SquarePlus,
   Stamp,
   Sun,
   Trash2,
@@ -140,6 +141,8 @@ export const ICONE_DA_ACAO = {
   "sair-da-tela-cheia": Minimize2,
   pausar: Pause,
   continuar: Play,
+  /* Bloco 16 (spec 031, FR-001): o envio do formulário de lançamento do DSA, em ícone. */
+  lancar: SquarePlus,
 } as const satisfies Record<string, LucideIcon>;
 
 export type AcaoDeIcone = keyof typeof ICONE_DA_ACAO;
@@ -197,6 +200,7 @@ export const ROTULO_DA_ACAO: Readonly<Record<AcaoDeIcone, string | null>> = {
   "sair-da-tela-cheia": "Sair da tela cheia",
   pausar: "Pausar",
   continuar: "Continuar",
+  lancar: "Lançar",
 };
 
 /** A dica do botão: o verbo do vocabulário, ou o rótulo quando o verbo é ele (D-16). */

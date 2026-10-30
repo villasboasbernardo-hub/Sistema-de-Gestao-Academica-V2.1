@@ -3210,6 +3210,7 @@ export type Database = {
           editado_por: string | null
           id: string
           instrutor_id: string | null
+          instrutores_adicionais: string[]
           local: string | null
           metodologia: string | null
           observacoes: string | null
@@ -3240,6 +3241,7 @@ export type Database = {
           editado_por?: string | null
           id?: string
           instrutor_id?: string | null
+          instrutores_adicionais?: string[]
           local?: string | null
           metodologia?: string | null
           observacoes?: string | null
@@ -3270,6 +3272,7 @@ export type Database = {
           editado_por?: string | null
           id?: string
           instrutor_id?: string | null
+          instrutores_adicionais?: string[]
           local?: string | null
           metodologia?: string | null
           observacoes?: string | null

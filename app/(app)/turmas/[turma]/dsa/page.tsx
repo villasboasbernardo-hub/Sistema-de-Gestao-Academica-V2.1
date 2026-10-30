@@ -46,7 +46,11 @@ import {
 import { permissoesDoPerfil, pode } from "@/lib/autorizacao/matriz";
 import { usuarioDaSessao } from "@/lib/autorizacao/sessao";
 import { QUEM_DESARQUIVA } from "@/lib/dominio/arquivamento-da-turma";
-import { datasDaSemanaIso } from "@/lib/dominio/carga-semanal";
+import { datasDaSemanaIso, janelaDaCarga } from "@/lib/dominio/carga-semanal";
+import {
+  linhasDoAcompanhamentoDeAvaliacoes,
+  type LinhaDoAcompanhamentoDeAvaliacoes,
+} from "@/lib/dominio/dsa/acompanhamento-de-avaliacoes";
 import {
   diasForaDaEtapa,
   etapaDaSemana,
@@ -106,6 +110,9 @@ import { NotasDaPublicacao } from "./NotasDaPublicacao";
 import { PapelDaVersao } from "./PapelDaVersao";
 import { lerPublicacaoDaSemana } from "./publicacao";
 import { PainelDeSituacao } from "./PainelDeSituacao";
+import { AbasDeAcompanhamento, type AbaDeAcompanhamento } from "./AbasDeAcompanhamento";
+import { AcompanhamentoDeAvaliacoes } from "./AcompanhamentoDeAvaliacoes";
+import { lerAvaliacoesDaTurma } from "../consulta-de-avaliacoes";
 
 export default async function SemanaDoDsa({
   params,
@@ -415,6 +422,68 @@ export default async function SemanaDoDsa({
     [...lida.marcasDeConflito.entries()].filter(([, m]) => m.conflito !== null).map(([id]) => id),
   );
   const ultimoDia = lida.dias[lida.dias.length - 1] ?? hoje;
+  /*
+   * Bloco 16 (spec 031, `FR-009`, D-15 e D-16): a aba do acompanhamento abaixo da grade. A de AVALIAÇÕES lê o quadro de
+   * avaliações da turma só quando aberta, com a referência no fim da semana mostrada (o corte das disciplinas).
+   */
+  const abaDoAcompanhamento = String(
+    valores.acompanhamento ?? "disciplinas",
+  ) as AbaDeAcompanhamento;
+  let acompanhamentoDeAvaliacoes: {
+    readonly linhas: readonly LinhaDoAcompanhamentoDeAvaliacoes[];
+    readonly aviso: string | null;
+  } | null = null;
+  if (abaDoAcompanhamento === "avaliacoes") {
+    const periodo = {
+      inicio: (turma.data_inicio as string | null) ?? null,
+      termino: (turma.data_termino as string | null) ?? null,
+    };
+    const lido = await lerAvaliacoesDaTurma({
+      turmaId,
+      cursoId,
+      curriculoId: (turma.curriculo_id as string | null) ?? null,
+      hoje: ultimoDia,
+      terminoDaTurma: periodo.termino,
+      turmaCodigo: codigo,
+    });
+    const terminoPorDisciplina = new Map(
+      extras.execucao.map((d) => [
+        d.disciplinaId,
+        janelaDaCarga(
+          { inicio: d.previsaoInicio || null, termino: d.previsaoTermino || null },
+          periodo,
+        ).termino,
+      ]),
+    );
+    acompanhamentoDeAvaliacoes = {
+      aviso: lido.aviso,
+      linhas: linhasDoAcompanhamentoDeAvaliacoes({
+        janela: {
+          dataInicio: periodo.inicio,
+          dataTermino: periodo.termino,
+          duracaoSemanasDoCurso: lida.duracaoSemanasDoCurso,
+        },
+        referencia: ultimoDia,
+        disciplinas: (lido.quadro?.disciplinas ?? []).map((d) => ({
+          id: d.disciplina.id,
+          cod: d.disciplina.cod,
+          nome: d.disciplina.nome,
+          terminoPrevisto: terminoPorDisciplina.get(d.disciplina.id) ?? null,
+          itens: d.itens.map((i) => ({
+            rotulo: i.rotulo,
+            situacao: i.situacao,
+            aplicacao: i.aplicacao,
+            tempo: i.tempo,
+          })),
+          semItem: d.semItem.map((a) => ({
+            tipo: a.tipo,
+            situacao: a.situacao,
+            aplicacao: a.aplicacao,
+          })),
+        })),
+      }),
+    };
+  }
   const quadros = quadrosDaSemana({
     execucao: extras.execucao,
     ocupacao: lida.ocupacaoAcumulada,
@@ -736,6 +805,7 @@ export default async function SemanaDoDsa({
               tiposDeAvaliacao={lida.tiposDeAvaliacao}
               instrumentos={lida.instrumentos}
               subtipos={lida.subtipos}
+              idsDeEstudoIndividual={[...lida.idsDeEstudoIndividual]}
               podeAtividadeGlobal={pode(permissoes, "atividades_globais", "criar")}
               lancar={lancar}
               mover={mover}
@@ -750,12 +820,34 @@ export default async function SemanaDoDsa({
               ⚠️ **A CASCATA USA O LANÇADO ATÉ A SEMANA**, o mesmo corte da linha da disciplina — e não o
                  lançado da turma inteira, que é o do formulário (`unidadesDaTurma`).
             */}
-            <PainelDeSituacao
-              quadros={quadros}
-              unidades={lida.unidades.map((u) => ({ ...u, lancada: u.lancadaAteASemana }))}
-              avaliacoesPorDisciplina={lida.avaliacoesPorDisciplina}
-              rotuloDaSemana={rotuloDaSemana(lida.dias)}
-            />
+            {/*
+              Bloco 16 (spec 031, `FR-009`): o acompanhamento EM ABAS — *Disciplinas* é o painel de antes, igual; ao lado,
+              *Avaliações*, *APOINST* e *Palestras* (as duas últimas, «Em breve»). Só a aba aberta é desenhada.
+            */}
+            <AbasDeAcompanhamento atual={abaDoAcompanhamento}>
+              {abaDoAcompanhamento === "avaliacoes" && acompanhamentoDeAvaliacoes !== null ? (
+                <AcompanhamentoDeAvaliacoes
+                  linhas={acompanhamentoDeAvaliacoes.linhas}
+                  aviso={acompanhamentoDeAvaliacoes.aviso}
+                  rotuloDaSemana={rotuloDaSemana(lida.dias)}
+                />
+              ) : abaDoAcompanhamento === "apoinst" || abaDoAcompanhamento === "palestras" ? (
+                <p
+                  role="status"
+                  data-slot="acompanhamento-em-breve"
+                  className="rounded-ciaara border-borda text-texto-suave border border-dashed p-6 text-center text-sm"
+                >
+                  Em breve
+                </p>
+              ) : (
+                <PainelDeSituacao
+                  quadros={quadros}
+                  unidades={lida.unidades.map((u) => ({ ...u, lancada: u.lancadaAteASemana }))}
+                  avaliacoesPorDisciplina={lida.avaliacoesPorDisciplina}
+                  rotuloDaSemana={rotuloDaSemana(lida.dias)}
+                />
+              )}
+            </AbasDeAcompanhamento>
 
             {/*
               ⚠️ **O RODAPÉ DO PAPEL, NA TELA** — carga horária acumulada, técnicas e as assinaturas da

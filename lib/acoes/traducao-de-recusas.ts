@@ -22,6 +22,10 @@
  */
 
 import { recusaDeExclusao } from "@/lib/dominio/recusa-de-exclusao";
+import {
+  FRASE_ADICIONAL_E_QUEM_MINISTRA,
+  FRASE_ADICIONAL_REPETIDO,
+} from "@/lib/dominio/dsa/instrutores-adicionais";
 import { RECUSA_DA_TURMA_ARQUIVADA } from "@/lib/dominio/arquivamento-da-turma";
 import { FRASE_DA_ESCOLHA_TRAVADA } from "@/lib/dominio/regime-da-turma";
 import { dataIlegivel, dataParaLeitura } from "@/lib/formato/data";
@@ -366,6 +370,13 @@ function porChave(
     case "semana_do_dsa_nao_salva":
       return "Salve a semana antes de publicar (e não deixe rascunho por salvar).";
     /* Bloco 11 (RD-3): a semana salva ou publicada nunca muda de regime de tempos. */
+    /* Bloco 16 (RD-9): os instrutores adicionais da aula, conferidos pelo gatilho. */
+    case "instrutor_adicional_inexistente":
+      return "Um dos instrutores adicionais não existe no cadastro. Escolha-os pela lista.";
+    case "instrutor_adicional_repetido":
+      return FRASE_ADICIONAL_REPETIDO;
+    case "instrutor_adicional_e_quem_ministra":
+      return FRASE_ADICIONAL_E_QUEM_MINISTRA;
     case "semana_do_dsa_salva":
       return "Esta semana já foi salva: o regime de tempos dela não muda mais. Escolha a partir de uma semana não salva.";
     case "regime_de_outro_curso":

@@ -385,12 +385,22 @@
   overflow-wrap: anywhere;
 }
 
-/* O instrutor: a última linha, que nunca encolhe. */
+/*
+ * O instrutor E O LOCAL: a última linha, que nunca encolhe (Bloco 16, spec 031, FR-008 — até ali o local ficava na
+ * linha de dados e sumia no cartão de 1 TA). Os dois na mesma linha, separados por « · ».
+ */
 .dsa4-cartao-pe {
   flex: none;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0 1.1mm;
   font-size: 0.9em;
   line-height: 1.15;
   color: var(--dsa4-suave);
+}
+
+.dsa4-cartao-pe > span + span::before {
+  content: "· ";
 }
 
 /* No compacto, a entrelinha e o respiro do cartão apertam — é o que deixa título e instrutor caberem juntos. */

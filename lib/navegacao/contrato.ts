@@ -834,6 +834,18 @@ export const CONTRATO = {
         historico: "empilha",
         avisaServidor: true,
       },
+      /*
+       * Bloco 16 (spec 031, `FR-009`, D-15): a aba do acompanhamento abaixo da grade — *Disciplinas* (o painel de antes,
+       * igual), *Avaliações*, *APOINST* e *Palestras*. Avisa o servidor: a de avaliações é lida só quando aberta.
+       */
+      acompanhamento: {
+        nome: "acompanhamento",
+        tipo: "escolha",
+        padrao: "disciplinas",
+        opcoes: ["disciplinas", "avaliacoes", "apoinst", "palestras"],
+        historico: "empilha",
+        avisaServidor: true,
+      },
     },
   },
   "/admin/salas": {

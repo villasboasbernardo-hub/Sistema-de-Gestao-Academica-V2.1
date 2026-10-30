@@ -356,7 +356,7 @@ test("itens 5 e 7 · editar antes de publicar sem ALT; as abas de versão", asyn
   await salvarASemana(page);
   await page.locator('[data-slot="imprimir-dsa"]').click();
   await expect(page.locator('[data-slot="dsa-previa"]')).toHaveText("PRÉVIA");
-  await expect(page.locator('[data-slot="dsa-alt"]')).toHaveText("ALT —");
+  await expect(page.locator('[data-slot="dsa-alt"]')).toHaveText("PRÉVIA");
   await page.goBack();
   await expect(page.locator('[data-slot="publicacao-do-dsa"]')).toBeVisible();
   await publicar(page);

@@ -60,6 +60,7 @@ import {
   estudosIndividuaisParaRemover,
   lancamentosParaLimpar,
 } from "@/lib/dominio/dsa/limpar-semana";
+import { recusaDosAdicionais } from "@/lib/dominio/dsa/instrutores-adicionais";
 import { parPendenteDaAula } from "@/lib/dominio/dsa/instrutores-da-aula";
 import {
   numeroDaProximaSessao,
@@ -915,6 +916,20 @@ export async function lancar(entrada: unknown): Promise<ResultadoDoLancamento> {
       disciplinaId,
     );
     if (recusa !== null) return falha(recusa, "instrutorId");
+    /*
+     * ⚠️ **RD-9 (Bloco 16): OS ADICIONAIS PASSAM PELO MESMO PORTEIRO** — cada um habilitado na disciplina (RD-1), sem
+     *    repetir e sem quem ministra. O banco recusa o repetido e o titular também (gatilho), mas a habilitação só
+     *    existe aqui, como a de quem ministra.
+     */
+    const recusaDaLista = recusaDosAdicionais(bloco.instrutorId, bloco.instrutoresAdicionais);
+    if (recusaDaLista !== null) return falha(recusaDaLista, "instrutoresAdicionais");
+    const recusasDosAdicionais = await Promise.all(
+      bloco.instrutoresAdicionais.map((adicional) =>
+        conferirHabilitacao(supabase, "ministrar", adicional, disciplinaId),
+      ),
+    );
+    const recusaDoAdicional = recusasDosAdicionais.find((r) => r !== null);
+    if (recusaDoAdicional) return falha(recusaDoAdicional, "instrutoresAdicionais");
 
     /*
      * ⚠️ **NENHUM TETO BLOQUEIA** desde a emenda da `RN-DIST-03` (a), de 27/10/2026 (spec 029,
@@ -946,6 +961,7 @@ export async function lancar(entrada: unknown): Promise<ResultadoDoLancamento> {
       unidade_ensino_id: bloco.unidadeEnsinoId,
       disciplina_id: bloco.disciplinaId,
       instrutor_id: bloco.instrutorId,
+      instrutores_adicionais: bloco.instrutoresAdicionais,
       ta_inicial: bloco.taInicial,
       tempos_consumidos: bloco.tempos,
       conteudo_resumo: bloco.conteudo,
@@ -1123,8 +1139,13 @@ export async function lancar(entrada: unknown): Promise<ResultadoDoLancamento> {
     ta_inicial: bloco.taInicial,
     tempos_consumidos: bloco.tempos,
     local: bloco.local,
-    instrutor_id: bloco.instrutorId,
-    responsavel_externo: bloco.responsavelExterno,
+    /*
+     * ⚠️ **BLOCO 16 (spec 031, FR-004): O ESTUDO INDIVIDUAL NÃO TEM INSTRUTOR** — a tela não pergunta, e o que vier por
+     *    fora grava nulo (D-5). As demais atividades continuam com o responsável do cadastro ou de nome livre.
+     */
+    instrutor_id: categoriaDaAtividade === "Estudo_Individual" ? null : bloco.instrutorId,
+    responsavel_externo:
+      categoriaDaAtividade === "Estudo_Individual" ? null : bloco.responsavelExterno,
     /* A disciplina OPCIONAL da AEC (item 1b, 08/10/2026); o banco confere que é do curso da turma. */
     disciplina_id: bloco.disciplinaId,
     quantidade_alunos: bloco.quantidadeAlunos,
@@ -1340,6 +1361,8 @@ type FatoDoBanco = {
   readonly avaliacaoCurriculoId?: string | null;
   /** Quem ministra a AULA (RD-1: o par final da edição); nas demais origens, ausente. */
   readonly instrutorId?: string | null;
+  /** Os instrutores adicionais da AULA (RD-9: o par final de cada um); nas demais origens, ausente. */
+  readonly instrutoresAdicionais?: readonly string[];
 };
 
 async function lerFato(
@@ -1351,7 +1374,7 @@ async function lerFato(
     const { data } = await supabase
       .from("registros_aula")
       .select(
-        "data, ta_inicial, tempos_consumidos, turma_id, curso_id, disciplina_id, unidade_ensino_id, origem_migracao_v1, editado_em, instrutor_id, salvo",
+        "data, ta_inicial, tempos_consumidos, turma_id, curso_id, disciplina_id, unidade_ensino_id, origem_migracao_v1, editado_em, instrutor_id, instrutores_adicionais, salvo",
       )
       .eq("id", fatoId)
       .maybeSingle();
@@ -1367,6 +1390,7 @@ async function lerFato(
       origem_migracao_v1: string | null;
       editado_em: string | null;
       instrutor_id: string | null;
+      instrutores_adicionais: string[] | null;
       salvo: boolean | null;
     };
     /*
@@ -1377,6 +1401,7 @@ async function lerFato(
      */
     type LinhaDaSombra = {
       instrutor_id: string | null;
+      instrutores_adicionais: string[] | null;
       disciplina_id: string | null;
       unidade_ensino_id: string | null;
       rascunho_exclui: boolean;
@@ -1386,7 +1411,9 @@ async function lerFato(
         ? ((
             await supabase
               .from("registros_aula")
-              .select("instrutor_id, disciplina_id, unidade_ensino_id, rascunho_exclui")
+              .select(
+                "instrutor_id, instrutores_adicionais, disciplina_id, unidade_ensino_id, rascunho_exclui",
+              )
               .eq("rascunho_de", fatoId)
               .eq("status", "ativo")
               .maybeSingle()
@@ -1445,6 +1472,11 @@ async function lerFato(
       herdado: l.origem_migracao_v1 !== null && l.editado_em === null,
       categoria: null,
       instrutorId: l.instrutor_id,
+      /* RD-9: os adicionais que valem depois da edição — os da sombra, se houver (como o par da RD-1). */
+      instrutoresAdicionais:
+        (sombra !== null && !sombra.rascunho_exclui
+          ? sombra.instrutores_adicionais
+          : salvoDaLinha.instrutores_adicionais) ?? [],
     };
   }
 
@@ -1742,11 +1774,13 @@ async function aplicarAtualizacao(a: Atualizacao): Promise<ResultadoDoLancamento
   }
 
   /* `RN-RESP-1`: as colunas de quem responde, e a recusa do nome livre onde o papel não o aceita (função pura). */
+  /* Bloco 16 (FR-004, D-5): o Estudo Individual não tem instrutor — o que vier por fora não muda nada. */
+  const ehEstudoIndividual = fato.categoria === "Estudo_Individual";
   const responsavel = responsavelNaEdicao({
     origem: a.origem,
     categoria: fato.categoria,
-    instrutorId: a.instrutorId,
-    responsavelExterno: a.responsavelExterno,
+    instrutorId: ehEstudoIndividual ? undefined : a.instrutorId,
+    responsavelExterno: ehEstudoIndividual ? undefined : a.responsavelExterno,
   });
   if (!responsavel.ok) return falha(responsavel.mensagem, responsavel.campo);
 
@@ -1818,6 +1852,32 @@ async function aplicarAtualizacao(a: Atualizacao): Promise<ResultadoDoLancamento
     const atuacao: Atuacao = a.origem === "aula" ? "ministrar" : "avaliacao";
     const recusa = await conferirHabilitacao(supabase, atuacao, instrutorFinal, disciplinaId);
     if (recusa !== null) return falha(recusa, "instrutorId");
+  }
+  /*
+   * ⚠️ **RD-9 (Bloco 16): OS ADICIONAIS, PELO MESMO PAR FINAL.** Mandados, conferem-se todos; não mandados, mas com a
+   *    disciplina mudando, os que já estavam também — um adicional de antes pode não ser habilitado na disciplina nova.
+   *    O repetido e quem ministra entre eles são recusados com a frase, antes do banco.
+   */
+  if (a.origem === "aula") {
+    const adicionaisFinais =
+      a.instrutoresAdicionais ?? (mudouDisciplina ? (fato.instrutoresAdicionais ?? []) : []);
+    const quemMinistraFinal = a.instrutorId ?? fato.instrutorId ?? null;
+    if (a.instrutoresAdicionais !== undefined || a.instrutorId != null) {
+      const recusaDaLista = recusaDosAdicionais(
+        quemMinistraFinal,
+        a.instrutoresAdicionais ?? fato.instrutoresAdicionais ?? [],
+      );
+      if (recusaDaLista !== null) return falha(recusaDaLista, "instrutoresAdicionais");
+    }
+    if (disciplinaId !== null && adicionaisFinais.length > 0) {
+      const recusas = await Promise.all(
+        adicionaisFinais.map((adicional) =>
+          conferirHabilitacao(supabase, "ministrar", adicional, disciplinaId),
+        ),
+      );
+      const recusa = recusas.find((r) => r !== null);
+      if (recusa) return falha(recusa, "instrutoresAdicionais");
+    }
   }
   /*
    * ⚠️ **D-AV-3 TAMBÉM NA EDIÇÃO** (spec 014, FR-043): trocar o aplicador pelo cartão dá o MESMO aviso que lançar —
@@ -1902,6 +1962,13 @@ async function aplicarAtualizacao(a: Atualizacao): Promise<ResultadoDoLancamento
    *    sem isso o banco recusaria com `23514`. Provado em `tests/unidade/dsa/responsavel-na-edicao.test.ts`.
    */
   Object.assign(campos, responsavel.colunas);
+  /* RD-9: os adicionais só existem na AULA. */
+  if (a.instrutoresAdicionais !== undefined) {
+    if (a.origem !== "aula") {
+      return falha("Instrutores adicionais só existem na aula.", "instrutoresAdicionais");
+    }
+    campos["instrutores_adicionais"] = a.instrutoresAdicionais;
+  }
   /* As SESSÕES (de vista e de aplicação) não têm `outros_instrutores`: os demais são os da avaliação. */
   if (
     a.outrosInstrutores !== undefined &&

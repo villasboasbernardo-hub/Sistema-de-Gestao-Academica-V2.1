@@ -297,15 +297,21 @@ function CorpoDoCartao({
         {cartao.tipo === "estudo" ? " *" : ""}
       </span>
       <TecnicaDoCartao tecnica={linha.te} />
-      {/* ⚠️ O instrutor fica INTEIRO (FR-007.4): quebra a linha, nunca é cortado com reticências. */}
-      {linha.instrutor === "" ? null : (
-        <span className="break-words text-[10px]" data-slot="cartao-instrutor">
-          {linha.instrutor}
+      {/*
+        ⚠️ O instrutor fica INTEIRO (FR-007.4): quebra a linha, nunca é cortado com reticências. Bloco 16 (spec 031,
+        `FR-008`): o LOCAL vem na mesma linha, depois de « · » — antes ele ficava na linha do TA.
+      */}
+      {linha.instrutor === "" && linha.local === "" ? null : (
+        <span className="break-words text-[10px]" data-slot="cartao-pe">
+          {linha.instrutor === "" ? null : (
+            <span data-slot="cartao-instrutor">{linha.instrutor}</span>
+          )}
+          {linha.instrutor !== "" && linha.local !== "" ? " · " : null}
+          {linha.local === "" ? null : <span data-slot="cartao-local">{linha.local}</span>}
         </span>
       )}
       <span className="flex flex-wrap items-center gap-x-1.5 text-[10px] tabular-nums">
         <span>{cartao.ta} TA</span>
-        {linha.local === "" ? null : <span>{linha.local}</span>}
         {cartao.partes > 1 ? (
           /*
            * ⚠️ **O TOTAL DO BLOCO VAI JUNTO DA PARTE** (item 2 do comando de 08/10/2026). O bloco que
