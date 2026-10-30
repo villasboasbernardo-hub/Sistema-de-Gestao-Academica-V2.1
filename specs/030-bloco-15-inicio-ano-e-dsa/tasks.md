@@ -104,10 +104,15 @@ sequência. **Sem banco.**
   `/estilo` com os ícones novos e o carrossel; `pnpm verificar` sem erro.
 - [X] T023 Defeitos deliberados nos testes que provam a mudança (um por item que muda veredito), cada um visto reprovar
   e desfeito.
-- [ ] T024 `pnpm verificar:tudo` sem a ponta a ponta inteira (pgTAP e RLS locais) + a ponta a ponta dos arquivos
+- [X] T024 `pnpm verificar:tudo` sem a ponta a ponta inteira (pgTAP e RLS locais) + a ponta a ponta dos arquivos
   afetados com 1 processo; medição da «Atrasada» no remoto (só leitura) antes e depois; `roteiro-de-conferencia.md`;
   `plano-de-correcoes-em-blocos.md` (Bloco 15, `PEND-029-1` fechada, pendências novas); commit, push, PR com o template
-  inteiro; CI verde.
+  inteiro; CI verde. *(Fechada no encerramento, 30/10/2026. Local, sobre `d1fa6d2`: tipos e lint sem erro, 3.048 de
+  unidade em 224 arquivos, build, 1.161 pgTAP em 73 arquivos, 491 RLS + 1 pulado em 33, e a ponta a ponta dos arquivos
+  afetados verde com 1 processo depois das correções de teste (spec §11 e §12). A «Atrasada» no remoto, só leitura: de 38
+  linhas para 18 (spec §3, item 11). PR #107 com CI verde nos três blocos sobre `d1fa6d2` (runs `40993265142` e
+  `40993259968`), aprovado na conferência de 30/10/2026 e mesclado por squash em `3bfa6e0`; CI da `main` verde nos três
+  blocos (run `41055350923`) e o deploy de Production de `3bfa6e0` em `success`.)*
 
 ## Fase 11 — o ajuste da conferência de 29/10/2026 (item 8, spec §12)
 
