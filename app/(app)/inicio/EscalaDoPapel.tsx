@@ -41,14 +41,19 @@
  *    — as assinaturas — sumia sem rolagem. `overflow-auto` vale também depois da medição: ali a moldura tem a altura
  *    da caixa e a largura que cabe nela, e nenhuma barra aparece.
  * ⚠️ **SEM COR**: só medida.
+ * ⚠️ **NA TELA CHEIA, OUTRA CONTA** (Bloco 15, spec 030, `FR-001`, D-2): dentro da sobreposição do carrossel
+ *    (`EmTelaCheia`), a caixa É a área que sobra na janela, e a escala é `escalaDaTelaCheia` — a maior que cabe, sem teto
+ *    nem piso, centrada nos dois eixos. A mesma folha, outra medida; o papel continua o da impressão.
  */
 "use client";
 
 import * as React from "react";
 
+import { EmTelaCheia } from "@/components/ciaara/carrossel";
 import {
   ALTURA_DA_FOLHA_PX,
   LARGURA_DA_FOLHA_PX,
+  escalaDaTelaCheia,
   escalaQueCabe,
   regravarAEscala,
   type MedidaDoPapel,
@@ -74,6 +79,63 @@ function folgaAbaixo(caixa: HTMLElement): number {
 }
 
 export function EscalaDoPapel({ children }: { readonly children: React.ReactNode }) {
+  const telaCheia = React.useContext(EmTelaCheia);
+  if (telaCheia) return <PapelNaTelaCheia>{children}</PapelNaTelaCheia>;
+  return <PapelNoCarrossel>{children}</PapelNoCarrossel>;
+}
+
+/** O papel na tela cheia: a maior escala que cabe na caixa da sobreposição, centrado (Bloco 15, `FR-001`). */
+function PapelNaTelaCheia({ children }: { readonly children: React.ReactNode }) {
+  const caixa = React.useRef<HTMLDivElement>(null);
+  const [escala, definirEscala] = React.useState<number | null>(null);
+  React.useLayoutEffect(() => {
+    const elemento = caixa.current;
+    if (elemento === null) return;
+    const medir = () => {
+      const nova = tresCasasParaBaixo(
+        escalaDaTelaCheia(elemento.clientWidth, elemento.clientHeight),
+      );
+      definirEscala((anterior) => (anterior === nova ? anterior : nova));
+    };
+    medir();
+    const observador = new ResizeObserver(() => medir());
+    observador.observe(elemento);
+    window.addEventListener("resize", medir);
+    return () => {
+      observador.disconnect();
+      window.removeEventListener("resize", medir);
+    };
+  }, []);
+  const medida = escala ?? 1;
+  return (
+    <div
+      ref={caixa}
+      className="flex h-full min-h-0 w-full items-center justify-center overflow-hidden"
+      data-slot="papel-na-tela-cheia"
+      data-escala={escala === null ? undefined : escala.toFixed(3)}
+    >
+      <div
+        className="shrink-0 overflow-hidden"
+        style={{
+          width: `${LARGURA_DA_FOLHA_PX * medida}px`,
+          height: `${ALTURA_DA_FOLHA_PX * medida}px`,
+        }}
+      >
+        <div
+          style={{
+            width: `${LARGURA_DA_FOLHA_PX}px`,
+            transform: `scale(${medida})`,
+            transformOrigin: "top left",
+          }}
+        >
+          {children}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function PapelNoCarrossel({ children }: { readonly children: React.ReactNode }) {
   const caixa = React.useRef<HTMLDivElement>(null);
   /* `null` = ainda não medido: é o que o servidor desenha (D-28). */
   const [escala, definirEscala] = React.useState<number | null>(null);

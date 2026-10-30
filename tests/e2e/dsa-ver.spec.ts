@@ -20,7 +20,7 @@ import { expect, test, type Page } from "@playwright/test";
 
 import { semanaIsoDe } from "@/lib/dominio/carga-semanal";
 import { AVISO_DE_TURMA_EAD, ROTULO_CURTO_DE_TURMA_EAD } from "@/lib/dominio/dsa/ead-puro";
-import { campoDaSemanaDoCurso, semanaDoCurso } from "@/lib/dominio/dsa/semana-do-curso";
+import { rotuloDaSemanaDoCurso, semanaDoCurso } from "@/lib/dominio/dsa/semana-do-curso";
 import { hojeNaCiaara } from "@/lib/formato/ano-corrente";
 
 import { apagarConta, criarConta, emailDeTeste, entrar } from "./conta-de-teste";
@@ -42,14 +42,19 @@ import {
   irAListaDeTurmas,
   LISTA_DE_TURMAS,
 } from "./navegar-turmas";
+import { abrirOCampoDaSemana } from "./percurso-do-dsa";
 
 /**
  * O campo «Semana do curso: N de T» de uma semana na turma da semente — 05/01 a 18/12/2026, curso sem duração (spec 016,
  * FR-009.2). ⚠️ Pela função do domínio, nunca uma segunda conta: o número escrito à mão aqui seria o
  * lugar a esquecer quando a semente mudar de datas.
  */
+/**
+ * *"Semana N de T"* — o pedaço da linha única do cabeçalho (Bloco 15, spec 030, `FR-009`): o quadro *Semana do curso*
+ * da tela saiu, e a semana do curso é lida da linha sob o título (`data-slot="semana-atual"`).
+ */
 function semanaDaSemente(ano: number, numero: number): string {
-  return campoDaSemanaDoCurso(
+  return rotuloDaSemanaDoCurso(
     semanaDoCurso({
       dataInicio: "2026-01-05",
       dataTermino: "2026-12-18",
@@ -334,6 +339,8 @@ test.describe("`RF-NAV-04` · a navegação empilha, e a vigência resolve pela 
     page,
   }) => {
     await abrirODsaPorClique(page, SEMEADO.turmaComRelogio);
+    /* Bloco 15 (`FR-010`): o campo de data mora atrás do ícone *Escolher semana*, na barra. */
+    await abrirOCampoDaSemana(page);
     const campo = page.getByLabel("Ir para a semana do dia");
     const parametro = (nome: string) => new URL(page.url()).searchParams.get(nome);
 
@@ -348,29 +355,39 @@ test.describe("`RF-NAV-04` · a navegação empilha, e a vigência resolve pela 
     await expect.poll(() => parametro("semana")).toBe(String(SEMANA));
     expect(parametro("ano")).toBe(String(ANO));
     expect(parametro("sabado"), "o sábado aberto se perdeu na escolha da data").toBe("sim");
-    await expect(page.locator('[data-slot="tela-semana"]')).toHaveText(
+    await expect(page.locator('[data-slot="semana-atual"]')).toContainText(
       semanaDaSemente(ANO, SEMANA),
     );
-    await expect(page.locator('[data-slot="tela-periodo"]')).toContainText("06/04/2026");
+    await expect(page.locator('[data-slot="semana-atual"]')).toContainText("06/04 a ");
 
     /* ── ⚠️ A virada do ano ISO: 01/01/2027 é da semana 53 de 2026 ──────────────────────────── */
+    /*
+     * ⚠️ Escolhido o dia, a semana nova FECHA o calendário (a seção da semana é remontada pela `key` de semana, que zera
+     * a edição das assinaturas): para escolher outro dia, abre-se o ícone de novo — como a pessoa faz.
+     */
+    await abrirOCampoDaSemana(page);
     await campo.fill("2027-01-01");
     await expect.poll(() => parametro("semana")).toBe("53");
     expect(parametro("ano"), "o ano da URL é o ISO, não o do calendário").toBe("2026");
-    /* A semente fecha a turma em 18/12/2026: a semana 53 já não é do curso, e sai «—» (FR-009.6). */
-    await expect(page.locator('[data-slot="tela-semana"]')).toHaveText("Semana do curso: —");
-    await expect(page.locator('[data-slot="tela-periodo"]')).toContainText("28/12/2026");
+    /*
+     * A semente fecha a turma em 18/12/2026: a semana 53 já não é do curso (FR-009.6), e a linha única sai SEM o pedaço
+     * da semana (D-25 da spec 030) — e com as datas inteiras, porque a semana atravessa o ano.
+     */
+    await expect(page.locator('[data-slot="semana-atual"]')).not.toContainText(/Semana \d/);
+    await expect(page.locator('[data-slot="semana-atual"]')).toContainText("28/12/2026 a ");
 
     /* Saindo do campo, ele volta a mostrar a segunda-feira da semana aberta. */
+    await abrirOCampoDaSemana(page);
     await campo.blur();
     await expect(campo).toHaveValue("2026-12-28");
 
     /* ⚠️ `RF-NAV-04`: escolher pela data também EMPILHA — voltar retorna à semana da quarta. */
     await page.goBack();
     await expect.poll(() => parametro("semana")).toBe(String(SEMANA));
-    await expect(page.locator('[data-slot="tela-semana"]')).toHaveText(
+    await expect(page.locator('[data-slot="semana-atual"]')).toContainText(
       semanaDaSemente(ANO, SEMANA),
     );
+    await abrirOCampoDaSemana(page);
     await expect(campo).toHaveValue(SEGUNDA);
   });
 
@@ -420,9 +437,10 @@ test.describe("`RF-NAV-04` · a navegação empilha, e a vigência resolve pela 
       `Trocamos o ano pelo corrente, ${anoCorrente}, e mantivemos a semana 22.`,
     );
     await expect(aviso).not.toContainText("semana corrente");
-    await expect(page.locator('[data-slot="tela-semana"]')).toHaveText(
-      semanaDaSemente(anoCorrente, 22),
-    );
+    const semana22 = semanaDaSemente(anoCorrente, 22);
+    if (semana22 === "—")
+      await expect(page.locator('[data-slot="semana-atual"]')).not.toContainText(/Semana \d/);
+    else await expect(page.locator('[data-slot="semana-atual"]')).toContainText(semana22);
   });
 });
 
@@ -531,8 +549,9 @@ test.describe("`FR-011` · os três caminhos clicáveis até o DSA", () => {
    *    01/01/2027 — sem isso eles reprovariam sem defeito nenhum no produto.
    */
   async function inicioNoAnoDaSemente(page: Page): Promise<void> {
+    /* Bloco 15 (`FR-003`): o ano mora no cabeçalho do sistema. */
     const escolha = page.locator(
-      '[data-slot="cabecalho-do-inicio"] select[data-slot="ano-do-painel-escolha"]',
+      '[data-slot="cabecalho-do-app"] select[data-slot="ano-do-painel-escolha"]',
     );
     await escolha.selectOption(String(ANO));
     await expect(page.locator('[data-slot="turmas-do-ano"]')).toHaveAttribute(

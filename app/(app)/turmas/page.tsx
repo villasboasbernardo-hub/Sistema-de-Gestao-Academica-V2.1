@@ -41,7 +41,6 @@ import {
   GatilhoDePainel,
   ProvedorDePaineis,
 } from "@/components/ciaara/paineis-da-pagina";
-import { SeletorDeAno } from "@/components/ciaara/seletor-de-ano";
 import { excluirTurma } from "@/lib/acoes/turma";
 import { estadoDaExclusaoDaTurma } from "@/lib/dominio/exclusao-de-turma";
 import { anoEscolhido } from "@/lib/navegacao/ano-da-tela";
@@ -282,12 +281,6 @@ export default async function Turmas({
             </p>
           </div>
           <BarraDeAcoes rotulo="Ações das turmas">
-            <SeletorDeAno
-              ano={anoDoPainelEscolhido}
-              vigente={escolha.vigente}
-              origem={escolha.origem}
-              rota="/turmas"
-            />
             <GatilhoDePainel painel="filtros" contagem={ativos} />
             {recorte.error ? null : <GatilhoDePainel painel="estatisticas" />}
           </BarraDeAcoes>

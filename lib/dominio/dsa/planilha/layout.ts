@@ -53,15 +53,12 @@ export const P = {
   disciplinaDaCh: 30,
   noPapel: 31,
   taOcupado: 32,
-  taOcupadoSemEi: 33,
+  /* 33, 36, 38 e 40 ficaram livres no Bloco 15 (spec 030): eram as contas da linha fixa do Estudo Individual. */
   semana_indice: 34,
   /* apoio, na primeira linha de cada dia */
   bloqueio: 35,
-  eiNoDia: 36,
   ultimoTaFora: 37,
-  ultimoTa: 38,
   temLancamento: 39,
-  slotDoEi: 40,
   maxTaDoDia: 41,
   semPosicaoNoDia: 42,
   /* apoio, nas linhas sem posição */

@@ -31,7 +31,6 @@ import {
   GatilhoDePainel,
   ProvedorDePaineis,
 } from "@/components/ciaara/paineis-da-pagina";
-import { SeletorDeAno } from "@/components/ciaara/seletor-de-ano";
 import { SePodeVer } from "@/components/ciaara/SePodeVer";
 import { permissoesDoPerfil, pode } from "@/lib/autorizacao/matriz";
 import { escalaDeLinhas } from "@/lib/dominio/antiguidade";
@@ -321,12 +320,6 @@ export default async function Instrutores({
           <div className="flex flex-wrap items-center justify-between gap-3">
             <h1 className="text-texto text-lg font-semibold">Instrutores</h1>
             <BarraDeAcoes rotulo="Ações dos instrutores">
-              <SeletorDeAno
-                ano={ano}
-                vigente={escolha.vigente}
-                origem={escolha.origem}
-                rota="/instrutores"
-              />
               <GatilhoDePainel painel="filtros" contagem={ativos} />
               <GatilhoDePainel painel="estatisticas" />
               {/* ⚠️ Oculto para quem não pode criar — e a RLS nega se a ação vier por fora da tela. */}

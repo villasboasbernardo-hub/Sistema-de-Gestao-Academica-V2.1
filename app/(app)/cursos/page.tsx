@@ -34,7 +34,6 @@ import { usuarioDaSessao } from "@/lib/autorizacao/sessao";
 import { curriculoVigenteEm, type CurriculoParaVigencia } from "@/lib/dominio/curriculos";
 import { curriculoDeReferencia } from "@/lib/dominio/ano-escolhido";
 import { anoEscolhido } from "@/lib/navegacao/ano-da-tela";
-import { SeletorDeAno } from "@/components/ciaara/seletor-de-ano";
 import { indicadoresDoCatalogo } from "@/lib/dominio/indicadores-do-catalogo";
 import { hojeNaCiaara } from "@/lib/formato/ano-corrente";
 import { lerParametros } from "@/lib/navegacao/esquema";
@@ -128,12 +127,6 @@ export default async function Cursos({
         </p>
       </div>
       <BarraDeAcoes rotulo="Ações do catálogo">
-        <SeletorDeAno
-          ano={escolha.ano}
-          vigente={escolha.vigente}
-          origem={escolha.origem}
-          rota="/cursos"
-        />
         <GatilhoDePainel painel="filtros" contagem={ativos} />
         {error ? null : <GatilhoDePainel painel="estatisticas" />}
         <SePodeVer permissoes={permissoes} recurso="cursos" acao="criar">

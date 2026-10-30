@@ -211,6 +211,8 @@ describe("`DP-5` · mais de 1.000 lançamentos: a CH acumulada bate", () => {
       emConflito: new Set<string>(),
       ateODia: fim,
       hoje,
+      /* O acumulado não depende da janela (Bloco 15, `PEND-029-1`): só a situação a usa. */
+      periodoDaTurma: { inicio: null, termino: null },
     });
     for (const q of painel) {
       expect

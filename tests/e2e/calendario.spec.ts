@@ -76,7 +76,8 @@ async function abrirASemana(page: Page, email: string, turma: string): Promise<v
   await irAFichaDaTurma(page, email, turma);
   await page.locator('[data-slot="abrir-o-dsa"]').click();
   await irParaASemanaDoDia(page, SEGUNDA, SEMANA, ANO);
-  await expect(page.locator('[data-slot="controle-de-paradas"]')).toBeVisible();
+  /* Bloco 15 (D-19): o *Parar dia* mora na barra do DSA; as paradas da semana só aparecem quando há alguma. */
+  await expect(page.locator('[data-slot="parar-dia"]')).toBeVisible();
 }
 
 const celula = (page: Page, ta: number, dia: string) =>
@@ -130,7 +131,10 @@ test("SC-001 · parar todas as turmas pelo DSA, desfazer pelo DSA e lançar aula
   const dialogo = page.locator('[data-slot="dialogo-confirmacao"]');
   await expect(dialogo).toContainText("libera o dia em todas as turmas");
   await dialogo.getByRole("button", { name: "Desfazer" }).click();
-  await expect(resposta).toHaveText("Feriado desfeito: o dia está liberado.");
+  /* Bloco 15 (D-19): o *Desfazer* responde abaixo do cabeçalho, no slot dele; o *Parar dia*, abaixo da barra. */
+  await expect(page.locator('[data-slot="resposta-do-desfazer"]')).toHaveText(
+    "Feriado desfeito: o dia está liberado.",
+  );
   await expect(page.locator("[data-feriado]", { hasText: motivoDoDsa() })).toHaveCount(0);
   await expect(celula(page, 3, QUARTA)).toHaveAttribute("data-tom", "livre");
 
@@ -212,7 +216,8 @@ test("SC-002/SC-004 · a aba Calendário: cadastrar para turmas escolhidas, inat
   );
   await expect(celula(page, 3, QUINTA)).toHaveAttribute("data-tom", "bloqueada");
   await abrirASemana(page, ADMIN, S.turmaSemRelogio);
-  await expect(page.locator('[data-slot="controle-de-paradas"]')).toBeVisible();
+  /* Bloco 15 (D-19): o *Parar dia* mora na barra do DSA; as paradas da semana só aparecem quando há alguma. */
+  await expect(page.locator('[data-slot="parar-dia"]')).toBeVisible();
   await expect(page.locator("[data-feriado]", { hasText: nomeDoCalendario() })).toHaveCount(0);
 
   /* Desativar, com confirmação — pela aba, chegando pelo menu. */

@@ -19,9 +19,15 @@ import { describe, expect, it } from "vitest";
 
 const RAIZ = path.resolve(__dirname, "../..");
 
-/** Os verbos padrão (D-4 da spec 022), no começo do texto do botão. */
+/**
+ * Os verbos padrão (D-4 da spec 022), no começo do texto do botão.
+ *
+ * ⚠️ **E A NAVEGAÇÃO, DESDE O BLOCO 15** (spec 030, RT-1 emendada em 29/10/2026): as setas de semana e de carrossel, o
+ *    *Esta semana*, o *Pausar*, o sábado do DSA e o Estudo Individual da semana também são ícones — *"Só ícones, dica só
+ *    do verbo"*, Bernardo Villas Boas.
+ */
 const VERBO_PADRAO =
-  /^(Editar|Excluir|Desativar|Reativar|Inativar|Imprimir|Salvar|Gravar|Novo|Nova|Cadastrar|Acrescentar|Registrar|Declarar|Arquivar|Desarquivar|Descartar|Retirar|Baixar|Carregar|Substituir|Redefinir senha|Trocar situação|Desfazer|Parar dia|Limpar filtros|Enviar foto|Remover foto|Abrir o DSA|DSA da semana|Juntar|Claro|Noturno|Sistema)(?![\p{L}\p{N}])/u;
+  /^(Editar|Excluir|Desativar|Reativar|Inativar|Imprimir|Salvar|Gravar|Novo|Nova|Cadastrar|Acrescentar|Registrar|Declarar|Arquivar|Desarquivar|Descartar|Retirar|Baixar|Carregar|Substituir|Redefinir senha|Trocar situação|Desfazer|Parar dia|Limpar filtros|Enviar foto|Remover foto|Abrir o DSA|DSA da semana|Juntar|Claro|Noturno|Sistema|Semana anterior|Semana seguinte|Próxima semana|Esta semana|Anterior|Próximo|Pausar|Continuar|Abrir o sábado|Fechar o sábado|Lançar o Estudo Individual)(?![\p{L}\p{N}])/u;
 
 const BOTOES = new Set(["Button", "button", "Link", "a"]);
 const ONDE_O_TEXTO_CONTINUA = new Set([
@@ -127,6 +133,8 @@ describe("FR-001.4 · verbo de ação é botão de ícone", () => {
       "Desativar curso",
       "Novo instrutor",
       "Baixar planilha de contingência",
+      /* Bloco 15 (RT-1 emendada): até 29/10/2026 este era o exemplo de texto que NÃO se acusava. */
+      "Semana anterior",
     ]);
   });
 

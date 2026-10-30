@@ -36,10 +36,17 @@ import {
   ArrowLeftRight,
   Ban,
   Bell,
+  BookMinus,
+  BookPlus,
+  CalendarCheck,
   CalendarDays,
+  CalendarMinus,
+  CalendarPlus,
   CalendarSearch,
   ChartColumn,
   Check,
+  ChevronLeft,
+  ChevronRight,
   CirclePause,
   Clock,
   Download,
@@ -52,9 +59,12 @@ import {
   ListPlus,
   LoaderCircle,
   Merge,
+  Minimize2,
   Monitor,
   Moon,
+  Pause,
   Pencil,
+  Play,
   Plus,
   Power,
   Printer,
@@ -114,6 +124,22 @@ export const ICONE_DA_ACAO = {
   publicar: Stamp,
   /* Bloco 11 (RD-7): a semana dos DSA publicados no Início, pelo calendário. */
   "escolher-semana": CalendarSearch,
+  /*
+   * Bloco 15 (spec 030, RT-1 emendada): a navegação também é ícone — as setas da semana e do carrossel, a semana de hoje,
+   * o sábado do DSA, o Estudo Individual da semana, o rodapé do cartão do lançamento, a tela cheia e o Pausar.
+   */
+  voltar: ChevronLeft,
+  avancar: ChevronRight,
+  "esta-semana": CalendarCheck,
+  "abrir-sabado": CalendarPlus,
+  "fechar-sabado": CalendarMinus,
+  "lancar-ei": BookPlus,
+  "remover-ei": BookMinus,
+  cancelar: X,
+  fechar: X,
+  "sair-da-tela-cheia": Minimize2,
+  pausar: Pause,
+  continuar: Play,
 } as const satisfies Record<string, LucideIcon>;
 
 export type AcaoDeIcone = keyof typeof ICONE_DA_ACAO;
@@ -159,6 +185,18 @@ export const ROTULO_DA_ACAO: Readonly<Record<AcaoDeIcone, string | null>> = {
   limpar: "Limpar",
   publicar: "Publicar",
   "escolher-semana": "Escolher semana",
+  voltar: "Voltar",
+  avancar: "Avançar",
+  "esta-semana": "Ir para esta semana",
+  "abrir-sabado": "Abrir sábado",
+  "fechar-sabado": "Fechar sábado",
+  "lancar-ei": "Lançar EI",
+  "remover-ei": "Remover EI",
+  cancelar: "Cancelar",
+  fechar: "Fechar",
+  "sair-da-tela-cheia": "Sair da tela cheia",
+  pausar: "Pausar",
+  continuar: "Continuar",
 };
 
 /** A dica do botão: o verbo do vocabulário, ou o rótulo quando o verbo é ele (D-16). */

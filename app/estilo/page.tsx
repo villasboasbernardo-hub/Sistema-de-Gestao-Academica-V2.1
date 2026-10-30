@@ -343,7 +343,7 @@ export default function Vitrine() {
         <AmostraBarraDeProgresso />
       </Secao>
 
-      <Secao titulo="Carrossel — passa sozinho, pausa ao apontar e ao focar, anda por ← e →; parado com «reduzir movimento»">
+      <Secao titulo="Carrossel — passa sozinho, pausa ao apontar e ao focar, anda por ← e →; parado com «reduzir movimento»; o clique abre em tela cheia">
         <AmostraCarrossel />
       </Secao>
 

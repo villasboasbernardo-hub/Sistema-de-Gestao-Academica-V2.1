@@ -735,19 +735,47 @@
   }
 }
 
-/* Spec 024 (FR-010): a marca PRÉVIA — grande, inclinada e clara, sobre a folha, sem esconder o conteúdo. */
+/*
+ * Spec 024 (FR-010): a marca PRÉVIA — UMA palavra, grande e na diagonal da folha. ⚠️ **NA FRENTE DOS CARTÕES, BEM
+ * TRANSPARENTE E SEM CAPTURAR CLIQUE** (spec 030, `FR-008`, D-17 — conferência de Bernardo Villas Boas, 29/10/2026): *"a
+ * marca PRÉVIA atrás do conteúdo some quando a semana está toda lançada. Volte a marca para a FRENTE dos cartões, UMA
+ * palavra «PRÉVIA» só, grande e na diagonal, bem transparente (opacidade entre 0,08 e 0,12 …), sem capturar clique
+ * (pointer-events: none)."* Do Bloco 9 até ali ela ficava na frente, amarela a 0,35, e cobria o texto; no primeiro corte do
+ * Bloco 15 foi para trás (`z-index: -1`, com as colunas translúcidas), e os cartões opacos da semana cheia a cobriam inteira.
+ * ⚠️ **O MARINHO DO PAPEL A 0,10, E NÃO O AMARELO** (sonda de 29/10/2026 sobre a semana cheia, e o contraste calculado
+ *    com as cores deste arquivo): o amarelo a 0,12 quase não se vê sobre o branco (1,07:1) e ainda clareia mais o texto;
+ *    o marinho a 0,10 contrasta 1,23:1 com o branco, e o texto mais fraco do cartão — o título da avaliação sobre o verde
+ *    — fica em 5,40:1 (era 5,88:1), acima dos 4,5:1.
+ * ⚠️ **A CAMADA É A FOLHA, E SÓ A PALAVRA GIRA**: a camada cobre a folha e a recorta (`inset: 0` e `overflow: hidden`), e a
+ *    palavra segue a diagonal da A4 paisagem — `atan(210/297)`, 35,26°. Nada passa da folha: a impressão continua numa
+ *    página só (`SC-001` da spec 013). A folha é um contexto de empilhamento próprio (`isolation`), e a marca, por cima dos cartões
+ *    (`z-index: 2`) e das faixas (`1`).
+ */
 .dsa4 .dsa4-previa {
   position: absolute;
   inset: 0;
-  z-index: 5;
+  z-index: 3;
   display: flex;
   align-items: center;
   justify-content: center;
+  overflow: hidden;
   pointer-events: none;
-  font-size: 96pt;
-  font-weight: 800;
+  user-select: none;
+  color: var(--dsa4-marinho);
+  opacity: 0.1;
+}
+
+/* O espaço de depois da última letra, repetido antes da primeira: a palavra gira em torno do próprio centro. */
+.dsa4 .dsa4-previa > span {
+  padding-left: 0.2em;
+  font-size: 150pt;
+  font-weight: 700;
+  line-height: 1;
   letter-spacing: 0.2em;
-  color: var(--dsa4-amarelo);
-  opacity: 0.35;
-  transform: rotate(-24deg);
+  white-space: nowrap;
+  transform: rotate(-35.26deg);
+}
+
+.dsa4-com-previa {
+  isolation: isolate;
 }

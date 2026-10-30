@@ -11,6 +11,7 @@
  */
 import "server-only";
 
+import { conteudoComparavel } from "@/lib/dominio/dsa/publicacao";
 import type { criarClienteDeServidor } from "@/lib/supabase/server";
 
 import { COLUNAS_DA_TURMA_DO_DSA } from "../../(app)/turmas/[turma]/dsa/consulta";
@@ -71,18 +72,11 @@ export async function montarRetratoDaSemana(
   };
 }
 
-/** O que o RP-4 compara: o conteúdo da semana, sem o quadro acumulado nem a contagem «à frente» (D-8). */
+/**
+ * O que o RP-4 compara: o conteúdo da semana, sem o quadro acumulado nem a contagem «à frente» (D-8) — e, desde o
+ * Bloco 15, sem a linha fixa do Estudo Individual dos retratos antigos e sem a grade e a legenda, que derivam dos dias
+ * (`conteudoComparavel`, D-10 da spec 030).
+ */
 export function conteudoDaSemana(dados: DadosDoDocumento): unknown {
-  return {
-    curso: dados.curso,
-    semana: dados.semana,
-    semanaDoCurso: dados.semanaDoCurso,
-    primeiro: dados.primeiro,
-    ultimo: dados.ultimo,
-    alunos: dados.alunos,
-    dias: dados.dias,
-    grade: dados.grade,
-    legenda: dados.legenda,
-    assinaturas: dados.assinaturas,
-  };
+  return conteudoComparavel(dados);
 }

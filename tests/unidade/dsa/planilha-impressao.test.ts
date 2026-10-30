@@ -10,7 +10,6 @@ import { describe, expect, it } from "vitest";
 
 import { montarPlanilhaComGeometria } from "@/lib/dominio/dsa/planilha-de-contingencia";
 import type { CartaoDaGrade } from "@/lib/dominio/dsa/grade-do-papel";
-import { TEXTO_DO_ESTUDO_FIXO } from "@/lib/dominio/dsa/planilha/impressao";
 import { celulasComErro, calcularCaches } from "@/lib/planilha/pasta";
 
 import { lerImpressao, precalcular } from "./planilha/leitura-da-pasta";
@@ -160,13 +159,17 @@ describe.each(SEMANAS.map((s) => [s.numero, s] as const))("semana %i", (_, s) =>
     expect(lida.texto(6, 7)).toMatch(/^Período /);
   });
 
-  it("o Estudo Individual fixo no TA seguinte ao último lançado (`slotDoEstudoIndividual`)", () => {
+  /*
+   * Bloco 15 (spec 030, `FR-004`): a linha fixa do Estudo Individual saiu do papel e da planilha — o cartão de EI só
+   * existe quando há EI digitado. O papel desta semana não tem nenhum cartão de EI que não seja lançamento.
+   */
+  it("Bloco 15 · nenhum cartão de Estudo Individual que não foi lançado", () => {
     const grade = papel.grade;
     if (grade === null) return;
-    for (const c of grade.cartoes.filter((x) => x.linha.chave.startsWith("ei-"))) {
+    expect(grade.cartoes.filter((c) => c.linha.chave.startsWith("ei-2"))).toEqual([]);
+    for (const c of grade.cartoes.filter((x) => x.tipo === "estudo")) {
       const ta = (grade.faixas[c.faixaInicial] as { numero: number }).numero;
-      expect.soft(lida.slot(c.coluna)).toBe(ta);
-      expect.soft(lida.celula(c.coluna, ta)).toBe(TEXTO_DO_ESTUDO_FIXO);
+      expect.soft(lida.celula(c.coluna, ta)).not.toBe("");
     }
   });
 });

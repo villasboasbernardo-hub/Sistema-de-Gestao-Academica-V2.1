@@ -41,6 +41,7 @@ _Decisão de Bernardo Villas Boas, 19/10/2026._ Todo pedido de correção ou mud
 | **12** | Excluir no Calendário: exclusão lógica, sem bloqueio, com alerta de impacto (D-COR-7) — ✅ **concluído em 27/10/2026** | uma migration, que só acrescenta | 027 |
 | **13** | Abertura com a moeda do CIAARA na raiz — ✅ **concluído em 28/10/2026** | não | 028 |
 | **14** | DSA (TFM sem teto, EI sem «O que é», Salvar alteração), Início em nova ordem e as pendências dos Blocos 10 e 11 — ✅ **concluído em 29/10/2026** | uma migration, que só acrescenta | 029 |
+| **15** | Início (tela cheia, setas), ano no cabeçalho e ajustes do DSA (EI só lançado, abas de versão, barra única, cabeçalho numa linha) e a `PEND-029-1` — 🟨 **em conferência** | não | 030 |
 
 ---
 
@@ -654,10 +655,55 @@ desde 29/10/2026** pelo rito completo: backup `remoto-20261029-011810.sql`, **10
    recorte: Concluídas 0 → 13 e Canceladas 0 → 8 nos cartões do Início).
 8. **Início em nova ordem**: os DSA publicados no topo, com o papel enquadrado na janela; depois os cartões e o carrossel.
 
-**Pendências novas, achadas e não corrigidas** (texto na spec 029, §9): **`PEND-029-1`** (a «Atrasada» do DSA usa a
+**Pendências novas, achadas e não corrigidas** (texto na spec 029, §9): ~~**`PEND-029-1`**~~ (✅ **fechada pelo Bloco 15**,
+spec 030, FR-011: a «Atrasada» do DSA passa pela janela da carga; era: a «Atrasada» do DSA usa a
 previsão de um ano só, `vw_disciplinas_execucao`), **`PEND-029-2`** (habilitado inativo na ficha da turma),
 **`PEND-029-3`** (o «do curso» do saldo × o do DSA, com o D20 residual), **`PEND-029-4`** (turma sem período continua
 invisível ao alerta) e **`PEND-029-5`** (o `TipoTeto` do documento 04 nunca existiu no código).
+
+---
+
+## Bloco 15 — Início (tela cheia, setas), ano no cabeçalho e ajustes do DSA (spec própria) — 🟨 EM CONFERÊNCIA
+
+_Pedido de Bernardo Villas Boas, 29/10/2026, pelo `/corrigir`._ Spec `030-bloco-15-inicio-ano-e-dsa`, ramo
+`fix/BLOCO-15-inicio-ano-e-dsa`, um PR. **Sem banco.** Regras emendadas: **RT-1** (as setas e os grupos) e **RT-6** (o
+seletor no cabeçalho) em `padroes-de-tela.md`; **RD-2**, **RD-4**, **RD-6** e **RD-7** em `regras-do-dsa-lancamento.md`;
+**RP-3** (o histórico em abas) em `regras-da-publicacao-do-dsa.md`. ⚠️ **O papel do DSA muda** para a semana sem Estudo
+Individual lançado (a linha fixa sai — item 4): o merge espera a virada de semana.
+
+1. **Tela cheia**: clicar no papel do DSA no Início (ou `Enter` nele) abre o papel ampliado ao máximo que cabe, com *Sair
+   da tela cheia*, `Esc` e as setas do carrossel (D-2, D-3, D-22).
+2. **Setas (RT-1)**: a semana com as setas nos cantos e as datas curtas no centro, com o calendário; o carrossel com as
+   setas nas laterais, no meio da altura — nos dois carrosséis do Início (D-4); dica *Voltar*/*Avançar* (D-5).
+3. **Ano no cabeçalho (RT-6)**: um seletor só, antes do sininho; saem os sete das páginas; na página sem ano no endereço,
+   a escolha vai só para o cookie (D-7); o `ano` da semana ISO do DSA não é tocado.
+4. **Estudo Individual só lançado** 🐛: o que «voltava» era a **linha fixa sintética** do papel e da grade (nada relançava
+   EI ao abrir a semana — medido). Ela sai da tela, da prévia, do papel e da planilha (D-9); *Remover EI* na barra, a
+   exclusão pelo cartão e o *Lançar EI* em ícone (D-11, D-12). Os retratos publicados não mudam, e o RP-4 compara os
+   campos de origem (D-10).
+5. **Editar antes de publicar, sem ALT**: ✅ **já estava feito** (`situacaoDaSemana`: a trava só nasce da publicação; a
+   prévia não grava evento) — provado por caso novo de ponta a ponta.
+6. **Cartão do lançamento**: *Salvar · Cancelar · Excluir* em ícones, juntos no canto inferior esquerdo; a disciplina por
+   extenso e quem ministra no título (D-13).
+7. **Abas de versão**: *Minuta · Original · ALT N* no lugar de *Versões publicadas*, com o papel de cada versão e
+   *Reimprimir*; `?versao=` (D-15, D-23).
+8. **PRÉVIA** — *ajustada na conferência de 29/10/2026*: **na frente** dos cartões, uma palavra só, 150 pt na diagonal da
+   folha, no marinho a 0,10, sem capturar clique (D-17). Atrás, como no primeiro corte, ela sumia na semana com todos os
+   tempos lançados; o caso de ponta a ponta usa essa semana. O carrossel do Início só mostra papel publicado, sem marca
+   (D-27).
+9. **Cabeçalho do DSA numa linha** 🐛: *código (link) · Semana N de T · 26/10 a 31/10/2026*; saem *Voltar à turma*, o ano
+   solto e o quadro *Semana do curso / Período / Alunos* da tela; em *Editar turma*, o código vira o link da ficha.
+10. **Barra única do DSA (RD-6)**: navegação | lançamento | publicação, só ícones; as paradas da semana ficam abaixo do
+    cabeçalho (D-19).
+11. **`PEND-029-1`** 🐛: a «Atrasada» do DSA pela janela da carga (D-21) — medido no remoto (29/10/2026, só leitura, a
+    regra inteira de `estaAtrasada`): de 38 linhas «Atrasada» para 18; as 20 que mudam são da CAHO 2027.
+
+**O que a verificação achou e mudou** (spec 030, §11): o seletor de ano saiu do `Suspense` — com a reserva, toda página
+aberta por endereço tinha, por um instante, dois seletores, e o visível mostrava o ano guardado em vez do `?ano=`; e a tela
+cheia, aberta pelo teclado, pedia dois `Esc` (o primeiro fechava só a dica do ícone) — agora o foco vai para a própria
+sobreposição. Os dois têm caso de ponta a ponta visto reprovar com o defeito de volta.
+
+**Pendências novas:** nenhuma. A `PEND-025-2` (a lateral não lê o `?ano=`) continua como estava (D-8).
 
 ---
 

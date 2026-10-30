@@ -5,6 +5,7 @@
 import { describe, expect, it } from "vitest";
 
 import {
+  conteudoComparavel,
   documentosIguais,
   rotuloDoAlt,
   situacaoDaSemana,
@@ -236,5 +237,69 @@ describe("documentosIguais", () => {
   it("compara pelo conteúdo, sem a ordem das chaves", () => {
     expect(documentosIguais({ a: 1, b: [1, 2] }, { b: [1, 2], a: 1 })).toBe(true);
     expect(documentosIguais({ a: 1 }, { a: 2 })).toBe(false);
+  });
+});
+
+/*
+ * Bloco 15 (spec 030, `FR-004.4`, D-10): o retrato publicado com a linha FIXA do Estudo Individual (que o papel
+ * desenhava sozinho até 29/10/2026) e o papel de hoje, sem ela, com o MESMO dado, são o mesmo papel — senão 4 originais
+ * e 1 ALT do remoto passariam a acusar «alterado desde a publicação» sem ninguém ter mexido na semana.
+ */
+describe("conteudoComparavel — a linha fixa dos retratos antigos não conta (Bloco 15, D-10)", () => {
+  const aula = {
+    chave: "9f1c2d3e-0000-4000-8000-000000000001",
+    conteudo: "Aula",
+    estudoIndividual: false,
+  };
+  const fixa = { chave: "ei-2026-10-05", conteudo: "ESTUDO INDIVIDUAL", estudoIndividual: true };
+  const base = {
+    curso: "C-Ap-HN",
+    semana: { ano: 2026, numero: 41 },
+    semanaDoCurso: 30,
+    primeiro: "2026-10-05",
+    ultimo: "2026-10-10",
+    alunos: 16,
+    assinaturas: { esquerda: null, direita: null },
+  };
+  const retratoAntigo = {
+    ...base,
+    dias: [{ data: "2026-10-05", linhas: [aula, fixa] }],
+    grade: { cartoes: ["aula", "fixa"] },
+    legenda: [{ sigla: "EI" }, { sigla: "EO" }],
+  };
+  const papelDeHoje = {
+    ...base,
+    dias: [{ data: "2026-10-05", linhas: [aula] }],
+    grade: { cartoes: ["aula"] },
+    legenda: [{ sigla: "EO" }],
+  };
+
+  it("⚠️ o caso que discrimina: o retrato com a linha fixa e o papel de hoje sem ela são IGUAIS", () => {
+    expect(documentosIguais(retratoAntigo, papelDeHoje)).toBe(false);
+    expect(
+      documentosIguais(conteudoComparavel(retratoAntigo), conteudoComparavel(papelDeHoje)),
+    ).toBe(true);
+  });
+
+  it("controle: a aula que mudou continua acusando a alteração", () => {
+    const mudou = {
+      ...papelDeHoje,
+      dias: [{ data: "2026-10-05", linhas: [{ ...aula, conteudo: "Outra" }] }],
+    };
+    expect(documentosIguais(conteudoComparavel(retratoAntigo), conteudoComparavel(mudou))).toBe(
+      false,
+    );
+  });
+
+  it("controle: o EI LANÇADO (chave do fato) conta — ele é dado, não a linha fixa", () => {
+    const lancado = {
+      chave: "9f1c2d3e-0000-4000-8000-000000000002",
+      conteudo: "ESTUDO INDIVIDUAL",
+      estudoIndividual: true,
+    };
+    const comEi = { ...papelDeHoje, dias: [{ data: "2026-10-05", linhas: [aula, lancado] }] };
+    expect(documentosIguais(conteudoComparavel(papelDeHoje), conteudoComparavel(comEi))).toBe(
+      false,
+    );
   });
 });

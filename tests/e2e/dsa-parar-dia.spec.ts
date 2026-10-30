@@ -97,9 +97,8 @@ test("US4 · parar os tempos 6 e 7 da sexta bloqueia só eles, e desfazer devolv
   await expect(celula(page, 7)).toHaveAttribute("data-tom", "bloqueada");
   await expect(celula(page, 5)).toHaveAttribute("data-tom", "livre");
   /*
-   * ⚠️ RD-2 (Bloco 11): o 8º tempo da sexta é a linha fixa do Estudo Individual — o último tempo do regime, a mesma
-   *    regra do papel (D-9). Até ali ela caía no tempo seguinte ao último lançado, e o 8 ficava livre. O que importa
-   *    aqui continua igual: a parada não o bloqueou.
+   * ⚠️ O 8º tempo da sexta era a linha fixa do Estudo Individual (RD-2, Bloco 11), que saiu no Bloco 15 (`FR-004`): o
+   *    tempo está livre. O que importa aqui continua igual: a parada não o bloqueou.
    */
   await expect(celula(page, 8)).not.toHaveAttribute("data-tom", "bloqueada");
 
@@ -111,7 +110,7 @@ test("US4 · parar os tempos 6 e 7 da sexta bloqueia só eles, e desfazer devolv
   expect(gravada).toEqual({ status: "ativo", ta_inicial: 6, tempos: 2, prevista: true });
 
   await chip.locator('[data-slot="desfazer-parada"]').click();
-  await expect(page.locator('[data-slot="resposta-da-parada"]')).toHaveText("Parada desfeita.");
+  await expect(page.locator('[data-slot="resposta-do-desfazer"]')).toHaveText("Parada desfeita.");
   await expect(page.locator("[data-parada]", { hasText: MOTIVO })).toHaveCount(0);
   const { data: desfeita } = await banco()
     .from("dias_parados")
@@ -183,6 +182,6 @@ test("SC-012 · LA NÃO prevista consome Tempo Reserva (+2), sai no papel e volt
     .locator("[data-parada]", { hasText: motivo })
     .locator('[data-slot="desfazer-parada"]')
     .click();
-  await expect(page.locator('[data-slot="resposta-da-parada"]')).toHaveText("Parada desfeita.");
+  await expect(page.locator('[data-slot="resposta-do-desfazer"]')).toHaveText("Parada desfeita.");
   await expect.poll(trDaTurma).toBe(antes);
 });

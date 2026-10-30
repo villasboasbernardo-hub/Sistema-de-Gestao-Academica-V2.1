@@ -21,7 +21,6 @@
 import { estadosPorRegistro, type ImpedimentosDoRegistro } from "@/lib/dominio/exclusao-permanente";
 import { redirect } from "next/navigation";
 
-import { SeletorDeAno } from "@/components/ciaara/seletor-de-ano";
 import { excluirTurma } from "@/lib/acoes/turma";
 import { curriculoDeReferencia } from "@/lib/dominio/ano-escolhido";
 import { idsArquivados } from "@/lib/dominio/arquivamento-da-turma";
@@ -477,12 +476,6 @@ export default async function PaginaDoCurso({
            banco recusa de qualquer forma (`FR-017.8` da spec 009).
       */}
         <div className="flex flex-wrap items-center justify-end gap-2">
-          <SeletorDeAno
-            ano={escolha.ano}
-            vigente={escolha.vigente}
-            origem={escolha.origem}
-            rota="/cursos/[curso]"
-          />
           <BarraDoCurso
             sigla={curso.codigo as string}
             ativo={cursoAtivo}

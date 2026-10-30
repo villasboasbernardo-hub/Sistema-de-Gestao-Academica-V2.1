@@ -12,7 +12,11 @@
  *    aparecem só para quem tem `calendario.editar` (`podeDesfazerGlobal`) — o banco recusaria os outros —, e o do
  *    feriado pede confirmação: ele libera o dia em todas as turmas que alcança.
  * ⚠️ **O FORMULÁRIO ABRE NUM DIÁLOGO** (spec 022, Bloco 7, FR-002): até o Bloco 7 ele abria abaixo do botão. A recusa e
- *    o pedido de confirmação ficam no diálogo; a resposta da gravação, abaixo do botão.
+ *    o pedido de confirmação ficam no diálogo; a resposta da gravação, abaixo da barra.
+ * ⚠️ **DUAS PEÇAS DESDE O BLOCO 15** (spec 030, `FR-010`, D-19): o ícone *Parar dia* com o diálogo (`PararDia`) mora na
+ *    **barra** do DSA, no grupo de lançamento — *"mover para a barra de ícones do canto superior direito (…) o Parar
+ *    dia"*, Bernardo Villas Boas, 29/10/2026 —, e as paradas e os feriados da semana com o *Desfazer*
+ *    (`ParadasDaSemana`) ficam abaixo do cabeçalho, onde estavam.
  */
 import { useRouter } from "next/navigation";
 import * as React from "react";
@@ -73,28 +77,22 @@ type Resposta =
   | { readonly ok: true }
   | { readonly ok: false; readonly erro: string; readonly lancamentosNoDia?: number };
 
-export function ControleDeParadas({
+/** O ícone *Parar dia* e o diálogo do formulário — na barra do DSA (Bloco 15, D-19). */
+export function PararDia({
   turmaId,
   dias,
   tipos,
   podeGlobal,
-  podeDesfazerGlobal = false,
-  paradas,
-  feriados = [],
   pararDia,
-  desfazerParada,
+  aoResponder,
 }: {
   readonly turmaId: string;
   readonly dias: readonly string[];
   readonly tipos: readonly TipoDeParada[];
   readonly podeGlobal: boolean;
-  /** Spec 023 (FR-002, FR-004): `calendario.editar` — o *Desfazer* do feriado e das paradas globais. */
-  readonly podeDesfazerGlobal?: boolean;
-  readonly paradas: readonly ParadaNaSemana[];
-  /** Spec 023 (FR-001): os feriados de dia inteiro da semana que alcançam a turma. */
-  readonly feriados?: readonly FeriadoDaFaixa[];
   readonly pararDia: (entrada: unknown) => Promise<Resposta>;
-  readonly desfazerParada: (entrada: unknown) => Promise<Resposta>;
+  /** A resposta da gravação, que a barra publica abaixo dela, em largura total. */
+  readonly aoResponder: (texto: string) => void;
 }) {
   const router = useRouter();
   const [aberto, setAberto] = React.useState(false);
@@ -107,8 +105,7 @@ export function ControleDeParadas({
   const [tempos, setTempos] = React.useState("1");
   const [prevista, setPrevista] = React.useState(true);
   const [consomeTr, setConsomeTr] = React.useState(false);
-  const [resposta, setResposta] = React.useState<string | null>(null);
-  /* A recusa da gravação fica no diálogo, com o que foi preenchido; a resposta, abaixo do botão. */
+  /* A recusa da gravação fica no diálogo, com o que foi preenchido; a resposta, abaixo da barra. */
   const [recusa, setRecusa] = React.useState<string | null>(null);
   const [confirmar, setConfirmar] = React.useState<number | null>(null);
   const [gravando, iniciar] = React.useTransition();
@@ -118,7 +115,6 @@ export function ControleDeParadas({
 
   const enviar = (confirmado: boolean) =>
     iniciar(async () => {
-      setResposta(null);
       setRecusa(null);
       const r = await pararDia({
         turmaId,
@@ -142,10 +138,177 @@ export function ControleDeParadas({
         setRecusa(r.erro);
         return;
       }
-      setResposta("Dia parado registrado.");
+      aoResponder("Dia parado registrado.");
       setAberto(false);
       router.refresh();
     });
+
+  return (
+    <DialogoDeFormulario
+      titulo="Parar dia"
+      largo
+      slot="formulario-de-parada"
+      aberto={aberto}
+      aoMudar={(v) => {
+        setAberto(v);
+        if (!v) {
+          setConfirmar(null);
+          setRecusa(null);
+        }
+      }}
+      gatilho={<BotaoDeIcone acao="parar-dia" rotulo="Parar dia" data-slot="parar-dia" />}
+    >
+      {() => (
+        <form
+          className="grid gap-2 text-sm md:grid-cols-3"
+          onSubmit={(e) => {
+            e.preventDefault();
+            enviar(false);
+          }}
+        >
+          <EscolhaSimples
+            id="parada-dia"
+            rotulo="Dia"
+            opcoes={dias.map((d) => ({ valor: d, rotulo: dataParaLeitura(d) }))}
+            valor={data}
+            aoMudar={setData}
+          />
+          <EscolhaSimples
+            id="parada-tipo"
+            rotulo="Tipo de parada"
+            opcoes={tipos.map((t) => ({ valor: t.id, rotulo: t.rotulo }))}
+            valor={tipoId}
+            aoMudar={setTipoId}
+          />
+          <label className="flex flex-col gap-1">
+            <span className="text-texto-suave text-xs">Motivo</span>
+            <input
+              id="parada-motivo"
+              value={motivo}
+              onChange={(e) => setMotivo(e.target.value)}
+              className="border-borda-forte bg-superficie rounded-ciaara border px-2 py-1"
+            />
+          </label>
+          {podeTodas ? (
+            <label className="flex items-center gap-2">
+              <input
+                type="checkbox"
+                checked={alcance === "todas"}
+                onChange={(e) => setAlcance(e.target.checked ? "todas" : "turma")}
+                data-slot="parada-de-todas"
+              />
+              Todas as turmas
+            </label>
+          ) : null}
+          <label className="flex items-center gap-2">
+            <input
+              type="checkbox"
+              checked={diaInteiro}
+              onChange={(e) => setDiaInteiro(e.target.checked)}
+            />
+            Dia inteiro
+          </label>
+          {diaInteiro ? null : (
+            <span className="flex items-center gap-2">
+              <label className="flex items-center gap-1">
+                Do tempo
+                <input
+                  type="number"
+                  min={1}
+                  max={12}
+                  value={taInicial}
+                  onChange={(e) => setTaInicial(e.target.value)}
+                  className="border-borda-forte bg-superficie rounded-ciaara w-14 border px-1"
+                />
+              </label>
+              <label className="flex items-center gap-1">
+                quantos
+                <input
+                  type="number"
+                  min={1}
+                  max={12}
+                  value={tempos}
+                  onChange={(e) => setTempos(e.target.value)}
+                  className="border-borda-forte bg-superficie rounded-ciaara w-14 border px-1"
+                />
+              </label>
+            </span>
+          )}
+          <label className="flex items-center gap-2">
+            <input
+              type="checkbox"
+              checked={prevista}
+              onChange={(e) => {
+                setPrevista(e.target.checked);
+                if (e.target.checked) setConsomeTr(false);
+              }}
+            />
+            Prevista no calendário
+          </label>
+          {!prevista && (tipo?.aceitaTr ?? false) ? (
+            <label className="flex items-center gap-2">
+              <input
+                type="checkbox"
+                checked={consomeTr}
+                onChange={(e) => setConsomeTr(e.target.checked)}
+                data-slot="consome-tempo-reserva"
+              />
+              Não prevista — consome Tempo Reserva
+            </label>
+          ) : null}
+          {recusa ? (
+            <p role="alert" className="text-conflito-tinta text-sm md:col-span-3">
+              {recusa}
+            </p>
+          ) : null}
+          {confirmar !== null ? (
+            <p
+              role="status"
+              className="text-atrasado-tinta text-xs md:col-span-3"
+              data-slot="confirmar-parada"
+            >
+              Há {confirmar} lançamento(s) neste dia; eles ficam, e a parada impede aula nova.{" "}
+              <button type="button" className="underline" onClick={() => enviar(true)}>
+                Parar mesmo assim
+              </button>
+            </p>
+          ) : null}
+          <DialogFooter className="md:col-span-3">
+            <Button type="button" size="sm" variant="ghost" onClick={() => setAberto(false)}>
+              Cancelar
+            </Button>
+            <Button type="submit" size="sm" disabled={gravando} data-slot="gravar-parada">
+              {gravando ? "Gravando…" : "Registrar parada"}
+            </Button>
+          </DialogFooter>
+        </form>
+      )}
+    </DialogoDeFormulario>
+  );
+}
+
+/**
+ * As paradas e os feriados de dia inteiro da semana, com o *Desfazer* — abaixo do cabeçalho (Bloco 15, D-19). Sem
+ * nenhum, nada é desenhado.
+ */
+export function ParadasDaSemana({
+  turmaId,
+  podeDesfazerGlobal = false,
+  paradas,
+  feriados = [],
+  desfazerParada,
+}: {
+  readonly turmaId: string;
+  /** Spec 023 (FR-002, FR-004): `calendario.editar` — o *Desfazer* do feriado e das paradas globais. */
+  readonly podeDesfazerGlobal?: boolean;
+  readonly paradas: readonly ParadaNaSemana[];
+  /** Spec 023 (FR-001): os feriados de dia inteiro da semana que alcançam a turma. */
+  readonly feriados?: readonly FeriadoDaFaixa[];
+  readonly desfazerParada: (entrada: unknown) => Promise<Resposta>;
+}) {
+  const router = useRouter();
+  const [resposta, setResposta] = React.useState<string | null>(null);
+  const [gravando, iniciar] = React.useTransition();
 
   const desfazer = (p: Pick<ParadaNaSemana, "destino" | "codigo">) =>
     iniciar(async () => {
@@ -160,149 +323,10 @@ export function ControleDeParadas({
       if (r.ok) router.refresh();
     });
 
+  if (paradas.length === 0 && feriados.length === 0 && resposta === null) return null;
   return (
     <div className="flex flex-col gap-2" data-slot="controle-de-paradas">
       <div className="flex flex-wrap items-center gap-2">
-        <DialogoDeFormulario
-          titulo="Parar dia"
-          largo
-          slot="formulario-de-parada"
-          aberto={aberto}
-          aoMudar={(v) => {
-            setAberto(v);
-            if (!v) {
-              setConfirmar(null);
-              setRecusa(null);
-            }
-          }}
-          gatilho={<BotaoDeIcone acao="parar-dia" rotulo="Parar dia" data-slot="parar-dia" />}
-        >
-          {() => (
-            <form
-              className="grid gap-2 text-sm md:grid-cols-3"
-              onSubmit={(e) => {
-                e.preventDefault();
-                enviar(false);
-              }}
-            >
-              <EscolhaSimples
-                id="parada-dia"
-                rotulo="Dia"
-                opcoes={dias.map((d) => ({ valor: d, rotulo: dataParaLeitura(d) }))}
-                valor={data}
-                aoMudar={setData}
-              />
-              <EscolhaSimples
-                id="parada-tipo"
-                rotulo="Tipo de parada"
-                opcoes={tipos.map((t) => ({ valor: t.id, rotulo: t.rotulo }))}
-                valor={tipoId}
-                aoMudar={setTipoId}
-              />
-              <label className="flex flex-col gap-1">
-                <span className="text-texto-suave text-xs">Motivo</span>
-                <input
-                  id="parada-motivo"
-                  value={motivo}
-                  onChange={(e) => setMotivo(e.target.value)}
-                  className="border-borda-forte bg-superficie rounded-ciaara border px-2 py-1"
-                />
-              </label>
-              {podeTodas ? (
-                <label className="flex items-center gap-2">
-                  <input
-                    type="checkbox"
-                    checked={alcance === "todas"}
-                    onChange={(e) => setAlcance(e.target.checked ? "todas" : "turma")}
-                    data-slot="parada-de-todas"
-                  />
-                  Todas as turmas
-                </label>
-              ) : null}
-              <label className="flex items-center gap-2">
-                <input
-                  type="checkbox"
-                  checked={diaInteiro}
-                  onChange={(e) => setDiaInteiro(e.target.checked)}
-                />
-                Dia inteiro
-              </label>
-              {diaInteiro ? null : (
-                <span className="flex items-center gap-2">
-                  <label className="flex items-center gap-1">
-                    Do tempo
-                    <input
-                      type="number"
-                      min={1}
-                      max={12}
-                      value={taInicial}
-                      onChange={(e) => setTaInicial(e.target.value)}
-                      className="border-borda-forte bg-superficie rounded-ciaara w-14 border px-1"
-                    />
-                  </label>
-                  <label className="flex items-center gap-1">
-                    quantos
-                    <input
-                      type="number"
-                      min={1}
-                      max={12}
-                      value={tempos}
-                      onChange={(e) => setTempos(e.target.value)}
-                      className="border-borda-forte bg-superficie rounded-ciaara w-14 border px-1"
-                    />
-                  </label>
-                </span>
-              )}
-              <label className="flex items-center gap-2">
-                <input
-                  type="checkbox"
-                  checked={prevista}
-                  onChange={(e) => {
-                    setPrevista(e.target.checked);
-                    if (e.target.checked) setConsomeTr(false);
-                  }}
-                />
-                Prevista no calendário
-              </label>
-              {!prevista && (tipo?.aceitaTr ?? false) ? (
-                <label className="flex items-center gap-2">
-                  <input
-                    type="checkbox"
-                    checked={consomeTr}
-                    onChange={(e) => setConsomeTr(e.target.checked)}
-                    data-slot="consome-tempo-reserva"
-                  />
-                  Não prevista — consome Tempo Reserva
-                </label>
-              ) : null}
-              {recusa ? (
-                <p role="alert" className="text-conflito-tinta text-sm md:col-span-3">
-                  {recusa}
-                </p>
-              ) : null}
-              {confirmar !== null ? (
-                <p
-                  role="status"
-                  className="text-atrasado-tinta text-xs md:col-span-3"
-                  data-slot="confirmar-parada"
-                >
-                  Há {confirmar} lançamento(s) neste dia; eles ficam, e a parada impede aula nova.{" "}
-                  <button type="button" className="underline" onClick={() => enviar(true)}>
-                    Parar mesmo assim
-                  </button>
-                </p>
-              ) : null}
-              <DialogFooter className="md:col-span-3">
-                <Button type="button" size="sm" variant="ghost" onClick={() => setAberto(false)}>
-                  Cancelar
-                </Button>
-                <Button type="submit" size="sm" disabled={gravando} data-slot="gravar-parada">
-                  {gravando ? "Gravando…" : "Registrar parada"}
-                </Button>
-              </DialogFooter>
-            </form>
-          )}
-        </DialogoDeFormulario>
         {paradas.map((p) => (
           <span
             key={p.codigo}
@@ -357,7 +381,11 @@ export function ControleDeParadas({
       </div>
 
       {resposta ? (
-        <p role="status" className="text-texto text-sm" data-slot="resposta-da-parada">
+        /*
+          ⚠️ Slot PRÓPRIO (Bloco 15): a resposta do *Parar dia* agora sai da barra (`resposta-da-parada`), e as duas podem
+             estar na tela ao mesmo tempo — parar e, em seguida, desfazer.
+        */
+        <p role="status" className="text-texto text-sm" data-slot="resposta-do-desfazer">
           {resposta}
         </p>
       ) : null}

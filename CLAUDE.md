@@ -340,13 +340,14 @@ dela teria os cadastros e nenhuma senha; as contas se refazem **pelo cadastro do
   rota do sistema, como se fossem links; só o defeito deliberado mostrou. O **percurso por clique**
   de cada tela fica nos casos de ponta a ponta, e ali `goto` só é aceitável para chegar ao **ponto de
   partida**.
-- **Padrões de tela RT-1 a RT-8** *(decisões de Bernardo Villas Boas, 24 e 28/10/2026 — Blocos 10 e 14)*:
+- **Padrões de tela RT-1 a RT-8** *(decisões de Bernardo Villas Boas, 24, 28 e 29/10/2026 — Blocos 10, 14 e 15)*:
   `docs/correcoes/padroes-de-tela.md`. Valem para **toda tela, nova ou antiga**, e se leem antes de criar
-  ou mexer em tela: ações no canto superior direito como ícone cuja dica é só o verbo (RT-1); todo
+  ou mexer em tela: ações no canto superior direito como ícone cuja dica é só o verbo — e as setas de
+  navegação também, nos cantos ou nas laterais (RT-1, *29/10/2026*); todo
   cadastro com Editar, Desativar/Reativar e Excluir, e nunca "Inativar" (RT-2); edição só em diálogo ou
   página própria, um Editar por entidade (RT-3); Filtros e Estatísticas como ícones que abrem painel
   recolhível (RT-4); todo gráfico interativo (RT-5); um ano escolhido para todos os módulos, padrão o de
-  hoje (RT-6) — ⚠️ **e o ano de toda informação ligada a turma é o ANO DA TURMA, nunca a data do registro
+  hoje, num **seletor só, no cabeçalho do sistema** (RT-6; o seletor saiu das páginas em *29/10/2026 — Bloco 15*) — ⚠️ **e o ano de toda informação ligada a turma é o ANO DA TURMA, nunca a data do registro
   nem a janela da atribuição** *(Bernardo Villas Boas, 24/10/2026)*; cartões de indicadores juntos e iguais
   (RT-7); e a turma **arquivada** sai das listas do dia a dia (carrossel, submenu, listas de escolha e de
   ativas, avisos), mas **continua contando** nas estatísticas e nos cartões do **ano dela**, com a situação que

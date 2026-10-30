@@ -106,8 +106,8 @@ test.describe("o cabeçalho e o rodapé do papel, na tela", () => {
     page,
   }) => {
     await abrirASemana(page);
-    await expect(page.locator('[data-slot="cabecalho-da-semana"]')).toContainText("Período");
-    await expect(page.locator('[data-slot="tela-periodo"]')).toContainText("06/04/2026");
+    /* Bloco 15 (`FR-009`): a semana numa linha só, sob o título — o quadro *Período* da tela saiu. */
+    await expect(page.locator('[data-slot="semana-atual"]')).toContainText("06/04 a ");
     await expect(page.locator('[data-slot="rodape-da-semana"]')).toContainText("Carga horária");
     await expect(page.locator('[data-slot="tela-assinaturas"]')).toContainText("Assinaturas");
     /* ⚠️ Uma versão só: a seção antiga «O documento desta semana» não existe mais. */

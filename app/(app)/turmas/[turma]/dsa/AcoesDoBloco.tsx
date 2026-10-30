@@ -25,6 +25,13 @@
  *
  * ⚠️ **FOLHA DE CLIENTE, DECLARADA.** As ações chegam por propriedade (Princípio XI); quem decide é a
  * Server Action (`atualizar`), e quem impõe é o banco.
+ *
+ * ⚠️ **AS AÇÕES SÃO ÍCONES, JUNTOS NO CANTO INFERIOR ESQUERDO** (Bloco 15, spec 030, `FR-006`; emenda a D-3 da spec 022
+ *    só para este cartão): *"os botões do cartão (editar, mover, excluir etc.) viram só ícones, sem texto, juntos no
+ *    canto inferior esquerdo, com dica só do verbo. Nome da disciplina e instrutor continuam legíveis"* — Bernardo Villas
+ *    Boas, 29/10/2026. *Salvar* grava a edição e o movimento; *Cancelar* fecha sem gravar (e vira *Fechar* depois de
+ *    gravar com aviso — o *Entendi* saiu); *Excluir* abre a confirmação, que continua escrita (RT-1). O título diz a
+ *    disciplina **por extenso** e **quem ministra**, quebrando a linha, sem cortar (D-13).
  */
 "use client";
 
@@ -35,10 +42,9 @@ import {
 } from "@/lib/dominio/dsa/instrutores-da-aula";
 import * as React from "react";
 
-import { DialogFooter } from "@/components/ui/dialog";
+import { BotaoDeIcone } from "@/components/ciaara/botao-de-icone";
 import { DialogoConfirmacao } from "@/components/ciaara/dialogo-confirmacao";
 import { SeletorInstrutor } from "@/components/ciaara/seletor-instrutor";
-import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import type { EscalaDeAntiguidade } from "@/lib/dominio/antiguidade";
@@ -248,6 +254,13 @@ export function AcoesDoBloco({
 
   /* Spec 029, D-6: o Estudo Individual sem «O que é» se nomeia pelo subtipo, e não «Lançamento». */
   const titulo = tituloDoLancamento(fato);
+  /*
+   * Bloco 15 (`FR-006.3`): a disciplina POR EXTENSO e quem ministra no título — o cartão da grade abrevia (o *Nome no
+   * DSA*, regra do nome longo do Bloco 2); aqui eles saem inteiros, quebrando a linha.
+   */
+  const disciplinaPorExtenso = disciplinas.find((d) => d.id === disciplinaGravada);
+  /* Gravado com aviso: o cartão fica aberto para a leitura, e o «Cancelar» já não cancela nada — vira «Fechar». */
+  const gravadoComAviso = avisos.length > 0;
 
   return (
     <section
@@ -255,8 +268,18 @@ export function AcoesDoBloco({
       aria-label={`Lançamento: ${titulo}`}
       className="flex flex-col gap-3"
     >
-      <p className="text-sm text-texto" data-slot="bloco-escolhido">
+      <p className="text-sm text-texto break-words" data-slot="bloco-escolhido">
         <strong>{titulo}</strong>
+        {disciplinaPorExtenso ? (
+          <span className="block" data-slot="disciplina-por-extenso">
+            {disciplinaPorExtenso.codigo} — {disciplinaPorExtenso.nome}
+          </span>
+        ) : null}
+        {fato.instrutor ? (
+          <span className="block" data-slot="quem-ministra-no-cartao">
+            {fato.instrutor}
+          </span>
+        ) : null}
         <span className="block text-xs text-texto-suave">
           {fato.semPosicao
             ? `${dataComDiaDaSemana(fato.data)} · sem posição`
@@ -463,29 +486,37 @@ export function AcoesDoBloco({
               <li key={a.codigo}>{a.texto}</li>
             ))}
           </ul>
-          <Button type="button" size="sm" variant="outline" onClick={aoFechar}>
-            Entendi
-          </Button>
         </div>
       ) : null}
 
-      {/* Spec 022 (D-3): é o rodapé do diálogo do lançamento — os botões continuam com texto. */}
-      <DialogFooter className="border-borda flex-row flex-wrap items-center gap-2 border-t pt-2 sm:justify-start">
-        <Button
-          type="button"
-          size="sm"
-          disabled={agindo}
+      {/*
+        Bloco 15 (`FR-006`): as ações do cartão, SÓ ÍCONES, JUNTAS NO CANTO INFERIOR ESQUERDO — a dica é o verbo, e o nome
+        acessível, o rótulo inteiro. Era o rodapé escrito *Gravar · Cancelar … Excluir* (D-3 da spec 022).
+      */}
+      <div
+        role="group"
+        aria-label="Ações do lançamento"
+        className="border-borda flex flex-wrap items-center justify-start gap-2 border-t pt-2"
+        data-slot="acoes-do-cartao"
+      >
+        <BotaoDeIcone
+          acao="salvar"
+          rotulo="Gravar o lançamento"
+          variante="padrao"
+          ocupado={agindo}
           data-slot="gravar-edicao"
           onClick={() =>
-            executar(() => atualizar({ fatoId: fato.fatoId, origem: fato.origem, ...mudancas() }))
+            void executar(() =>
+              atualizar({ fatoId: fato.fatoId, origem: fato.origem, ...mudancas() }),
+            )
           }
-        >
-          {agindo ? "Gravando…" : "Gravar"}
-        </Button>
-        <Button type="button" size="sm" variant="ghost" onClick={aoFechar}>
-          Cancelar
-        </Button>
-        <span className="flex-1" />
+        />
+        <BotaoDeIcone
+          acao={gravadoComAviso ? "fechar" : "cancelar"}
+          rotulo={gravadoComAviso ? "Fechar o lançamento" : "Cancelar a edição"}
+          data-slot="fechar-cartao"
+          onClick={aoFechar}
+        />
         <DialogoConfirmacao
           titulo="Excluir este lançamento?"
           /*
@@ -503,11 +534,9 @@ export function AcoesDoBloco({
             void executar(() => excluir({ fatoId: fato.fatoId, origem: fato.origem }))
           }
         >
-          <Button type="button" size="sm" variant="outline" data-slot="excluir-bloco">
-            Excluir
-          </Button>
+          <BotaoDeIcone acao="excluir" rotulo="Excluir o lançamento" data-slot="excluir-bloco" />
         </DialogoConfirmacao>
-      </DialogFooter>
+      </div>
     </section>
   );
 }

@@ -21,9 +21,12 @@
  *    `trechosDoBloco`, que é o ponto único do horário do bloco; este módulo **transporta os
  *    trechos** e o papel desenha um por linha. Dois lugares calculando a quebra discordariam no
  *    primeiro regime novo.
- * 2. **A linha `ESTUDO INDIVIDUAL · EI` é a ÚLTIMA de cada dia, sempre** — e quando há EI lançado,
- *    é ELE que vira essa linha, não uma linha comum mais a fixa. Sem isso o dia sairia com o EI
- *    duas vezes: uma no corpo e outra no pé do dia.
+ * 2. **A linha `ESTUDO INDIVIDUAL · EI` é a ÚLTIMA do dia que tem EI LANÇADO** — o lançamento sai do
+ *    corpo e vira o pé do dia. ⚠️ **E SÓ O LANÇADO, DESDE O BLOCO 15** (spec 030, `FR-004`, D-9): *"EI excluído
+ *    NÃO volta sozinho: só pelo botão do EI da semana"* — Bernardo Villas Boas, 29/10/2026. Até ali o papel
+ *    desenhava uma linha FIXA em todo dia útil sem EI (`ei-<data>`, a da `praticas-da-planilha.md` §1.2), e era ela
+ *    que "voltava" depois de excluir o EI. Os retratos publicados com ela não mudam; quem os compara com o papel de
+ *    hoje a reconhece por `ehLinhaFixaDoEstudoIndividual`.
  * 3. **A tabela de CH e a legenda de T/E trazem SÓ o que aparece naquela semana** (`SC-014`) — é o
  *    que o documento assinado faz. Listar o currículo inteiro no pé de uma página A4 é o que não
  *    cabe, e é por isso que o corte é regra e não estética.
@@ -42,8 +45,7 @@
 
 import { emOrdemNaturalDoCodigo } from "../ordem-natural";
 import { MOTIVO_NO_MESMO_TA, rotuloDaParadaParcial, type DiaDaGrade, type Semana } from "./grade";
-import { slotDoEstudoIndividual, tempoDeAula, type Relogio, type Trecho } from "./horario-do-bloco";
-import { LOCAL_DO_ESTUDO_INDIVIDUAL } from "./rotulos";
+import { type Trecho } from "./horario-do-bloco";
 
 /** O texto fixo da última linha de cada dia, como o documento assinado o escreve. */
 export const TEXTO_DO_ESTUDO_INDIVIDUAL = "ESTUDO INDIVIDUAL";
@@ -187,45 +189,16 @@ export function siglaOuExtenso(
 }
 
 /**
- * A linha fixa do Estudo Individual, para o dia que **não** tem EI lançado — no último tempo do regime (RD-2, que
- * substitui a `D-4`; a mesma regra do botão e da planilha, D-9 da spec 026).
+ * A linha FIXA do Estudo Individual de um retrato antigo — a que o papel desenhava sozinho, até o Bloco 15, em todo dia
+ * útil sem EI lançado (chave `ei-<data>`).
  *
- * ⚠️ **SEM RELÓGIO NENHUM ela aparece sem horário** (degradação, `RN-DEG-01`): a célula de HORÁRIO
- * fica vazia e a linha continua, porque é ela que carrega a promessa do rodapé.
- *
- * ⚠️ **COM RELÓGIO, ELA NUNCA SAI SEM HORÁRIO** *(conferência visual de Bernardo Villas Boas,
- * 07/10/2026)*. Quando o relógio não tem o tempo seguinte ao último TA — o catálogo CFG-H do CAHO tem
- * 9 tempos, e nos dias com os 9 ocupados o slot caía no 10º —, não há tempo livre para Estudo
- * Individual, e a linha **não nasce** (`null`). É o que o DSA assinado desses dias traz: nenhum EI.
- * Medido no ano inteiro: 38 linhas sem horário, todas no CAHO; depois, zero.
+ * ⚠️ **ELA NÃO NASCE MAIS** (spec 030, `FR-004`): o EI só existe lançado. Mas os retratos publicados antes a guardam (4
+ *    originais e 1 ALT no remoto em 29/10/2026), e a comparação do «alterado desde a publicação» (RP-4) a tira do retrato
+ *    para não acusar alteração que não houve (D-10). ⚠️ **A DATA NA CHAVE É O QUE A DISTINGUE**: o lançamento tem por
+ *    chave o identificador do fato, e um identificador que começasse por `ei-` não seria confundido com ela.
  */
-function linhaFixaDoEstudoIndividual(
-  data: string,
-  ultimoTa: number | null,
-  relogio: Relogio | null,
-): LinhaImpressa | null {
-  const slot = slotDoEstudoIndividual(ultimoTa, relogio?.temposDoRegime ?? null);
-  /* RD-2 (D-9): sem regime conhecido e dia vazio, nenhum EI — o mesmo que a planilha e o botão (revisão do Bloco 11). */
-  if (slot === null) return null;
-  const tempo = relogio !== null && slot !== null ? tempoDeAula(relogio, slot) : undefined;
-  if (relogio !== null && tempo === undefined) return null;
-  const trechos: readonly Trecho[] =
-    tempo === undefined ? [] : [{ inicio: tempo.inicio, fim: tempo.fim, periodo: tempo.periodo }];
-  return {
-    chave: `ei-${data}`,
-    trechos,
-    taInicial: slot,
-    tempos: tempo === undefined ? null : 1,
-    disciplina: "",
-    conteudo: TEXTO_DO_ESTUDO_INDIVIDUAL,
-    /* O local do EI é sempre a Biblioteca (decisão de Bernardo Villas Boas, 07/10/2026). */
-    local: LOCAL_DO_ESTUDO_INDIVIDUAL,
-    te: SIGLA_DO_ESTUDO_INDIVIDUAL,
-    instrutor: "",
-    estudoIndividual: true,
-    /* A linha FIXA não é lançamento: ela não pode estar "à frente" de nada. */
-    lancadoAFrente: false,
-  };
+export function ehLinhaFixaDoEstudoIndividual(linha: { readonly chave: string }): boolean {
+  return /^ei-\d{4}-\d{2}-\d{2}$/.test(linha.chave);
 }
 
 /**
@@ -255,7 +228,6 @@ function linhaFixaDoEstudoIndividual(
 export function diaImpresso(
   dia: DiaDaGrade,
   entrada: {
-    readonly relogio: Relogio | null;
     readonly tecnicas: readonly TecnicaDoCatalogo[];
     readonly idsDeEstudoIndividual: ReadonlySet<string>;
   },
@@ -264,7 +236,6 @@ export function diaImpresso(
   let doEi: LinhaImpressa | null = null;
   /* Onde o EI guardado entraria em `comuns`, se outro EI aparecer depois dele no mesmo dia. */
   let posicaoDoEi = 0;
-  let ultimoTa: number | null = null;
 
   for (const celula of dia.celulas) {
     const bloco = celula.bloco;
@@ -298,7 +269,7 @@ export function diaImpresso(
        */
       if (doEi !== null) comuns.splice(posicaoDoEi, 0, doEi);
       posicaoDoEi = comuns.length;
-      /* ⚠️ O EI lançado **substitui** a linha fixa, e sai do corpo: ele é o pé do dia. */
+      /* ⚠️ O EI lançado sai do corpo: ele é o pé do dia. */
       doEi = {
         ...linha,
         conteudo: TEXTO_DO_ESTUDO_INDIVIDUAL,
@@ -310,14 +281,10 @@ export function diaImpresso(
     }
 
     comuns.push(linha);
-    if (bloco.taInicial !== null) {
-      const fim = bloco.taInicial + Math.max(1, bloco.tempos ?? 1) - 1;
-      ultimoTa = ultimoTa === null ? fim : Math.max(ultimoTa, fim);
-    }
   }
 
   if (dia.bloqueio !== null) {
-    /* ⚠️ Só o que foi LANÇADO: a linha fixa de EI não nasce em dia sem expediente. */
+    /* ⚠️ Só o que foi LANÇADO aparece abaixo da faixa (decisão de 06/10/2026). */
     const noMesmoTaDoBloqueado = linhasNoMesmoTa(dia, entrada);
     return {
       data: dia.data,
@@ -327,7 +294,8 @@ export function diaImpresso(
     };
   }
 
-  const ei = doEi ?? linhaFixaDoEstudoIndividual(dia.data, ultimoTa, entrada.relogio);
+  /* Bloco 15 (`FR-004`): só o EI lançado — o dia sem EI não ganha mais a linha fixa. */
+  const ei = doEi;
   const noMesmoTa = linhasNoMesmoTa(dia, entrada);
   const paradas: ParadaImpressa[] = [];
   for (const p of dia.paradas) {
@@ -394,7 +362,6 @@ export function documentoImpresso(
 ): readonly DiaImpresso[] {
   return semana.dias.map((dia) =>
     diaImpresso(dia, {
-      relogio: semana.relogio,
       tecnicas: entrada.tecnicas,
       idsDeEstudoIndividual: entrada.idsDeEstudoIndividual,
     }),
@@ -537,9 +504,7 @@ export function avisosAntesDeImprimir(entrada: {
     );
   }
   if (entrada.linhasImpressas === 0) {
-    avisos.push(
-      "Nenhum Tempo de Aula está lançado nesta semana: o documento sai com os dias e só a linha de Estudo Individual.",
-    );
+    avisos.push("Nenhum Tempo de Aula está lançado nesta semana: o documento sai só com os dias.");
   }
   return avisos;
 }

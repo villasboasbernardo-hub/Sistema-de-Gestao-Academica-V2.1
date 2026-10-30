@@ -822,6 +822,18 @@ export const CONTRATO = {
         historico: "substitui",
         avisaServidor: true,
       },
+      /*
+       * A aba de versão (Bloco 15, spec 030, `FR-007`, D-15): vazio é a **Minuta**; `0`, a Original; `N`, a ALT N.
+       * ⚠️ **EMPILHA**, como as abas da turma: «voltar» desfaz a troca de aba. ⚠️ **TEXTO, não inteiro**: o padrão
+       *    precisa ser «nenhuma versão», e o `0` é uma versão. Quem confere se a versão existe é `versaoEscolhida`.
+       */
+      versao: {
+        nome: "versao",
+        tipo: "texto",
+        padrao: "",
+        historico: "empilha",
+        avisaServidor: true,
+      },
     },
   },
   "/admin/salas": {
@@ -1259,6 +1271,26 @@ export type RotaComParametro<P extends string> = {
 /** O descritor de um parâmetro, para quem precisa da política e não só do valor. */
 export function descritor<R extends Rota>(rota: R, nome: ParametroDe<R>): Parametro {
   return (CONTRATO[rota].parametros as Readonly<Record<string, Parametro>>)[nome] as Parametro;
+}
+
+/**
+ * A rota do contrato que tem o **ano escolhido** (RT-6), pelo caminho da página — ou `null` (Bloco 15, spec 030,
+ * `FR-003`): é por ela que o seletor do CABEÇALHO, que vive no layout e não conhece a página, sabe se põe o `?ano=` na
+ * URL e se empilha ou substitui o histórico.
+ *
+ * ⚠️ **SÓ O ANO DO RT-6, QUE É TEXTO**: o `ano` do DSA é a **semana ISO** (inteiro, junto do `semana`), e o seletor não o
+ *    toca — escolher 2027 no cabeçalho não pode trocar a semana aberta.
+ * ⚠️ **O CAMINHO CHEGA CODIFICADO** (`usePathname`): o segmento dinâmico casa qualquer texto sem barra.
+ */
+export function rotaComAnoDoCaminho(caminho: string): RotaComParametro<"ano"> | null {
+  const limpo = caminho.split(/[?#]/)[0]?.replace(/\/+$/, "") || "/";
+  for (const rota of Object.keys(CONTRATO) as Rota[]) {
+    const ano = (CONTRATO[rota].parametros as Readonly<Record<string, Parametro>>)["ano"];
+    if (ano === undefined || ano.tipo !== "texto") continue;
+    const padrao = new RegExp(`^${rota.replace(/\[[^\]]+\]/g, "[^/]+")}$`);
+    if (padrao.test(limpo)) return rota as RotaComParametro<"ano">;
+  }
+  return null;
 }
 
 /** Todos os descritores de uma rota, na ordem em que foram declarados. */

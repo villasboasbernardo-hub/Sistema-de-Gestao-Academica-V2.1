@@ -136,9 +136,13 @@ test.describe("FR-009 · «Semana N de T» na tela e no papel, chegando por cliq
     await expect(page.locator('[data-slot="semana-atual"]')).toContainText("Semana 28 de 37");
     await expect(page.locator('[data-slot="semana-atual"]')).not.toContainText("semana 42");
     /* ⚠️ Num rótulo só (ajuste A do PR #68): o campo não repete "Semana" embaixo do rótulo. */
-    await expect(page.locator('[data-slot="tela-semana"]')).toHaveText("Semana do curso: 28 de 37");
-    await expect(page.locator('[data-slot="cabecalho-da-semana"]')).not.toContainText("Semana 28");
-    await expect(page.locator('[data-slot="cabecalho-da-semana"]')).not.toContainText("Nº");
+    /*
+     * Bloco 15 (`FR-009`): a semana do curso UMA vez, na linha sob o título — *"código · Semana 28 de 37 · datas"* —, e o
+     * quadro *Semana do curso* da tela saiu. Sem *Nº*.
+     */
+    await expect(page.locator('[data-slot="semana-atual"]')).toContainText("Semana 28 de 37");
+    await expect(page.locator('[data-slot="semana-atual"]')).not.toContainText("Nº");
+    await expect(page.locator('[data-slot="cabecalho-da-semana"]')).toHaveCount(0);
 
     /* ── FR-009.2 · no papel, pelo botão Imprimir ───────────────────────────────────────────── */
     await page.locator('[data-slot="imprimir-dsa"]').click();

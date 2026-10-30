@@ -1,4 +1,4 @@
-# Regras da publicação do DSA — decisões de Bernardo Villas Boas (21, 22, 23 e 28/10/2026)
+# Regras da publicação do DSA — decisões de Bernardo Villas Boas (21, 22, 23, 28 e 29/10/2026)
 
 O DSA é por **turma e semana**. É impresso e distribuído a instrutores e alunos **fora do sistema** (nenhum envio — D-USR-1).
 
@@ -12,6 +12,9 @@ O DSA é por **turma e semana**. É impresso e distribuído a instrutores e alun
 > que o pedido não fixou — o selo com rascunho novo (D-8), o botão sem rascunho (D-23), o evento da trilha (D-24), a
 > linha de situação e a planilha (D-25) e o desfazer (D-29) — são decisões da spec 029 **adotadas por padrão** no
 > `/corrigir` e conferidas por Bernardo no fim do bloco.
+
+> **Emenda de 29/10/2026** *(pedido de Bernardo Villas Boas no `/corrigir` do Bloco 15, spec 030, `FR-007`)*: o
+> histórico da RP-3 vira **abas** (*Minuta · Original · ALT N*), cada versão com o seu papel. RP-0 a RP-9 não mudam.
 
 ## O ciclo de uma semana
 
@@ -34,6 +37,11 @@ O DSA é por **turma e semana**. É impresso e distribuído a instrutores e alun
 - **RP-1.** Antes da primeira publicação, editar é livre; depois dela, toda mudança é uma alteração numerada, com justificativa.
 - **RP-2.** Alteração registrada é alteração publicada: não existe "alteração salva e não publicada" fora do modo *Fazer alteração* em andamento.
 - **RP-3.** Tela do DSA: mostra a situação da semana (em preenchimento, registrado, publicado, ALT N, ou *alteração em andamento*) e o **histórico**: original e alterações, com data, autor, justificativa e **Reimprimir** de cada uma.
+  ⚠️ **Emenda de 29/10/2026** *(pedido de Bernardo Villas Boas no `/corrigir` do Bloco 15, spec 030, `FR-007`)*: o
+  histórico vira **abas** — **Minuta** (a de trabalho, editável, com o selo da situação) · **Original** · **ALT 1** ·
+  **ALT 2**… —, e cada aba de versão mostra o **papel publicado** daquela versão (o retrato), só leitura, com a data, o
+  autor, a justificativa (na ALT) e *Reimprimir*. Semana nunca publicada: só a aba Minuta. A aba fica na URL
+  (`?versao=`), e a semana abre sempre na Minuta (D-23 da spec 030).
 - **RP-4.** Se algo de fora mudar uma semana publicada (feriado ou parada pelo Calendário, sincronização da planilha), o DSA avisa *"alterado desde a publicação"* e pede uma alteração para republicar. Nunca muda a versão publicada em silêncio.
 - **RP-5.** Quem salva, gera prévia, publica e altera: quem lança o DSA da turma. Scripts sem sessão (migration, ETL, sincronização VIRADA-1) não são travados.
 - **RP-6.** As semanas que já existem nascem *em preenchimento* (nada publicado), então nada do que já está lançado fica travado; e **tudo o que já está lançado nasce SALVO** (RP-8).

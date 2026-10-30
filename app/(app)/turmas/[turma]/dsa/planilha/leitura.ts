@@ -485,6 +485,8 @@ export async function lerDadosDaPlanilha(
     emConflito,
     ateODia: semanaCorrente.dias[semanaCorrente.dias.length - 1] ?? contexto.hoje,
     hoje: contexto.hoje,
+    /* Bloco 15 (`PEND-029-1`): a «Atrasada» pela janela da carga — a mesma da tela. */
+    periodoDaTurma: { inicio: turma.data_inicio, termino: turma.data_termino },
   });
   const retrato = new Map<string, "atrasada" | "conflitou">();
   for (const q of quadros) {

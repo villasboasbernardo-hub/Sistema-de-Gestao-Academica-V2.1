@@ -99,7 +99,8 @@ export default async function LayoutDoApp({ children }: { children: React.ReactN
    *    expira e a lista troca sozinha. O layout não lê a URL: um link com `?ano=` mostra a página no ano do link e a
    *    lateral no da escolha de quem abre, até ele escolher de novo.
    */
-  const anoVigente = (await anoEscolhido("", hojeNaCiaara())).ano;
+  const escolhaDoAno = await anoEscolhido("", hojeNaCiaara());
+  const anoVigente = escolhaDoAno.ano;
   const [permissoes, armazemDeCookies, fotoUrl, cursosRes, turmasRes, arquivadasRes] =
     await Promise.all([
       permissoesDoPerfil(usuario.perfil),
@@ -148,6 +149,12 @@ export default async function LayoutDoApp({ children }: { children: React.ReactN
         fotoUrl={fotoUrl}
         aoSair={encerrarSessao}
         submenu={submenu}
+        /* Bloco 15 (`FR-003`): o ano guardado (ou o de hoje) — o seletor do cabeçalho lê o `?ano=` do link sozinho. */
+        anoEscolhido={{
+          ano: escolhaDoAno.ano,
+          vigente: escolhaDoAno.vigente,
+          origem: escolhaDoAno.origem,
+        }}
       >
         {children}
       </CascaDoApp>

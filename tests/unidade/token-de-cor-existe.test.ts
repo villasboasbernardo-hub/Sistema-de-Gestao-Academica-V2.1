@@ -82,6 +82,7 @@ const NAO_E_COR: ReadonlySet<string> = new Set([
   "l",
   "b-0",
   "b-2",
+  "l-0",
   "l-2",
   "offset-2",
   // estilo de borda e de tabela

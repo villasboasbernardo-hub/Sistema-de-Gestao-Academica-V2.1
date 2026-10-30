@@ -55,7 +55,11 @@ import {
 import { avisoDoEmpurrao, empurrarEmCascata, ultimoTempoDoDia } from "@/lib/dominio/dsa/empurrar";
 import { responsavelNaEdicao } from "@/lib/dominio/dsa/responsavel-na-edicao";
 import { idDoLancamento } from "@/lib/dominio/dsa/posicao-herdada";
-import { camposDaExclusao, lancamentosParaLimpar } from "@/lib/dominio/dsa/limpar-semana";
+import {
+  camposDaExclusao,
+  estudosIndividuaisParaRemover,
+  lancamentosParaLimpar,
+} from "@/lib/dominio/dsa/limpar-semana";
 import { parPendenteDaAula } from "@/lib/dominio/dsa/instrutores-da-aula";
 import {
   numeroDaProximaSessao,
@@ -2105,6 +2109,92 @@ export async function limparSemanaDoDsa(
       turmaId: l.turma_id,
       bloqueiaAula: l.origem === "atividade_nao_letiva" && paradas.has(l.fato_id),
     })),
+  );
+  if (exclusoes.length === 0) return { ok: true, excluidos: 0 };
+
+  const gravado = await gravarEmTransacao(
+    supabase,
+    exclusoes.map((e) => ({
+      acao: "atualizar" as const,
+      tabela: TABELA_DA_ORIGEM[e.origem],
+      id: e.id,
+      campos: { ...camposDaExclusao(e.origem) },
+    })),
+    ((turmaRes.data as { curso_id?: string } | null)?.curso_id ?? null) || null,
+  );
+  if (gravado !== true) return { ok: false, mensagem: gravado };
+  revalidar();
+  return { ok: true, excluidos: exclusoes.length };
+}
+
+/**
+ * **Remover Estudo Individual da semana** (Bloco 15, spec 030, `FR-004.2`, D-11): o *Limpar semana*, **só com os EI** da
+ * turma na semana — a mesma exclusão do cartão (`camposDaExclusao`), em lote, por `gravar_rascunho_do_dsa`.
+ *
+ * > *"EI excluído NÃO volta sozinho: só pelo botão do EI da semana."* — Bernardo Villas Boas, 29/10/2026
+ *
+ * ⚠️ **O QUE ESTAVA SALVO VIRA RASCUNHO DE EXCLUSÃO**, como no Limpar: sai de vez no *Salvar minuta* (ou no *Salvar
+ *    alteração*), e *Descartar rascunho* o desfaz. Nada se apaga (regra 4). A semana publicada é recusada pelo banco
+ *    (RP-5) até *Fazer alteração*.
+ * ⚠️ **QUAIS SÃO EI É O BANCO QUE DIZ** (`categoria_normativa`), na mesma rodada da grade: a grade não conhece categoria.
+ *    E ele não volta sozinho porque não há mais linha fixa (spec 030, `FR-004.1`): o *Lançar EI* da barra é o caminho.
+ */
+export async function removerEstudoIndividualDaSemana(
+  entrada: unknown,
+): Promise<
+  | { readonly ok: true; readonly excluidos: number }
+  | { readonly ok: false; readonly mensagem: string }
+> {
+  const conferido = esquemaDoEstudoIndividualDaSemana.safeParse(entrada);
+  if (!conferido.success) {
+    return { ok: false, mensagem: conferido.error.issues[0]?.message ?? "Dados inválidos." };
+  }
+  const { turmaId, ano, semana } = conferido.data;
+  const supabase = await criarClienteDeServidor();
+  const arquivada = await recusaSeTurmaArquivada(supabase, turmaId);
+  if (arquivada) return { ok: false, mensagem: arquivada };
+
+  const dias = datasDaSemanaIso(ano, semana);
+  const de = dias[0];
+  const ate = dias[dias.length - 1];
+  if (de === undefined || ate === undefined)
+    return { ok: false, mensagem: "Não identifiquei a semana." };
+
+  const [gradeRes, eiRes, turmaRes] = await Promise.all([
+    supabase
+      .from("vw_ocupacao_do_dsa")
+      .select("origem, fato_id, sessao_id, turma_id")
+      .eq("turma_id", turmaId)
+      .gte("data", de)
+      .lte("data", ate),
+    supabase
+      .from("atividades_nao_letivas")
+      .select("id")
+      .eq("turma_id", turmaId)
+      .eq("categoria_normativa", "Estudo_Individual")
+      .eq("status", "ativo")
+      .gte("data", de)
+      .lte("data", ate),
+    supabase.from("turmas").select("curso_id").eq("id", turmaId).maybeSingle(),
+  ]);
+  if (gradeRes.error) return { ok: false, mensagem: traduzirRecusa(gradeRes.error as ErroDoBanco) };
+  if (eiRes.error) return { ok: false, mensagem: traduzirRecusa(eiRes.error as ErroDoBanco) };
+  const exclusoes = estudosIndividuaisParaRemover(
+    (
+      (gradeRes.data ?? []) as {
+        origem: string;
+        fato_id: string;
+        sessao_id: string | null;
+        turma_id: string | null;
+      }[]
+    ).map((l) => ({
+      origem: l.origem,
+      fatoId: l.fato_id,
+      sessaoId: l.sessao_id,
+      turmaId: l.turma_id,
+      bloqueiaAula: false,
+    })),
+    new Set(((eiRes.data ?? []) as { id: string }[]).map((e) => e.id)),
   );
   if (exclusoes.length === 0) return { ok: true, excluidos: 0 };
 

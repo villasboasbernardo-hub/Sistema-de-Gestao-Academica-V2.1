@@ -84,7 +84,13 @@ describe("`SC-022` · zero contêiner de contexto como fonte de verdade de naveg
    *    link mandado a outra pessoa não deve abrir com os painéis de quem mandou. O contêiner existe porque o ícone (na
    *    barra do cabeçalho) e o painel (abaixo dele) são irmãos distantes na árvore.
    */
+  /*
+   * ⚠️ **O QUINTO ISENTO ENTROU EM 29/10/2026** (spec 030, Bloco 15, `FR-001`): o `EmTelaCheia` do carrossel. Ele guarda
+   *    **só se o item está sendo desenhado na tela cheia** — um booleano de apresentação, que o papel lê para escolher a
+   *    escala. Não é recorte nem posição: a pergunta do `FR-010` dá *não*, e a tela cheia não vai para a URL.
+   */
   const ISENTOS = [
+    "components/ciaara/carrossel.tsx",
     "components/ciaara/paineis-da-pagina.tsx",
     "components/ciaara/lista-navegavel.tsx",
     "app/(app)/admin/usuarios/AvisoDaLista.tsx",

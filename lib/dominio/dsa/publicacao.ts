@@ -23,6 +23,8 @@
  * ⚠️ **TypeScript puro: sem `next`, sem `react`, sem `supabase`.**
  */
 
+import { ehLinhaFixaDoEstudoIndividual } from "./impressao";
+
 export type TipoDeEvento =
   "salvo" | "rascunho_descartado" | "publicado" | "alteracao_iniciada" | "alteracao_publicada";
 
@@ -180,6 +182,44 @@ function normalizado(valor: unknown): unknown {
     );
   }
   return valor;
+}
+
+/**
+ * O que o RP-4 compara de um papel: os campos de ORIGEM — a turma, a semana, o período, os alunos, as assinaturas e as
+ * linhas de cada dia —, **sem a linha fixa do Estudo Individual** dos retratos antigos (Bloco 15, spec 030, D-10).
+ *
+ * ⚠️ **A GRADE E A LEGENDA SAÍRAM DA COMPARAÇÃO** porque derivam dos dias (e do relógio, que já está no horário de cada
+ *    linha): a linha fixa que o papel desenhava até 29/10/2026 acrescentava cartão e faixa à grade e a sigla EI à
+ *    legenda, e compará-las faria toda semana publicada com ela (4 originais e 1 ALT no remoto) acusar «alterado» sem
+ *    mudança de dado. O retrato em si não muda: reimprimir continua idêntico.
+ * ⚠️ **O EI LANÇADO CONTINUA CONTANDO** — a linha fixa se reconhece pela chave `ei-<data>`
+ *    (`ehLinhaFixaDoEstudoIndividual`), e a do lançamento é o identificador do fato.
+ */
+export function conteudoComparavel<
+  D extends {
+    readonly curso: unknown;
+    readonly semana: unknown;
+    readonly semanaDoCurso: unknown;
+    readonly primeiro: unknown;
+    readonly ultimo: unknown;
+    readonly alunos: unknown;
+    readonly assinaturas: unknown;
+    readonly dias: readonly { readonly linhas: readonly { readonly chave: string }[] }[];
+  },
+>(dados: D): unknown {
+  return {
+    curso: dados.curso,
+    semana: dados.semana,
+    semanaDoCurso: dados.semanaDoCurso,
+    primeiro: dados.primeiro,
+    ultimo: dados.ultimo,
+    alunos: dados.alunos,
+    assinaturas: dados.assinaturas,
+    dias: dados.dias.map((dia) => ({
+      ...dia,
+      linhas: dia.linhas.filter((l) => !ehLinhaFixaDoEstudoIndividual(l)),
+    })),
+  };
 }
 
 /** Dois documentos são o mesmo papel? Pelo conteúdo, sem a ordem das chaves (D-8). */

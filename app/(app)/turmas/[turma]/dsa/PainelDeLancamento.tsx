@@ -34,7 +34,6 @@ import * as React from "react";
 import type { TipoOferecido } from "./leitura";
 
 import { GradeDsa } from "@/components/ciaara/grade-dsa";
-import { Button } from "@/components/ui/button";
 import {
   Dialog,
   DialogContent,
@@ -79,8 +78,6 @@ export type PainelDeLancamentoProps = {
   readonly turmaId: string;
   readonly cursoId: string;
   readonly salaDaTurma: string | null;
-  readonly ano: number;
-  readonly numeroDaSemana: number;
   readonly podeLancar: boolean;
   readonly unidades: readonly UnidadeOferecida[];
   /** As atribuições da turma, em antiguidade — a sugestão de instrutor do formulário (FR-012.2). */
@@ -103,7 +100,6 @@ export type PainelDeLancamentoProps = {
   /** Quem tem `atividades_globais.criar` vê a caixa «todas as turmas» (spec 014, FR-014). */
   readonly podeAtividadeGlobal?: boolean;
   readonly lancar: (entrada: unknown) => Promise<ResultadoDaAcao>;
-  readonly lancarEstudoIndividual: (entrada: unknown) => Promise<ResultadoDoEstudoIndividual>;
   /** As três do PR 4 — ausentes, a grade fica só de leitura. */
   readonly mover?: (entrada: unknown) => Promise<ResultadoDaAcao>;
   /** O cartão único (ajuste 1 do PR #40): tudo de um lançamento, numa gravação. */
@@ -171,8 +167,6 @@ export function PainelDeLancamento({
   turmaId,
   cursoId,
   salaDaTurma,
-  ano,
-  numeroDaSemana,
   podeLancar,
   unidades,
   atribuicoesPorUe = [],
@@ -190,16 +184,13 @@ export function PainelDeLancamento({
   subtipos,
   podeAtividadeGlobal = false,
   lancar,
-  lancarEstudoIndividual,
   mover,
   atualizar,
   excluir,
 }: PainelDeLancamentoProps) {
   const [celula, definirCelula] = React.useState<{ dia: string; ta: number } | null>(null);
   const [fatoId, definirFato] = React.useState<string | null>(null);
-  const [respostaDoEi, definirRespostaDoEi] = React.useState<string | null>(null);
   const [respostaDoArraste, definirRespostaDoArraste] = React.useState<string | null>(null);
-  const [lancandoEi, definirLancandoEi] = React.useState(false);
 
   const podeMexer =
     podeLancar && mover !== undefined && atualizar !== undefined && excluir !== undefined;
@@ -224,30 +215,6 @@ export function PainelDeLancamento({
     /* A grade pode ter sido redesenhada depois de gravar: célula que saiu da página não recebe foco. */
     if (alvo?.isConnected) alvo.focus();
   };
-
-  async function lancarEi(): Promise<void> {
-    definirRespostaDoEi(null);
-    definirLancandoEi(true);
-    const r = await lancarEstudoIndividual({ turmaId, ano, semana: numeroDaSemana });
-    definirLancandoEi(false);
-    if (!r.ok) {
-      definirRespostaDoEi(r.mensagem);
-      return;
-    }
-    /*
-     * ⚠️ **OS PULADOS SÃO INFORMAÇÃO, NÃO SILÊNCIO.** Clicar de novo não cria nada — e sem dizer
-     * isso a tela pareceria não ter feito nada. É a lição do `AvisoDaLista` da spec 011: a resposta
-     * de toda ação é publicada, porque "não aconteceu nada" é o que uma falha invisível parece.
-     */
-    definirRespostaDoEi(
-      r.criados === 0
-        ? `Nenhum dia novo: os ${r.pulados.length} dias úteis desta semana já têm Estudo Individual, ou são feriado de dia inteiro.`
-        : `Estudo Individual lançado em ${r.criados} dia(s).` +
-            (r.pulados.length > 0
-              ? ` ${r.pulados.length} pulado(s) — já tinham, ou são feriado.`
-              : ""),
-    );
-  }
 
   /**
    * O arrastar-e-soltar — **o caminho secundário**, que chega à mesma `mover`.
@@ -280,32 +247,14 @@ export function PainelDeLancamento({
   return (
     <div className="flex min-w-0 flex-col gap-3">
       {podeLancar ? (
-        <div className="flex flex-wrap items-center gap-2">
-          {/*
-            ⚠️ `Q-7`: o Estudo Individual padrão da semana **em um clique**. Ele ocupa o slot
-               seguinte ao último TA lançado de cada dia (`D-4`) e dura um TA (`D-11`).
-          */}
-          <Button
-            type="button"
-            size="sm"
-            variant="outline"
-            disabled={lancandoEi}
-            onClick={lancarEi}
-            data-slot="lancar-estudo-individual"
-          >
-            {lancandoEi ? "Lançando…" : "Lançar o Estudo Individual da semana"}
-          </Button>
-          <span className="text-xs text-texto-suave">
-            {podeMexer
-              ? "Clique num tempo vazio para lançar, ou num cartão para mover, editar e excluir."
-              : "Clique num tempo vazio da grade para lançar nele."}
-          </span>
-        </div>
-      ) : null}
-
-      {respostaDoEi ? (
-        <p role="status" className="text-sm text-texto" data-slot="resposta-do-estudo-individual">
-          {respostaDoEi}
+        /*
+          ⚠️ `Q-7`: o Estudo Individual da semana em um clique foi para a BARRA, como ícone (Bloco 15, spec 030, D-12) —
+             ao lado do *Remover EI*. Aqui fica só o como lançar.
+        */
+        <p className="text-xs text-texto-suave">
+          {podeMexer
+            ? "Clique num tempo vazio para lançar, ou num cartão para mover, editar e excluir."
+            : "Clique num tempo vazio da grade para lançar nele."}
         </p>
       ) : null}
 

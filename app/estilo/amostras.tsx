@@ -35,7 +35,7 @@ import {
   GatilhoDePainel,
   ProvedorDePaineis,
 } from "@/components/ciaara/paineis-da-pagina";
-import { SeletorDeAno } from "@/components/ciaara/seletor-de-ano";
+import { SeletorDeAnoSemBusca } from "@/components/ciaara/seletor-de-ano";
 import { hojeNaCiaara } from "@/lib/formato/ano-corrente";
 import { usePedidoDeJustificativa } from "@/components/ciaara/pedido-de-justificativa";
 import { EstadoVazio } from "@/components/ciaara/EstadoVazio";
@@ -181,13 +181,17 @@ export function AmostraPedidoDeJustificativa() {
   );
 }
 
-/** Spec 019 (Bloco 4): o carrossel do Início — passa sozinho, pausa ao apontar e ao focar, anda por ← e →. */
+/**
+ * Spec 019 (Bloco 4): o carrossel do Início — passa sozinho, pausa ao apontar e ao focar, anda por ← e →. E, desde o
+ * Bloco 15 (spec 030, `FR-001`), o clique num item abre a **tela cheia**, com as setas e o *Sair da tela cheia*.
+ */
 export function AmostraCarrossel() {
   return (
     <Carrossel
       rotulo="Amostra de carrossel"
       intervaloMs={6000}
       largura="cartao"
+      telaCheia={{ nomes: [1, 2, 3, 4, 5].map((n) => `Cartão ${n}`) }}
       itens={[1, 2, 3, 4, 5].map((n) => (
         <div key={n} className="border-borda bg-superficie rounded-ciaara border p-3 text-sm">
           Cartão {n}
@@ -293,7 +297,7 @@ export function AmostraCartoesJuntos() {
  */
 export function AmostraSeletorDeAno() {
   const vigente = Number(hojeNaCiaara().slice(0, 4));
-  return <SeletorDeAno ano={vigente} vigente={vigente} origem="hoje" rota="/inicio" />;
+  return <SeletorDeAnoSemBusca ano={vigente} vigente={vigente} origem="hoje" />;
 }
 
 /**

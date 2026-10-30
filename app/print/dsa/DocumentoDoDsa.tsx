@@ -88,17 +88,21 @@ export function DocumentoDoDsa({
 
   return (
     <div
-      className={`dsa4 ${barlow.className}${compacto ? " dsa4-compacto" : ""}`}
+      className={`dsa4 ${barlow.className}${compacto ? " dsa4-compacto" : ""}${previa ? " dsa4-com-previa" : ""}`}
       data-slot="dsa-impresso"
     >
       {previa ? (
-        /* Spec 024 (FR-010): a marca PRÉVIA, em TEXTO, sobre a folha inteira. */
+        /*
+         * Spec 024 (FR-010): a marca PRÉVIA, em TEXTO, uma palavra só — na FRENTE dos cartões, bem transparente e sem
+         * capturar clique (Bloco 15, `FR-008`, ajustado na conferência de 29/10/2026). A camada é a folha; a palavra gira
+         * dentro dela, na diagonal (`documento.css`).
+         */
         <div
           className="dsa4-previa"
           data-slot="dsa-previa"
           aria-label="Prévia — não é versão publicada"
         >
-          PRÉVIA
+          <span>PRÉVIA</span>
         </div>
       ) : null}
       <div className="dsa4-faixa-topo" />

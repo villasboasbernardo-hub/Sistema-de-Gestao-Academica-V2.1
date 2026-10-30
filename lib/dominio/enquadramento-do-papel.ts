@@ -53,6 +53,20 @@ export function escalaQueCabe(
 }
 
 /**
+ * A escala do papel na **tela cheia** do Início (Bloco 15, spec 030, `FR-001`, D-2): *"papel ampliado ao máximo que
+ * cabe"* — Bernardo Villas Boas, 29/10/2026.
+ *
+ * ⚠️ **SEM TETO E SEM PISO**, ao contrário do carrossel (`escalaQueCabe`): a sobreposição ocupa a janela inteira, então a
+ *    folha passa de 1 sempre que a caixa for maior que ela (1920 × 1080 → ~1,3); e a sobreposição não rola, então numa
+ *    caixa minúscula a folha encolhe abaixo de 0,35 em vez de transbordar. Medida inválida devolve o neutro (1).
+ */
+export function escalaDaTelaCheia(larguraDisponivel: number, alturaDisponivel: number): number {
+  const valida = (medida: number) => Number.isFinite(medida) && medida > 0;
+  if (!valida(larguraDisponivel) || !valida(alturaDisponivel)) return 1;
+  return Math.min(larguraDisponivel / LARGURA_DA_FOLHA_PX, alturaDisponivel / ALTURA_DA_FOLHA_PX);
+}
+
+/**
  * A largura de uma barra de rolagem vertical clássica, com margem — no Windows ela ocupa de 15 a 17 px de CSS (mais,
  * com zoom abaixo de 100 %). É o tanto que a caixa estreita quando a barra da página aparece.
  */

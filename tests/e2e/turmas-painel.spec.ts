@@ -98,7 +98,8 @@ async function conferirIndicadores(page: Page, esperado: Record<string, string>)
   }
 }
 const ESCOLHA_DO_ANO = (page: Page) =>
-  page.locator('[data-slot="cabecalho-de-turmas"] select[data-slot="ano-do-painel-escolha"]');
+  /* Bloco 15 (`FR-003`): o ano mora no cabeçalho do sistema. */
+  page.locator('[data-slot="cabecalho-do-app"] select[data-slot="ano-do-painel-escolha"]');
 const indicador = (page: Page, chave: string) =>
   page.locator(`[data-slot="indicador-de-turmas"][data-chave="${chave}"]`);
 

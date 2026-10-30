@@ -194,6 +194,9 @@ test.describe("D-COR-5 · arquivar, sumir das listas, travar e desarquivar", () 
     await expect(page.locator('[data-slot="turma-arquivada"]')).toBeVisible();
     await expect(page.locator('[data-slot="lancar-estudo-individual"]')).toHaveCount(0);
     await expect(page.locator('[data-slot="controle-de-paradas"]')).toHaveCount(0);
+    /* Bloco 15 (D-19): nem o «Parar dia» da barra, nem o «Remover EI». */
+    await expect(page.locator('[data-slot="parar-dia"]')).toHaveCount(0);
+    await expect(page.locator('[data-slot="remover-estudo-individual"]')).toHaveCount(0);
     await expect(page.locator('[data-slot="imprimir-dsa"]')).toBeVisible();
     await expect(page.locator('[data-slot="baixar-planilha-de-contingencia"]')).toBeVisible();
 
