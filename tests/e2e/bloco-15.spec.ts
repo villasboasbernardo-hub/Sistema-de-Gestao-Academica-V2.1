@@ -6,6 +6,8 @@
  *    imutável e a turma da semente persiste entre rodadas, então a semana publicada na rodada anterior não aceita
  *    lançamento. A primeira candidata sem evento nas duas turmas do processo é a do caso — e a suíte roda duas vezes
  *    seguidas (regra 9.1). As candidatas não cruzam com as do Bloco 11.
+ * ⚠️ **A SEMANA CHEIA DO ITEM 8 É UMA TERCEIRA, SEM EVENTO E SEM LANÇAMENTO DA TURMA**: os 40 tempos dela são semeados
+ *    no próprio caso e apagados no fim dele (uma aula a mais num TA já ocupado iria para a lista «fora da grade»).
  */
 import { expect, test, type Page } from "@playwright/test";
 import { createClient, type SupabaseClient } from "@supabase/supabase-js";
@@ -32,7 +34,14 @@ let PROCESSO = 0;
 let SEMANA_PUBLICADA = 34;
 /** Uma semana sem evento, para o Estudo Individual (item 4) e o cartão (item 6). */
 let SEMANA_LIVRE = 35;
+/** A semana com todos os tempos lançados, para a PRÉVIA (item 8). */
+let SEMANA_CHEIA = 36;
+/** A G45 da semente (`dsa-de-teste.ts`): oito tempos por dia. */
+const TEMPOS_DA_G45 = 8;
 const topico = (n: string) => `Aula B15 ${n} ${MARCA}`;
+/** A semana ISO de 2026 de uma data. */
+const semanaDe = (data: string) =>
+  Math.floor((Date.parse(`${data}T00:00:00Z`) - Date.UTC(2025, 11, 29)) / (7 * 86_400_000)) + 1;
 
 let servico: SupabaseClient | undefined;
 const banco = (): SupabaseClient =>
@@ -61,6 +70,18 @@ test.beforeAll(async ({}, info) => {
   if (livres.length < 2) throw new Error("sem semana candidata livre — rode o db:reset:limpo");
   SEMANA_PUBLICADA = livres[0] as number;
   SEMANA_LIVRE = livres[1] as number;
+  /* Item 8: a primeira das que sobram sem aula nenhuma da turma (a semente lança uma «à frente», a duas semanas de hoje). */
+  const { data: lancadas, error } = await banco()
+    .from("registros_aula")
+    .select("data")
+    .eq("turma_id", await idDaTurma())
+    .gte("data", segundaDe(Math.min(...CANDIDATAS)))
+    .lte("data", somarDias(segundaDe(Math.max(...CANDIDATAS)), 6));
+  if (error) throw new Error(`não li as aulas das semanas candidatas: ${error.message}`);
+  const comAula = new Set(((lancadas ?? []) as { data: string }[]).map((r) => semanaDe(r.data)));
+  const cheia = livres.slice(2).find((n) => !comAula.has(n));
+  if (cheia === undefined) throw new Error("sem semana candidata livre — rode o db:reset:limpo");
+  SEMANA_CHEIA = cheia;
 });
 
 test.afterAll(async () => {
@@ -307,9 +328,7 @@ test("item 6 · o cartão do lançamento: Salvar · Cancelar · Excluir em ícon
   await salvarASemana(page);
 });
 
-test("itens 5, 7 e 8 · editar antes de publicar sem ALT; as abas de versão; a PRÉVIA atrás do conteúdo", async ({
-  page,
-}) => {
+test("itens 5 e 7 · editar antes de publicar sem ALT; as abas de versão", async ({ page }) => {
   test.setTimeout(300_000);
   await abrirOsDsaDaTurma(page, SEMANA_PUBLICADA);
   const dia = segundaDe(SEMANA_PUBLICADA);
@@ -323,22 +342,8 @@ test("itens 5, 7 e 8 · editar antes de publicar sem ALT; as abas de versão; a 
   await salvarASemana(page);
   await page.locator('[data-slot="imprimir-dsa"]').click();
   await expect.poll(() => new URL(page.url()).pathname).toBe("/print/dsa");
-  const marca = page.locator('[data-slot="dsa-previa"]');
-  await expect(marca).toHaveText("PRÉVIA");
-
-  /* Item 8: a marca atrás do conteúdo, transparente, e nada do texto fica sob ela. */
-  const estilo = await marca.evaluate((m) => {
-    const s = getComputedStyle(m);
-    return { z: s.zIndex, opacidade: Number(s.opacity) };
-  });
-  expect(Number(estilo.z)).toBeLessThan(0);
-  expect(estilo.opacidade).toBeLessThanOrEqual(0.2);
-  const noCentro = await marca.evaluate((m) => {
-    const r = m.getBoundingClientRect();
-    const topo = document.elementFromPoint(r.left + r.width / 2, r.top + r.height / 2);
-    return topo === m || m.contains(topo);
-  });
-  expect(noCentro, "a marca PRÉVIA está por cima do conteúdo").toBe(false);
+  /* A marca do item 8 é medida no caso dele, com a semana cheia. */
+  await expect(page.locator('[data-slot="dsa-previa"]')).toHaveText("PRÉVIA");
   await page.goBack();
   await expect(page.locator('[data-slot="publicacao-do-dsa"]')).toBeVisible();
 
@@ -559,5 +564,260 @@ test("itens 1 e 2 · no Início: as setas nos cantos e nas laterais, e a tela ch
     expect(await dicaDe(page, '[data-slot="sair-da-tela-cheia"]')).toBe("Sair da tela cheia");
     await tela.locator('[data-slot="sair-da-tela-cheia"]').click();
     await expect(tela).toHaveCount(0);
+  }
+});
+
+/** Quantas páginas tem um PDF do Chromium (o `[^s]` separa `/Page` de `/Pages`, como em `dsa-imprimir.spec.ts`). */
+const paginasDoPdf = (pdf: Buffer) =>
+  (pdf.toString("latin1").match(/\/Type\s*\/Page[^s]/g) ?? []).length;
+
+/** O `id` de uma linha lida pela chave de serviço — e o erro da leitura, nunca descartado. */
+async function idDe(
+  consulta: PromiseLike<{ data: unknown; error: { message: string } | null }>,
+  oQue: string,
+): Promise<string> {
+  const { data, error } = await consulta;
+  if (error !== null || data === null)
+    throw new Error(`não li ${oQue}: ${error?.message ?? "sem linha"}`);
+  return (data as { id: string }).id;
+}
+
+/**
+ * Item 8: a semana com TODOS os tempos lançados — os cinco dias úteis × os oito TA da G45, uma aula de 1 TA em cada, direto
+ * no banco, como a semente. Sem sessão a linha nasce salva, e a semana sem rascunho já está registrada (D-18 da spec 024):
+ * a prévia sai.
+ */
+async function semearASemanaCheia(dias: readonly string[]): Promise<void> {
+  const turmaId = await idDaTurma();
+  const { data: turma, error } = await banco()
+    .from("turmas")
+    .select("curso_id")
+    .eq("id", turmaId)
+    .single();
+  if (error !== null) throw new Error(`não li o curso da turma: ${error.message}`);
+  const cursoId = (turma as { curso_id: string }).curso_id;
+  const disciplinaId = await idDe(
+    banco()
+      .from("disciplinas")
+      .select("id")
+      .eq("curso_id", cursoId)
+      .eq("cod_disciplina", S.codDisciplina)
+      .single(),
+    "a disciplina da semente",
+  );
+  const ueId = await idDe(
+    banco()
+      .from("unidades_ensino")
+      .select("id")
+      .eq("disciplina_id", disciplinaId)
+      .eq("numero_ue", 1)
+      .single(),
+    "a UE da semente",
+  );
+  const instrutorId = await idDe(
+    banco().from("instrutores").select("id").eq("codigo", `DSA-E2D${PROCESSO}-INS`).single(),
+    "o instrutor da semente",
+  );
+  const linhas = dias.flatMap((data) =>
+    Array.from({ length: TEMPOS_DA_G45 }, (_, i) => ({
+      codigo: `DSA-E2D${PROCESSO}-B15-${data.replaceAll("-", "")}-${i + 1}`,
+      data,
+      ta_inicial: i + 1,
+      tempos_consumidos: 1,
+      conteudo_resumo: topico(`cheia ${data.slice(8)} ${i + 1}`),
+      local: S.sala,
+      turma_id: turmaId,
+      curso_id: cursoId,
+      unidade_ensino_id: ueId,
+      instrutor_id: instrutorId,
+      metodologia: null,
+    })),
+  );
+  const { error: erroDaCarga } = await banco()
+    .from("registros_aula")
+    .upsert(linhas, { onConflict: "codigo" });
+  if (erroDaCarga !== null) throw new Error(`não semeei a semana cheia: ${erroDaCarga.message}`);
+}
+
+/**
+ * ⚠️ **ITEM 8, AJUSTADO NA CONFERÊNCIA DE 29/10/2026** (Bernardo Villas Boas): *"a marca PRÉVIA atrás do conteúdo some
+ *    quando a semana está toda lançada. Volte a marca para a FRENTE dos cartões, UMA palavra «PRÉVIA» só, grande e na
+ *    diagonal, bem transparente (…), sem capturar clique (pointer-events: none)."* Atrás, os cartões opacos da semana
+ *    cheia a cobriam inteira. ⚠️ **O CASO QUE DISCRIMINA É A SEMANA CHEIA**: numa semana com tempos vagos, a marca de
+ *    trás aparecia entre os cartões, e o caso passaria com o defeito.
+ * ⚠️ **"VISÍVEL" É A FOTO DO CARTÃO MUDAR COM A MARCA**: o `toBeVisible` passa com o elemento coberto (ele mede a caixa,
+ *    não a pintura), e o `elementFromPoint` não enxerga quem tem `pointer-events: none`. Cada cartão é fotografado com a
+ *    marca e sem ela; atrás dos cartões, nenhuma foto muda. As fotos esperam as fontes: uma troca de fonte entre as duas
+ *    rodadas mudaria as fotos sem marca nenhuma, e o caso passaria com o defeito.
+ */
+test("item 8 · semana com todos os tempos lançados: a PRÉVIA na frente dos cartões, transparente, e o cartão sob ela recebe o clique", async ({
+  page,
+}) => {
+  test.setTimeout(240_000);
+  const segunda = segundaDe(SEMANA_CHEIA);
+  const dias = [0, 1, 2, 3, 4].map((d) => somarDias(segunda, d));
+  const total = TEMPOS_DA_G45 * dias.length;
+  await semearASemanaCheia(dias);
+  try {
+    /* A folha inteira na janela: nenhum cartão precisa de rolagem para ser fotografado. */
+    await page.setViewportSize({ width: 1400, height: 1000 });
+    await abrirOsDsaDaTurma(page, SEMANA_CHEIA);
+    await expect(
+      page.locator('[data-slot="grade-da-semana"] [data-slot="dsa-cartao"]'),
+    ).toHaveCount(total);
+
+    /* Gerar prévia, pela barra. */
+    await page.locator('[data-slot="imprimir-dsa"]').click();
+    await expect.poll(() => new URL(page.url()).pathname).toBe("/print/dsa");
+    const papel = page.locator('[data-slot="dsa-impresso"]');
+    const cartoes = papel.locator('[data-slot="dsa-cartao"]');
+    const marca = papel.locator('[data-slot="dsa-previa"]');
+    await expect(cartoes).toHaveCount(total);
+    /* UMA palavra só. */
+    await expect(marca).toHaveCount(1);
+    await expect(marca).toHaveText("PRÉVIA");
+    await page.waitForLoadState("load");
+    await page.evaluate(async () => {
+      await document.fonts.ready;
+    });
+
+    /* Bem transparente (de 0,08 a 0,12) e sem capturar clique. */
+    const estilo = await marca.evaluate((m) => {
+      const s = getComputedStyle(m);
+      return { opacidade: Number(s.opacity), ponteiro: s.pointerEvents };
+    });
+    expect.soft(estilo.opacidade, "a PRÉVIA está mais opaca que 0,12").toBeLessThanOrEqual(0.12);
+    expect
+      .soft(estilo.opacidade, "a PRÉVIA está mais transparente que 0,08")
+      .toBeGreaterThanOrEqual(0.08);
+    expect.soft(estilo.ponteiro, "a PRÉVIA captura o clique").toBe("none");
+
+    /*
+     * Visível SOBRE os cartões: a foto do MIOLO de cada cartão, com a marca e sem ela. ⚠️ O miolo, e não a caixa: a foto
+     * da caixa arredonda para fora e leva a borda de fora do cartão — por onde a marca de trás aparecia, e o caso passava
+     * com o defeito (medido em 29/10/2026).
+     */
+    const miolos = await cartoes.evaluateAll((els) =>
+      els.map((e) => {
+        const r = e.getBoundingClientRect();
+        return { x: r.left + 3, y: r.top + 3, width: r.width - 6, height: r.height - 6 };
+      }),
+    );
+    const fotos = async () => {
+      const lista: Buffer[] = [];
+      for (const clip of miolos) lista.push(await page.screenshot({ clip }));
+      return lista;
+    };
+    const com = await fotos();
+    await marca.evaluate((m) => {
+      (m as HTMLElement).style.visibility = "hidden";
+    });
+    const sem = await fotos();
+    await marca.evaluate((m) => {
+      (m as HTMLElement).style.visibility = "";
+    });
+    const sob = com.flatMap((foto, i) => (foto.equals(sem[i] as Buffer) ? [] : [i]));
+    test.info().annotations.push({
+      type: "cartões sob a PRÉVIA",
+      description: `${sob.length} de ${total}`,
+    });
+    expect
+      .soft(sob.length, "com a semana cheia, a PRÉVIA não aparece sobre cartão nenhum")
+      .toBeGreaterThan(2);
+
+    /* O cartão sob a palavra: entre os que ela cobre, o mais perto do centro da folha (sem nenhum, o do centro). */
+    const folha = await papel.boundingBox();
+    if (folha === null) throw new Error("não medi a folha");
+    const centros = await cartoes.evaluateAll((els) =>
+      els.map((e) => {
+        const r = e.getBoundingClientRect();
+        return { x: r.left + r.width / 2, y: r.top + r.height / 2 };
+      }),
+    );
+    const longe = (i: number) => {
+      const c = centros[i] as { x: number; y: number };
+      return Math.hypot(c.x - (folha.x + folha.width / 2), c.y - (folha.y + folha.height / 2));
+    };
+    const alvo = (sob.length > 0 ? sob : centros.map((_, i) => i)).reduce((a, b) =>
+      longe(b) < longe(a) ? b : a,
+    );
+    const ponto = centros[alvo] as { x: number; y: number };
+    const cartao = cartoes.nth(alvo);
+    await cartao.evaluate((c) => c.setAttribute("data-sob-a-previa", "sim"));
+
+    /* Na FRENTE da camada dos cartões: ligado o clique na marca à força, quem está no topo daquele ponto é ela. */
+    const naFrente = await marca.evaluate((m, p) => {
+      const e = m as HTMLElement;
+      e.style.pointerEvents = "auto";
+      const topo = document.elementFromPoint(p.x, p.y);
+      e.style.pointerEvents = "";
+      return topo !== null && e.contains(topo);
+    }, ponto);
+    expect.soft(naFrente, "a PRÉVIA não está na frente do cartão").toBe(true);
+
+    /* E o cartão sob ela recebe o clique: o elemento no ponto é o cartão, e o duplo clique seleciona o texto dele. */
+    const recebe = await page.evaluate(
+      (p) => document.elementFromPoint(p.x, p.y)?.closest('[data-sob-a-previa="sim"]') != null,
+      ponto,
+    );
+    expect(recebe, "o clique no cartão sob a PRÉVIA não chega ao cartão").toBe(true);
+    await cartao.locator(".dsa4-cartao-pe > span").dblclick({ timeout: 5_000 });
+    const selecao = await page.evaluate(() => {
+      const s = window.getSelection();
+      const no = s?.anchorNode ?? null;
+      const el = no === null ? null : no instanceof Element ? no : no.parentElement;
+      return {
+        texto: s?.toString().trim() ?? "",
+        noCartao: el?.closest('[data-sob-a-previa="sim"]') != null,
+      };
+    });
+    expect(
+      selecao.noCartao && selecao.texto !== "",
+      "o duplo clique no cartão sob a PRÉVIA não selecionou o texto dele",
+    ).toBe(true);
+
+    /*
+     * Na impressão: a mesma marca — e, com a mídia de impressão, na frente e visível sobre o mesmo cartão — e a folha numa
+     * página só. ⚠️ Só a opacidade igual não bastaria: uma regra de impressão que a escondesse ou a mandasse para trás
+     * passaria.
+     */
+    await page.evaluate(() => window.getSelection()?.removeAllRanges());
+    await page.emulateMedia({ media: "print" });
+    const naImpressao = await marca.evaluate((m) => {
+      const s = getComputedStyle(m);
+      return { opacidade: Number(s.opacity), ponteiro: s.pointerEvents };
+    });
+    expect.soft(naImpressao, "a PRÉVIA da impressão não é a da tela").toEqual(estilo);
+    const noPapel = await cartao.evaluate((c) => {
+      const r = c.getBoundingClientRect();
+      return {
+        x: r.left + r.width / 2,
+        y: r.top + r.height / 2,
+        clip: { x: r.left + 3, y: r.top + 3, width: r.width - 6, height: r.height - 6 },
+      };
+    });
+    const naFrenteNoPapel = await marca.evaluate((m, p) => {
+      const e = m as HTMLElement;
+      e.style.pointerEvents = "auto";
+      const topo = document.elementFromPoint(p.x, p.y);
+      e.style.pointerEvents = "";
+      return topo !== null && e.contains(topo);
+    }, noPapel);
+    expect.soft(naFrenteNoPapel, "na impressão, a PRÉVIA não está na frente do cartão").toBe(true);
+    const comNoPapel = await page.screenshot({ clip: noPapel.clip });
+    await marca.evaluate((m) => {
+      (m as HTMLElement).style.visibility = "hidden";
+    });
+    const semNoPapel = await page.screenshot({ clip: noPapel.clip });
+    await marca.evaluate((m) => {
+      (m as HTMLElement).style.visibility = "";
+    });
+    expect
+      .soft(comNoPapel.equals(semNoPapel), "na impressão, a PRÉVIA não aparece sobre o cartão")
+      .toBe(false);
+    const pdf = await page.pdf({ format: "A4", landscape: true });
+    expect(paginasDoPdf(pdf), "com a PRÉVIA, a folha passou de uma página").toBe(1);
+  } finally {
+    await banco().from("registros_aula").delete().like("codigo", `DSA-E2D${PROCESSO}-B15-%`);
   }
 });
