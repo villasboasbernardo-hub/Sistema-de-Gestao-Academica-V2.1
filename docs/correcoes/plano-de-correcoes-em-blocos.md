@@ -41,7 +41,7 @@ _Decisão de Bernardo Villas Boas, 19/10/2026._ Todo pedido de correção ou mud
 | **12** | Excluir no Calendário: exclusão lógica, sem bloqueio, com alerta de impacto (D-COR-7) — ✅ **concluído em 27/10/2026** | uma migration, que só acrescenta | 027 |
 | **13** | Abertura com a moeda do CIAARA na raiz — ✅ **concluído em 28/10/2026** | não | 028 |
 | **14** | DSA (TFM sem teto, EI sem «O que é», Salvar alteração), Início em nova ordem e as pendências dos Blocos 10 e 11 — ✅ **concluído em 29/10/2026** | uma migration, que só acrescenta | 029 |
-| **15** | Início (tela cheia, setas), ano no cabeçalho e ajustes do DSA (EI só lançado, abas de versão, barra única, cabeçalho numa linha) e a `PEND-029-1` — 🟨 **em conferência** | não | 030 |
+| **15** | Início (tela cheia, setas), ano no cabeçalho e ajustes do DSA (EI só lançado, abas de versão, barra única, cabeçalho numa linha) e a `PEND-029-1` — ✅ **concluído em 30/10/2026** | não | 030 |
 
 ---
 
@@ -663,7 +663,15 @@ invisível ao alerta) e **`PEND-029-5`** (o `TipoTeto` do documento 04 nunca exi
 
 ---
 
-## Bloco 15 — Início (tela cheia, setas), ano no cabeçalho e ajustes do DSA (spec própria) — 🟨 EM CONFERÊNCIA
+## Bloco 15 — Início (tela cheia, setas), ano no cabeçalho e ajustes do DSA (spec própria) — ✅ CONCLUÍDO em 30/10/2026
+
+> ✅ **Concluído em 30/10/2026** — spec `030-bloco-15-inicio-ano-e-dsa`, pelo fluxo `/corrigir`, num PR só: **#107**,
+> **APROVADO** por Bernardo Villas Boas na conferência de 30/10/2026 (D-1 a D-27 como estão; a D-17 com o marinho a 0,10,
+> do ajuste de 29/10/2026) e mesclado por squash na `main` em **`3bfa6e0`**, na virada de semana — o papel do DSA mudou.
+> Sem banco. CI da `main` sobre `3bfa6e0` verde nos três blocos (run `41055350923`: 3.048 de unidade · 1.161 pgTAP · 491
+> RLS + 1 pulado · 611 de ponta a ponta, 1 instável — o `avaliacoes-nas-telas.spec.ts:55`, US10, da `PEND-014-7`, que
+> passou na repetição — e 7 pulados), e o deploy de Production de `3bfa6e0` em `success`. O ramo foi apagado, local e
+> remoto.
 
 _Pedido de Bernardo Villas Boas, 29/10/2026, pelo `/corrigir`._ Spec `030-bloco-15-inicio-ano-e-dsa`, ramo
 `fix/BLOCO-15-inicio-ano-e-dsa`, um PR. **Sem banco.** Regras emendadas: **RT-1** (as setas e os grupos) e **RT-6** (o
