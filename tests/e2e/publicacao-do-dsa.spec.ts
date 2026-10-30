@@ -405,7 +405,7 @@ test("RP-9 · Fazer alteração → lançar → «Salvar alteração»: conta na
   await expect(situacao(page)).toBeVisible();
 
   /* As abas: a Minuta e só a Original — e o Reimprimir dela, também sem o tópico salvo. */
-  await expect(page.locator('[data-slot="abas-de-versao"] [role="tab"]')).toHaveCount(2);
+  await expect(page.locator('[data-slot="abas-de-versao"] > [role="tablist"] [role="tab"]')).toHaveCount(2);
   await expect(page.locator('[data-versao="0"]')).toContainText("Original");
   await expect(page.locator('[data-versao="1"]')).toHaveCount(0);
   await abrirAVersao(page, 0);

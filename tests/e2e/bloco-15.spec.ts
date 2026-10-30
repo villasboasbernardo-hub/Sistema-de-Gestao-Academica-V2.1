@@ -334,8 +334,8 @@ test("itens 5 e 7 · editar antes de publicar sem ALT; as abas de versão", asyn
   const dia = segundaDe(SEMANA_PUBLICADA);
 
   /* Semana nunca publicada: só a aba Minuta (FR-007.2). */
-  await expect(page.locator('[data-slot="abas-de-versao"] [role="tab"]')).toHaveCount(1);
-  await expect(page.locator('[data-slot="abas-de-versao"] [role="tab"]')).toContainText("Minuta");
+  await expect(page.locator('[data-slot="abas-de-versao"] > [role="tablist"] [role="tab"]')).toHaveCount(1);
+  await expect(page.locator('[data-slot="abas-de-versao"] > [role="tablist"] [role="tab"]')).toContainText("Minuta");
 
   /* Item 5: lançar → salvar → prévia → editar → salvar → prévia → publicar = Original, sem ALT. */
   await lancarAula(page, 1, dia, topico("previa"));
@@ -371,7 +371,7 @@ test("itens 5 e 7 · editar antes de publicar sem ALT; as abas de versão", asyn
   expect(eventos, "nasceu ALT antes da 1ª publicação").toEqual([{ tipo: "publicado", numero: 0 }]);
 
   /* Item 7: Minuta · Original; a aba na URL; o papel da Original com Reimprimir. */
-  const abas = page.locator('[data-slot="abas-de-versao"] [role="tab"]');
+  const abas = page.locator('[data-slot="abas-de-versao"] > [role="tablist"] [role="tab"]');
   await expect(abas).toHaveCount(2);
   await page.locator('[data-slot="abas-de-versao"] [data-versao="0"]').click();
   await expect.poll(() => new URL(page.url()).searchParams.get("versao")).toBe("0");
