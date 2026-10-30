@@ -116,10 +116,23 @@ Medido no código e **no remoto, só leitura** (`python -m scripts.provas.medir_
 3. A aba escolhida fica na **URL** (`?versao=`); versão que não existe abre a Minuta com aviso (`RN-DEG-01`). A semana
    abre sempre na Minuta (D-23).
 
-### FR-008 — A marca PRÉVIA atrás do conteúdo (item 8)
+### FR-008 — A marca PRÉVIA na frente dos cartões, transparente e sem capturar clique (item 8)
 
-1. A marca fica **atrás** do conteúdo (camada de fundo), **mais transparente**, sem cobrir texto, legível como marca. Vale
-   na tela de impressão e no papel impresso (no carrossel do Início não há prévia: ele só mostra publicado, RD-7).
+*Ajustado na conferência de Bernardo Villas Boas, 29/10/2026 (§12):* *"a marca PRÉVIA atrás do conteúdo some quando a
+semana está toda lançada. Volte a marca para a FRENTE dos cartões, UMA palavra «PRÉVIA» só, grande e na diagonal, bem
+transparente (opacidade entre 0,08 e 0,12, escolha a que deixa o texto dos cartões legível e a marca ainda perceptível), sem
+capturar clique (pointer-events: none). Vale na tela, na impressão e no carrossel do Início."*
+
+1. A marca é **uma palavra só**, «PRÉVIA», **grande** e **na diagonal** da folha, **na frente** dos cartões, **bem
+   transparente** (opacidade entre 0,08 e 0,12 — D-17) e **sem capturar clique**: o cartão sob ela recebe o clique e a
+   seleção de texto como se ela não estivesse ali.
+2. Com a semana **cheia** — todos os tempos lançados — ela continua visível, e o texto dos cartões, legível.
+3. Vale na tela da prévia (`/print/dsa`) e no papel impresso, que são o mesmo componente; o carrossel do Início só mostra
+   papel publicado (RD-7), que não tem marca, e desenha o mesmo componente com o mesmo CSS (D-27).
+
+*Aceite (ponta a ponta, por clique):* na semana com todos os tempos lançados, *Gerar prévia* → a marca é visível sobre os
+cartões **e** um cartão sob ela continua clicável. *(O primeiro corte, de 29/10/2026, punha a marca atrás do conteúdo: os
+cartões opacos da semana cheia a cobriam inteira.)*
 
 ### FR-009 — O cabeçalho do DSA numa linha só (item 9)
 
@@ -187,9 +200,13 @@ Cada decisão foi **adotada por padrão — Bernardo confere no fim** (fluxo `/c
 - D-15 · Q: Como a aba fica na URL? → A: **`?versao=`**: vazio é a Minuta, `0` a Original, `N` a ALT N; empilha no
   histórico, como as abas da turma. A barra fica no cabeçalho em **todas** as abas; o selo vai **na aba Minuta**.
 - D-16 · Q: Os avisos da publicação (RP-4 e a linha da RP-9)? → A: **acima das abas**, como hoje acima da lista.
-- D-17 · Q: Quão transparente fica a PRÉVIA? → A: **opacidade 0,18** (era 0,35), mesmo tamanho e inclinação, **atrás**
-  do conteúdo. *(O clarify registrou 0,15; a implementação fixou 0,18, dentro do teto de 0,2 do SC-008 — o valor que
-  vale é o do `documento.css`.)*
+- D-17 · Q: Onde fica a PRÉVIA, e quão transparente? → A: *(refeita na conferência de 29/10/2026, §12)* **na frente**
+  dos cartões, **uma palavra só**, **150 pt na diagonal da folha** (35,26°, a diagonal da A4 paisagem), no **marinho** do
+  papel a **0,10**, sem capturar clique nem seleção (`pointer-events: none`, `user-select: none`). Na sonda sobre a semana
+  cheia, o amarelo de antes a 0,12 quase não aparece: contra o branco, ele dá 1,07:1 e o marinho a 0,10 dá 1,23:1
+  (calculado com as cores do `documento.css`); com o marinho, o texto mais fraco do cartão — o título da avaliação sobre o
+  verde — fica em 5,40:1 (era 5,88:1; o mínimo é 4,5:1). *Alternativa: o amarelo a 0,12, 96 pt a 24°, o desenho de antes.*
+  *(Antes da conferência: atrás do conteúdo, amarelo a 0,18 — sumia na semana cheia.)*
 - D-18 · Q: O formato das datas da linha única? → A: **curto quando o ano é o mesmo** (*"26/10 a 31/10/2026"*), inteiro
   quando a semana atravessa o ano (*"29/12/2025 a 03/01/2026"*) — um formatador só, em `lib/formato/data.ts`.
 - D-19 · Q: O que fica do *Parar dia* fora da barra? → A: as **paradas e feriados da semana** (com *Desfazer*) continuam
@@ -213,6 +230,12 @@ Cada decisão foi **adotada por padrão — Bernardo confere no fim** (fluxo `/c
 - D-26 · Q: O submenu da lateral acompanha a troca de ano no cabeçalho? → A: **sim**, como hoje (a escolha redesenha a
   página e o layout); só o `?ano=` do link continua sem chegar à lateral (`PEND-025-2`).
 
+*Da conferência de 29/10/2026 (§12):*
+
+- D-27 · Q: «Vale no carrossel do Início» — o carrossel passa a mostrar a prévia? → A: **não**: ele só mostra o papel
+  publicado (RD-7), que não tem marca; a regra vale lá por construção, porque é o mesmo componente com o mesmo CSS.
+  *Alternativa: mostrar no Início a prévia das semanas não publicadas (novidade, não pedida).*
+
 ## 6. Banco
 
 **Nenhuma migration.** Todos os itens são de tela, de TypeScript ou de CSS. O item 11 usa a função pura que já existe; o
@@ -227,6 +250,9 @@ item 4 deixa de **desenhar** uma linha que nunca foi registro.
 - **Item 11:** disciplina da CAHO 2027 com previsão de 2026 — antes: «Atrasada»; depois: «Aguardando início».
 - **Item 3:** trocar o ano no cabeçalho numa página **sem** seletor próprio (Turmas) muda o que ela mostra.
 - **Item 7:** `?versao=1` numa semana com ALT 1 abre o papel da ALT 1, e não a Minuta.
+- **Item 8 (§12):** a semana com **todos** os tempos lançados — com a marca atrás, a foto do miolo de nenhum dos 40
+  cartões muda com ela; na frente, as fotos dos cartões sob a palavra mudam, e o cartão sob ela continua recebendo o
+  clique. Numa semana com tempos vagos a marca de trás aparecia entre os cartões, e o caso não discriminaria.
 
 ## 8. Critérios de sucesso
 
@@ -242,7 +268,9 @@ item 4 deixa de **desenhar** uma linha que nunca foi registro.
   sem nenhuma ALT.
 - **SC-006**: o rodapé do cartão do lançamento não tem botão com texto; os três ícones ficam juntos à esquerda.
 - **SC-007**: semana não publicada tem 1 aba; com original e ALT 1, 3 abas; `?versao=` abre a aba certa.
-- **SC-008**: a marca PRÉVIA fica atrás do conteúdo, com opacidade ≤ 0,2.
+- **SC-008**: a marca PRÉVIA é uma palavra só, na frente dos cartões, com opacidade de 0,08 a 0,12 e sem capturar clique;
+  na semana com todos os tempos lançados ela aparece sobre os cartões, o cartão sob ela recebe o clique e a impressão
+  continua numa página. *(Era: "atrás do conteúdo, com opacidade ≤ 0,2" — refeito na conferência de 29/10/2026.)*
 - **SC-009**: o cabeçalho do DSA tem a semana **uma** vez; não há *Voltar à turma* nem o quadro *Alunos* na tela.
 - **SC-010**: a barra do DSA tem navegação, sábado, parar dia e os dois do EI, em três grupos, todos ícones com a dica só
   do verbo.
@@ -285,3 +313,35 @@ arquivos afetados com 1 processo; a suíte inteira no CI. Roteiro de conferênci
   existem com ela. A amostra passou a tê-la, e os que só existem com ela aberta estão em `SO_QUANDO_ABERTO`, abertos
   pelo próprio caso. Pego pelo CI do PR (run `40950731785`), não pela rodada local — o arquivo não estava na lista dos
   afetados.
+
+## 12. O ajuste da conferência (29/10/2026) — a PRÉVIA na frente dos cartões
+
+Na conferência, **antes do merge**, Bernardo Villas Boas pediu o ajuste do item 8: *"a marca PRÉVIA atrás do conteúdo some
+quando a semana está toda lançada"* — o texto inteiro está no FR-008. Os outros dez itens seguem em conferência.
+
+- **Medido antes do conserto** (o build local do ramo, base limpa, uma semana semeada com os 40 tempos da G45 — 5 dias × 8):
+  na foto da folha, a marca de trás não aparece na grade; e o caso novo de `bloco-15.spec.ts` reprovou pelos três motivos —
+  opacidade 0,18, a marca atrás do cartão e **0 de 40** cartões com a foto mudada por ela.
+- **A escolha (D-17)**, por uma sonda descartada — fotos da folha cheia em seis variantes: o amarelo a 0,12 quase não
+  aparece; o marinho a 0,08, 0,10 e 0,12 aparece, com o texto legível; ficou o **0,10**, com a palavra em **150 pt** na
+  diagonal da folha. O contraste do texto mais fraco do cartão (5,40:1; era 5,88:1) e o da marca contra o branco
+  (1,23:1 — o composto é (230, 231, 236); o amarelo a 0,12 dá 1,07:1) foram calculados com as cores do `documento.css`.
+  *(A primeira redação deste parágrafo dizia 1,24:1, arredondado duas vezes a partir de 1,2348 — achado da revisão.)*
+- **Achado da verificação:** a primeira redação do caso fotografava a **caixa** de cada cartão, que arredonda para fora e
+  leva a borda de fora dele — por onde a marca de trás aparecia, nas colunas translúcidas da prévia. Nesse ponto o caso
+  passava com o defeito. Ele passou a fotografar o **miolo**, e só então reprovou com 0 de 40.
+- **Depois do conserto** (o mesmo build local, com o CSS novo): o caso passou, com **18 de 40** cartões sob a palavra (a
+  anotação *«cartões sob a PRÉVIA»* do caso), o cartão sob ela recebendo o clique e a seleção, e o PDF numa página.
+- **Guarda:** o caso do item 8 — a semana cheia; a marca visível sobre os cartões (as fotos), na frente deles, de 0,08 a
+  0,12, sem capturar clique (o elemento no ponto é o cartão, e o duplo clique seleciona o texto dele); com a mídia de
+  impressão, a mesma opacidade e, sobre o mesmo cartão, na frente e visível (reforço sugerido pela revisão: só a
+  opacidade igual deixaria passar uma regra de impressão que a mandasse para trás); e o PDF numa página.
+- **Defeitos deliberados** (build local, cada um desfeito em seguida): com `pointer-events: auto`, o caso reprovou com *"a
+  PRÉVIA captura o clique — esperado none, recebido auto"* e *"o clique no cartão sob a PRÉVIA não chega ao cartão"*; com
+  `@media print { … z-index: -1 }`, reprovou só na impressão, com *"na impressão, a PRÉVIA não está na frente do
+  cartão"* e *"na impressão, a PRÉVIA não aparece sobre o cartão"* — as conferências da tela passaram. A «marca atrás» na
+  tela é o próprio CSS do primeiro corte, acima.
+- **Revisão independente** (três leitores e um cético por achado, só leitura): nove apontamentos, **dois confirmados, e os
+  dois são o mesmo** — o 1,24:1 do contraste, corrigido para 1,23:1 no CSS e aqui. Os outros sete eram anteriores ao
+  ajuste ou só reforço (um deles apontado duas vezes), e quatro entraram assim mesmo: o reforço da impressão acima, o
+  `SC-001` com o número da spec no comentário do CSS, a nota de superada na T015 e o passo do carrossel no roteiro.

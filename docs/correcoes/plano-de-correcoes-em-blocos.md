@@ -687,7 +687,10 @@ Individual lançado (a linha fixa sai — item 4): o merge espera a virada de se
    extenso e quem ministra no título (D-13).
 7. **Abas de versão**: *Minuta · Original · ALT N* no lugar de *Versões publicadas*, com o papel de cada versão e
    *Reimprimir*; `?versao=` (D-15, D-23).
-8. **PRÉVIA** atrás do conteúdo, opacidade 0,18 (D-17).
+8. **PRÉVIA** — *ajustada na conferência de 29/10/2026*: **na frente** dos cartões, uma palavra só, 150 pt na diagonal da
+   folha, no marinho a 0,10, sem capturar clique (D-17). Atrás, como no primeiro corte, ela sumia na semana com todos os
+   tempos lançados; o caso de ponta a ponta usa essa semana. O carrossel do Início só mostra papel publicado, sem marca
+   (D-27).
 9. **Cabeçalho do DSA numa linha** 🐛: *código (link) · Semana N de T · 26/10 a 31/10/2026*; saem *Voltar à turma*, o ano
    solto e o quadro *Semana do curso / Período / Alunos* da tela; em *Editar turma*, o código vira o link da ficha.
 10. **Barra única do DSA (RD-6)**: navegação | lançamento | publicação, só ícones; as paradas da semana ficam abaixo do

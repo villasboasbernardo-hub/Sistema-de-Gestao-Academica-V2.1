@@ -68,8 +68,11 @@ ponta a ponta inteira fica com o CI; localmente, só os arquivos tocados, com 1 
     confirmação escrita); o título com o código, o nome por extenso e quem ministra, quebrando a linha.
   - `components/ciaara/grade-dsa.tsx`: sai o texto *"no papel, sem lançamento"* e o caminho da linha fixa (o cartão de
     EI sem lançamento não existe mais).
-- **Papel (item 8):** `app/print/dsa/documento.css` — a folha com `isolation: isolate` e `.dsa4-previa` com `z-index: -1`
-  (pinta sobre o branco da folha e sob todo o resto), `opacity: 0.18`; só na prévia as colunas ficam translúcidas.
+- **Papel (item 8, refeito na conferência de 29/10/2026 — spec §12):** `app/print/dsa/documento.css` — a folha com
+  `isolation: isolate`; `.dsa4-previa` é a camada da folha inteira (`inset: 0`, `overflow: hidden`), **na frente** dos
+  cartões (`z-index: 3`, acima do 2 deles), no marinho a `opacity: 0.1`, com `pointer-events: none` e `user-select: none`;
+  dentro dela, a palavra (`<span>` em `DocumentoDoDsa.tsx`) com 150 pt, girada na diagonal da folha (`-35.26deg`). Saem a
+  `z-index: -1` e as colunas translúcidas do primeiro corte.
 - **Editar turma (item 9):** o código no título vira o link da ficha; sai *Voltar à ficha da turma*.
 - **Vocabulário dos ícones** (`components/ciaara/botao-de-icone.tsx`): `voltar`, `avancar`, `esta-semana`,
   `abrir-sabado`, `fechar-sabado`, `lancar-ei`, `remover-ei`, `cancelar`, `fechar`, `sair-da-tela-cheia`, `pausar`,
@@ -86,7 +89,7 @@ ponta a ponta inteira fica com o CI; localmente, só os arquivos tocados, com 1 
 | 5 | — | `bloco-15.spec.ts`: lançar → salvar → prévia → editar → salvar → prévia → publicar = Original, sem ALT |
 | 6 | — | `bloco-15.spec.ts`: o rodapé sem texto, os três ícones juntos à esquerda; `dsa-cartao-unico.spec.ts` segue pelos mesmos `data-slot` |
 | 7 | `versao-escolhida` | `bloco-15.spec.ts` e `publicacao-do-dsa.spec.ts`: 1 aba sem publicação; Original e ALT 1 depois; `?versao=` |
-| 8 | — | `bloco-15.spec.ts`: a marca atrás do conteúdo (`z-index` e opacidade calculados) |
+| 8 | — | `bloco-15.spec.ts`, com a semana cheia (40 tempos semeados): a foto do miolo dos cartões muda com a marca, ela está na frente (o ponto com o clique ligado à força), de 0,08 a 0,12, o cartão sob ela recebe o clique e a seleção, igual na impressão, PDF numa página |
 | 9 | `intervaloDeDatas` | `bloco-15.spec.ts`: a semana uma vez, sem *Voltar à turma* nem *Alunos* |
 | 10 | a guarda dos ícones (vocabulário) | `bloco-15.spec.ts`: os três grupos; navegar pela barra; os casos de navegação de `dsa-ver.spec.ts` pelas mesmas `data-acao` |
 | 11 | `painel-de-situacao`/`quadrosDaSemana`: a CAHO 2027 com previsão de 2026 → *aguardando início* | — (medição no remoto antes e depois, só leitura) |

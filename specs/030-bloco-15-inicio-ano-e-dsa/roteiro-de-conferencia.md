@@ -48,9 +48,15 @@ Confira nas duas janelas que o pedido cita (1366×768 e 1920×1080) onde o passo
    publicado, só leitura, com a data, o autor e **Reimprimir**; o endereço ganha `?versao=0`. *Voltar* do navegador volta à
    Minuta.
 
-## 8. Marca PRÉVIA (FR-008)
-1. *Gerar prévia* numa semana salva. **Esperado:** a palavra **PRÉVIA**, grande e inclinada, **mais clara** e **atrás** dos
-   cartões — o texto dos cartões fica legível por cima dela. Confira também imprimindo (ou *Salvar como PDF*).
+## 8. Marca PRÉVIA (FR-008 — ajustada na conferência de 29/10/2026)
+1. *Gerar prévia* numa semana salva — de preferência uma **com todos os tempos lançados**. **Esperado:** **uma** palavra
+   **PRÉVIA**, grande, na diagonal da folha, **na frente** dos cartões e bem clara (cinza-azulada); o texto dos cartões
+   continua legível através dela.
+2. Clique duas vezes numa palavra de um cartão que esteja sob a marca. **Esperado:** a palavra do cartão fica selecionada —
+   a marca não pega o clique.
+3. Imprima (ou *Salvar como PDF*). **Esperado:** a mesma marca, e a folha numa página só.
+4. *Início* → o carrossel dos DSA publicados. **Esperado:** o papel **sem** marca — o carrossel só mostra o que foi
+   publicado, e publicado não é prévia (D-27).
 
 ## 9. Cabeçalho do DSA sem repetição (FR-009)
 1. No DSA, sob o título, **uma linha**: *C-Ap-HN 2026* (o link da ficha) · *Semana 30 de 37* · *26/10 a 31/10/2026*.

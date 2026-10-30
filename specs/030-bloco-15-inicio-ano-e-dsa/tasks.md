@@ -70,7 +70,8 @@ sequência. **Sem banco.**
   esquerda; depois de gravar com aviso, *Fechar*. Mudança em `AcoesDoBloco.tsx` (rodapé e título com o nome por extenso
   e quem ministra).
 - [X] T015 [P] [US8] Ponta a ponta que reprova (`bloco-15.spec.ts`): a marca atrás do conteúdo e com opacidade ≤ 0,2.
-  Mudança em `app/print/dsa/documento.css`.
+  Mudança em `app/print/dsa/documento.css`. *(Superada pela conferência de 29/10/2026: a marca voltou para a frente —
+  T025 e T026, spec §12; as asserções de «atrás» saíram do caso.)*
 
 ## Fase 7 — item 5, editar antes de publicar (FR-005, já estava feito)
 
@@ -107,6 +108,17 @@ sequência. **Sem banco.**
   afetados com 1 processo; medição da «Atrasada» no remoto (só leitura) antes e depois; `roteiro-de-conferencia.md`;
   `plano-de-correcoes-em-blocos.md` (Bloco 15, `PEND-029-1` fechada, pendências novas); commit, push, PR com o template
   inteiro; CI verde.
+
+## Fase 11 — o ajuste da conferência de 29/10/2026 (item 8, spec §12)
+
+- [X] T025 [US8] Ponta a ponta que reprova (`bloco-15.spec.ts`, «item 8 · semana com todos os tempos lançados»): os 40
+  tempos semeados numa terceira semana candidata; a marca visível sobre os cartões (a foto do miolo de cada um com e sem
+  ela), na frente, de 0,08 a 0,12, sem capturar clique (o cartão sob ela recebe o clique e o duplo clique seleciona o texto
+  dele), igual na impressão e com o PDF numa página. Visto reprovar no build do primeiro corte (0,18; atrás; 0 de 40).
+- [X] T026 [US8] A marca na frente: `documento.css` (a camada da folha, o marinho a 0,10, sem clique nem seleção) e a
+  palavra girada na diagonal em `DocumentoDoDsa.tsx`; saem a `z-index: -1` e as colunas translúcidas. D-17, D-27, FR-008,
+  SC-008, o roteiro e o plano de correções. Defeito deliberado (`pointer-events: auto`) visto reprovar no caso T025 e
+  desfeito.
 
 ## Dependências e paralelo
 
