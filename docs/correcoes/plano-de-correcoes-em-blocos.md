@@ -40,7 +40,7 @@ _Decisão de Bernardo Villas Boas, 19/10/2026._ Todo pedido de correção ou mud
 | **11** | Lançamento do DSA e Início com o DSA publicado — ✅ **concluído em 26/10/2026** | uma migration, que só acrescenta | 026 |
 | **12** | Excluir no Calendário: exclusão lógica, sem bloqueio, com alerta de impacto (D-COR-7) — ✅ **concluído em 27/10/2026** | uma migration, que só acrescenta | 027 |
 | **13** | Abertura com a moeda do CIAARA na raiz — ✅ **concluído em 28/10/2026** | não | 028 |
-| **14** | DSA (TFM sem teto, EI sem «O que é», Salvar alteração), Início em nova ordem e as pendências dos Blocos 10 e 11 — 🟨 **em conferência** | uma migration, que só acrescenta | 029 |
+| **14** | DSA (TFM sem teto, EI sem «O que é», Salvar alteração), Início em nova ordem e as pendências dos Blocos 10 e 11 — ✅ **concluído em 29/10/2026** | uma migration, que só acrescenta | 029 |
 | **15** | Início (tela cheia, setas), ano no cabeçalho e ajustes do DSA (EI só lançado, abas de versão, barra única, cabeçalho numa linha) e a `PEND-029-1` — 🟨 **em conferência** | não | 030 |
 
 ---
@@ -625,7 +625,14 @@ _Pedido de Bernardo Villas Boas, 27/10/2026, pelo `/corrigir`._ Spec `028-bloco-
 
 ---
 
-## Bloco 14 — DSA, Início e pendências dos Blocos 10 e 11 (spec própria) — 🟨 EM CONFERÊNCIA
+## Bloco 14 — DSA, Início e pendências dos Blocos 10 e 11 (spec própria) — ✅ CONCLUÍDO em 29/10/2026
+
+> ✅ **Concluído em 29/10/2026** — spec `029-bloco-14-dsa-inicio-e-pendencias`, pelo fluxo `/corrigir`, num PR só: **#105**,
+> **APROVADO** por Bernardo Villas Boas na conferência de 29/10/2026 (D-1 a D-29 como estão) e mesclado por squash na
+> `main` em **`df29101`**. A migration `20261028182926` já estava no remoto antes do merge. CI da `main` sobre `df29101`
+> verde nos três blocos (run `40914240883`: 3.023 de unidade · 1.161 pgTAP · 491 RLS + 1 pulado · 605 de ponta a ponta,
+> nenhum instável, e 7 pulados), e o deploy de Production de `df29101` em `success`. O ramo foi apagado no remoto (não
+> havia cópia local).
 
 _Pedido de Bernardo Villas Boas, 28/10/2026, pelo `/corrigir` — chamado de «Bloco 12» no pedido; o 12 e o 13 já
 estavam usados (D-1)._ Spec `029-bloco-14-dsa-inicio-e-pendencias`, ramo `fix/BLOCO-14-dsa-inicio-e-pendencias`, um PR.
