@@ -15,8 +15,11 @@
   `reversao.sql` dentro da transação).
 - [X] T004 [US6] Migration `20261030224204_instrutores_adicionais_da_aula.sql` (coluna, gatilho, view); efeito zero
   medido na cópia `remoto-20261030-194246.sql`; `pnpm db:tipos`; frases das três recusas em `traducao-de-recusas.ts`.
-- [ ] T005 [US6] Rito do remoto: backup `--somente-copia`, dry-run só com ela, `supabase db push --linked`, conferência
-  só de leitura (migrations iguais, impressão digital, `security_invoker`, 0 policy de `DELETE`, Production). *[pendente]*
+- [X] T005 [US6] Rito do remoto (30/10/2026, depois do CI verde): backup `remoto-20261030-211901.sql`; dry-run listando só
+  a `20261030224204`; `supabase db push --linked` 0. Conferido só por leitura: **102 e 102** migrations; impressão digital
+  **igual nos dois bancos** (2.741 objetos, `35049a56…`); `security_invoker` na view; **0** policies de `DELETE`; **0**
+  aulas com adicional em 3.896; `vw_instrutor_carga_anual` no remoto com as mesmas **182** linhas e o mesmo md5
+  `21e538e8…` da medição na cópia (efeito zero); Production `/login` 200, `/` e `/inicio` 307.
 
 ## Fase 2 — domínio e ações
 
@@ -43,8 +46,11 @@
 
 - [X] T016 Ponta a ponta nova `tests/e2e/bloco-16-dsa.spec.ts` e os ajustes (`publicacao-do-dsa`, `bloco-15`,
   `dsa-tipo-e-global`, `dsa-avaliacao-item`, `dsa-responsavel-livre`, `dsa-sessao-de-aplicacao`, `tetos-da-turma`).
-- [ ] T017 Local: tipos, lint, formatação, unidade, build, pgTAP e RLS; a ponta a ponta dos arquivos afetados com 1
-  processo. *[pendente]*
-- [ ] T018 Commit, push, PR com o template inteiro, CI verde nos três blocos. *[pendente]*
+- [X] T017 Local: tipos, lint e formatação sem erro; 3.067 de unidade (227 arquivos); build; 1.172 pgTAP (74); 491 RLS + 1
+  pulado (33); ponta a ponta dos arquivos afetados com 1 processo — 27 de 27, e depois do 1º CI mais 22 de 22 (sete
+  arquivos com seletor que contava o elemento novo).
+- [X] T018 PR #109; o 1º CI reprovou por teste (formatação de 2 arquivos e 3 seletores diante do formulário e do cartão
+  novos) e foi corrigido em `b226843`; CI verde nos três blocos sobre `b226843` (run `41147205860`: 3.067 · 1.172 · 491 +
+  1 pulado · 615 de ponta a ponta, nenhum instável, 7 pulados).
 - [ ] T019 Encerramento depois da aprovação (merge na virada de semana, CI da `main`, Production, ramo apagado, plano de
   correções, `CLAUDE.md`). *[pendente]*

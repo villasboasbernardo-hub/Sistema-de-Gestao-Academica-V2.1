@@ -129,6 +129,10 @@ uuid[] not null default '{}'` com o gatilho que confere (D-7), e a recriação d
 adicionais — **autorizada pelo pedido com efeito zero medido na cópia do remoto** (SC-007). Nada de dado muda: a coluna
 nasce vazia em todas as linhas. A view mantém `security_invoker` (gotcha 10). Rito completo do remoto.
 
+**Aplicada no remoto em 30/10/2026**, depois do CI verde: backup `remoto-20261030-211901.sql`, dry-run só com ela, `db
+push` 0; **102 e 102** migrations, impressão digital igual nos dois bancos (2.741 objetos, `35049a56…`), e a view de carga
+no remoto com o mesmo md5 da medição (`21e538e8…`, 182 linhas) — o efeito zero confirmado no próprio remoto.
+
 ## 7. Fora do escopo
 
 - Somar na carga os adicionais **antigos**, em texto (`PEND-031-1`).
