@@ -502,7 +502,13 @@ function Cartao({
              conteúdo pela altura (`space-between`), e a linha dos instrutores nunca encolhe.
         */}
         <div
-          className={`dsa4-cartao-pe${arranjo.emPilha ? " dsa4-cartao-pe-pilha" : ""}`}
+          className={`dsa4-cartao-pe${arranjo.emPilha ? " dsa4-cartao-pe-pilha" : ""}${
+            cartao.ta <= 1
+              ? nomes.length >= 3
+                ? " dsa4-cartao-pe-um-tempo dsa4-cartao-pe-muitos"
+                : " dsa4-cartao-pe-um-tempo"
+              : ""
+          }`}
           data-slot="cartao-pe"
           data-arranjo={arranjo.emPilha ? "pilha" : "linha"}
         >

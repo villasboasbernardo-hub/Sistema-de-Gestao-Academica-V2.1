@@ -154,7 +154,9 @@ async function lancarDescritaESalvar(
 ): Promise<void> {
   await abrirCelula(page, celula);
   await page.locator(`[data-tipo="${tipo}"]`).click();
-  await page.locator("#dsa-subtipo").selectOption({ label: subtipo });
+  /* Bloco 16 (ajuste A): com um tipo só (o Estudo Individual), o campo não aparece — o tipo já vem escolhido. */
+  if (tipo === "Estudo_Individual") await expect(page.locator("#dsa-subtipo")).toHaveCount(0);
+  else await page.locator("#dsa-subtipo").selectOption({ label: subtipo });
   await page.locator("#dsa-tempos").fill("1");
   await page.locator("#dsa-descricao").fill(descricao);
   await page.locator('[data-slot="gravar-lancamento"]').click();
@@ -207,7 +209,8 @@ test("FR-002 · o Estudo Individual SEM «O que é» lança, salva e grava a des
   await abrirASemana(page);
   await abrirCelula(page, CELULA_DO_EI);
   await page.locator('[data-tipo="Estudo_Individual"]').click();
-  await page.locator("#dsa-subtipo").selectOption({ label: "Estudo Individual" });
+  /* Bloco 16 (ajuste A): o tipo único do Estudo Individual já vem escolhido, sem o campo. */
+  await expect(page.locator("#dsa-subtipo")).toHaveCount(0);
   await expect(page.locator('[data-slot="categoria-do-tipo"]')).toHaveText(
     "Conta como: Estudo Individual (fora da CHT)",
   );

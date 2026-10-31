@@ -765,8 +765,10 @@ test("item 8 · semana com todos os tempos lançados: a PRÉVIA na frente dos ca
       ponto,
     );
     expect(recebe, "o clique no cartão sob a PRÉVIA não chega ao cartão").toBe(true);
+    /* Bloco 16 (ajuste C): os nomes são elementos próprios — o duplo clique vai no primeiro, não no vão entre eles. */
     await cartao
-      .locator('.dsa4-cartao-pe > [data-slot="cartao-instrutor"]')
+      .locator('.dsa4-cartao-pe > [data-slot="cartao-instrutor"] > *')
+      .first()
       .dblclick({ timeout: 5_000 });
     const selecao = await page.evaluate(() => {
       const s = window.getSelection();

@@ -419,6 +419,22 @@
   gap: 0;
 }
 
+/*
+ * O cartão de 1 TEMPO (Bloco 16, ajuste C): a linha dos instrutores leva o TA e o local, e não encolhe — então ela fica
+ * mais densa para caber; com 3 nomes ou mais, mais ainda. Medido no CI (Linux, fontes mais largas que as do Windows): com
+ * quatro nomes longos na letra comum, o local passava do fundo do cartão.
+ */
+.dsa4-cartao-pe-um-tempo {
+  font-size: 0.8em;
+  line-height: 1.05;
+  gap: 0 0.8mm;
+}
+
+.dsa4-cartao-pe-muitos {
+  font-size: 0.68em;
+  line-height: 1;
+}
+
 /* O local na última linha do cartão (com altura). */
 .dsa4-cartao-local {
   flex: 0 10 auto;
