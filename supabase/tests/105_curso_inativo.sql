@@ -112,6 +112,9 @@ select * from (values
   -- Spec 021 (Bloco 6), 21/10/2026. REGRA DOS VALORES ESPERADOS: (a) — o currículo é dado do curso (RC-1): editá-lo
   -- exige o curso em oferta. ⚠️ UMA policy só (editar): o currículo nasce com o curso ou pela cópia, sem INSERT.
   ('curriculos',                 'curso_em_oferta'),
+  -- Spec 031 (Bloco 16, ajuste D), 31/10/2026. REGRA DOS VALORES ESPERADOS: (a) — o ajuste manual da avaliação é dado
+  -- da turma: gravar exige a turma em oferta. UMA policy só (criar): a tabela é só de acréscimo, sem UPDATE.
+  ('ajustes_de_avaliacao',       'turma_em_oferta'),
   ('instrutor_disciplina',       'disciplina_em_oferta')
 ) as v(tabela, chave);
 
@@ -156,8 +159,9 @@ select is(
   -- Spec 017 (Bloco 2, M1, 19/10/2026): + `ta_fora_do_dsa`, duas (registrar e desfazer) — 42 + 2 = 44, em 22.
   -- Spec 018 (Bloco 3, 20/10/2026): + `regimes_de_horario`, duas (criar e editar) — 44 + 2 = 46, em 23.
   -- Spec 021 (Bloco 6, 21/10/2026): + `curriculos`, UMA (editar; o currículo nasce com o curso ou pela cópia) — 46 + 1 = 47, em 24.
-  47,
-  'FR-017.5 · sao 47 policies de escrita em 24 tabelas — duas por tabela (criar e editar), menos o curriculo, que so se edita'
+  -- Spec 031 (Bloco 16, ajuste D, 31/10/2026): + `ajustes_de_avaliacao`, UMA (criar; só de acréscimo) — 47 + 1 = 48, em 25.
+  48,
+  'FR-017.5 · sao 48 policies de escrita em 25 tabelas — duas por tabela (criar e editar), menos o curriculo, que so se edita, e o ajuste da avaliacao, que so se cria'
 );
 
 -- ---------------------------------------------------------------- a exclusao DECLARADA, nao ausente

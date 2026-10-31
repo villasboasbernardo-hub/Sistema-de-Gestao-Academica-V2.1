@@ -315,7 +315,8 @@ export function papelDaSemana(
   const impressos = documentoImpresso(semana, { tecnicas: TECNICAS, idsDeEstudoIndividual });
   return {
     dias: impressos,
-    grade: gradeDoPapel(impressos, s.relogio),
+    /* A planilha de contingência mantém o regime inteiro (Bloco 16, D-20): o papel dela é o da tela, com o mínimo. */
+    grade: gradeDoPapel(impressos, s.relogio, { minimoDeTempos: s.relogio?.temposDoRegime ?? 0 }),
     noMesmoTa: semana.dias.flatMap((d) =>
       d.semPosicao
         .filter((x) => x.motivo === MOTIVO_NO_MESMO_TA)

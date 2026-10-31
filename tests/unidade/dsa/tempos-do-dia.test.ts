@@ -1,4 +1,4 @@
-/** Os tempos do dia para o campo «Em qual tempo começa» (item 1d, 08/10/2026). */
+/** Os tempos do dia para o campo «Início» (item 1d, 08/10/2026; era «Em qual tempo começa» até o Bloco 16). */
 import { describe, expect, it } from "vitest";
 
 import type { DiaDaGrade } from "@/lib/dominio/dsa/grade";

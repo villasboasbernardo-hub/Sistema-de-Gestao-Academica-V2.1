@@ -227,8 +227,8 @@ describe("situacaoDaSemana — Salvar alteração (RP-9, spec 029)", () => {
 
 describe("rotuloDoAlt", () => {
   it("a original e a semana sem publicação saem em branco; a alteração, ALT N", () => {
-    expect(rotuloDoAlt(null)).toBe("ALT —");
-    expect(rotuloDoAlt(0)).toBe("ALT —");
+    expect(rotuloDoAlt(null)).toBe("PRÉVIA");
+    expect(rotuloDoAlt(0)).toBe("ORIGINAL");
     expect(rotuloDoAlt(2)).toBe("ALT 2");
   });
 });

@@ -208,7 +208,7 @@ test("SC-003 · lançar PELA TELA acima do máximo grava a linha e só alerta (o
       timeout: 60_000,
     })
     .toBe(true);
-  if ((await avisos.count()) > 0) await page.getByRole("button", { name: "Entendi" }).click();
+  if ((await avisos.count()) > 0) await page.locator('[data-slot="fechar-formulario"]').click();
   await salvarASemana(page);
 
   // A linha está no banco: o teto não a recusou.

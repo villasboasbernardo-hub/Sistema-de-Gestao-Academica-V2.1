@@ -97,6 +97,8 @@ export type PainelDeLancamentoProps = {
   /** A2 (16/10/2026): os instrumentos da prova sem item do currículo — o formulário e o cartão. */
   readonly instrumentos?: readonly InstrumentoOferecido[];
   readonly subtipos: readonly TipoOferecido[];
+  /** Bloco 16 (FR-004): os fatos que são Estudo Individual — o cartão deles não pergunta instrutor. */
+  readonly idsDeEstudoIndividual?: readonly string[];
   /** Quem tem `atividades_globais.criar` vê a caixa «todas as turmas» (spec 014, FR-014). */
   readonly podeAtividadeGlobal?: boolean;
   readonly lancar: (entrada: unknown) => Promise<ResultadoDaAcao>;
@@ -114,7 +116,12 @@ export type PainelDeLancamentoProps = {
  * estão todas sem TA, então a faixa é onde o histórico mora. Procurar só nas células faria
  * *"posicionar"* não achar nada justamente no caso que a decisão criou.
  */
-function fatoDaSemana(semana: Semana, fatoId: string): FatoEscolhido | null {
+function fatoDaSemana(
+  semana: Semana,
+  fatoId: string,
+  idsDeEstudoIndividual: ReadonlySet<string>,
+): FatoEscolhido | null {
+  const ei = idsDeEstudoIndividual.has(fatoId);
   for (const dia of semana.dias) {
     for (const celula of dia.celulas) {
       const bloco = celula.bloco;
@@ -133,6 +140,7 @@ function fatoDaSemana(semana: Semana, fatoId: string): FatoEscolhido | null {
           herdado: bloco.herdado,
           gravado: bloco.gravado,
           semPosicao: false,
+          estudoIndividual: ei,
         };
       }
     }
@@ -152,6 +160,7 @@ function fatoDaSemana(semana: Semana, fatoId: string): FatoEscolhido | null {
           herdado: fato.herdado,
           gravado: fato.gravado,
           semPosicao: true,
+          estudoIndividual: ei,
         };
       }
     }
@@ -182,6 +191,7 @@ export function PainelDeLancamento({
   tiposDeAvaliacao,
   instrumentos = [],
   subtipos,
+  idsDeEstudoIndividual = [],
   podeAtividadeGlobal = false,
   lancar,
   mover,
@@ -194,7 +204,8 @@ export function PainelDeLancamento({
 
   const podeMexer =
     podeLancar && mover !== undefined && atualizar !== undefined && excluir !== undefined;
-  const fato = fatoId === null ? null : fatoDaSemana(semana, fatoId);
+  const conjuntoDeEi = React.useMemo(() => new Set(idsDeEstudoIndividual), [idsDeEstudoIndividual]);
+  const fato = fatoId === null ? null : fatoDaSemana(semana, fatoId, conjuntoDeEi);
 
   /*
    * ⚠️ **QUEM ABRIU O DIÁLOGO, PARA O FOCO VOLTAR A ELE AO FECHAR** — e a primeira redação dizia que
@@ -229,7 +240,7 @@ export function PainelDeLancamento({
     definirRespostaDoArraste(null);
     const resposta = await mover({
       fatoId: id,
-      origem: fatoDaSemana(semana, id)?.origem,
+      origem: fatoDaSemana(semana, id, conjuntoDeEi)?.origem,
       data: dia,
       taInicial: ta,
     });

@@ -157,7 +157,7 @@ test.describe("criar, editar e excluir uma aula pela grade", () => {
     const resultado = await desfecho();
     expect(resultado, "o lançamento pela grade foi recusado").not.toMatch(/^recusou/);
     if (resultado === "avisou") {
-      await page.locator(FORMULARIO).getByRole("button", { name: "Cancelar" }).click();
+      await page.locator(FORMULARIO).locator('[data-slot="fechar-formulario"]').click();
     }
     await expect(page.locator(FORMULARIO)).toHaveCount(0);
 
@@ -235,7 +235,7 @@ test.describe("criar, editar e excluir uma aula pela grade", () => {
     await expect.poll(desfechoDoLancamento, { timeout: 60_000 }).not.toBe("em curso");
     expect(await desfechoDoLancamento(), "o lançamento foi recusado").not.toMatch(/^recusou/);
     if ((await page.locator(FORMULARIO).count()) > 0) {
-      await page.locator(FORMULARIO).getByRole("button", { name: "Cancelar" }).click();
+      await page.locator(FORMULARIO).locator('[data-slot="fechar-formulario"]').click();
     }
 
     const cartao = page.locator(`${GRADE} td`).filter({ hasText: topico });

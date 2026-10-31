@@ -5,7 +5,7 @@
  *   2. Salvar: conta. Gerar prévia: o papel sai com PRÉVIA e ALT em branco.
  *   3. Publicar: a semana trava (o painel oferece só «Fazer alteração»).
  *   4. Fazer alteração → lançar → Publicar alteração: sem justificativa é recusado; com ela, ALT 1.
- *   5. Reimprimir: a original sai com «ALT —», a ALT 1 com «ALT 1».
+ *   5. Reimprimir: a original sai com «ORIGINAL», a ALT 1 com «ALT 1» (Bloco 16, RP-1; até ali «ALT —»).
  *   6. Descartar rascunho: o lançamento sai da grade e fica INATIVO no banco (não apagado).
  *   7. A turma EAD: o andamento da ficha diz que o controle é da Divisão de Ensino a Distância.
  *   8. Spec 029 (Bloco 14), RP-9 — Fazer alteração → lançar → «Salvar alteração»: conta na CH, o selo diz *Em alteração ·
@@ -181,11 +181,11 @@ test("SC-001/SC-003/SC-004 · rascunho → salvar → prévia → publicar → a
   await expect(situacao(page)).toHaveAttribute("data-situacao", "registrado");
   await expect.poll(taDaTurma).toBe(antes + 1);
 
-  /* Gerar prévia: PRÉVIA e ALT em branco. */
+  /* Gerar prévia: PRÉVIA na marca e no campo ALT (Bloco 16, RP-1). */
   await page.locator('[data-slot="imprimir-dsa"]').click();
   await expect.poll(() => new URL(page.url()).pathname).toBe("/print/dsa");
   await expect(page.locator('[data-slot="dsa-previa"]')).toHaveText("PRÉVIA");
-  await expect(page.locator('[data-slot="dsa-alt"]')).toHaveText("ALT —");
+  await expect(page.locator('[data-slot="dsa-alt"]')).toHaveText("PRÉVIA");
   await page.goBack();
   await expect(situacao(page)).toBeVisible();
 
@@ -237,10 +237,10 @@ test("SC-001/SC-003/SC-004 · rascunho → salvar → prévia → publicar → a
     { tipo: "alteracao_publicada", numero: 1 },
   ]);
 
-  /* 5. Reimprimir, pela aba de cada versão: a original com ALT em branco, a ALT 1 com «ALT 1». */
+  /* 5. Reimprimir, pela aba de cada versão: a original com «ORIGINAL» (Bloco 16, RP-1), a ALT 1 com «ALT 1». */
   await abrirAVersao(page, 0);
   await page.locator('[data-slot="papel-da-versao"] [data-slot="reimprimir-versao"]').click();
-  await expect(page.locator('[data-slot="dsa-alt"]')).toHaveText("ALT —");
+  await expect(page.locator('[data-slot="dsa-alt"]')).toHaveText("ORIGINAL");
   await expect(page.locator('[data-slot="dsa-previa"]')).toHaveCount(0);
   await page.goBack();
   await abrirAVersao(page, 1);
@@ -285,7 +285,7 @@ test("SC-007 · a turma EAD: o andamento é da Divisão de Ensino a Distância",
  * ⚠️ **POR ÚLTIMO NO ARQUIVO, DE PROPÓSITO**: o arquivo é serial, e um caso que reprova pula os seguintes. Antes da spec
  *    029 este reprova (o botão não existe), e não pode levar o SC-007 junto.
  * ⚠️ **O PAPEL É CONFERIDO PELO TÓPICO DENTRO DO CARTÃO**, nunca pelo ALT só: a original e a semana com a alteração salva
- *    têm o mesmo «ALT —», e só o conteúdo distingue o retrato publicado do salvo de hoje.
+ *    têm o mesmo «ORIGINAL», e só o conteúdo distingue o retrato publicado do salvo de hoje.
  */
 test("RP-9 · Fazer alteração → lançar → «Salvar alteração»: conta na CH e o papel segue o publicado; sair e voltar; Descartar volta ao salvo; Publicar → ALT 1", async ({
   page,
@@ -394,7 +394,7 @@ test("RP-9 · Fazer alteração → lançar → «Salvar alteração»: conta na
   /* O papel continua o PUBLICADO (FR-003.2): Imprimir (a versão vigente) sai sem o tópico salvo na alteração. */
   await page.locator('[data-slot="imprimir-dsa"]').click();
   await expect.poll(() => new URL(page.url()).pathname).toBe("/print/dsa");
-  await expect(page.locator('[data-slot="dsa-alt"]')).toHaveText("ALT —");
+  await expect(page.locator('[data-slot="dsa-alt"]')).toHaveText("ORIGINAL");
   await expect(page.locator('[data-slot="dsa-previa"]')).toHaveCount(0);
   await expect(cartaoNoPapel(daOriginal)).toHaveCount(1);
   await expect(
@@ -405,13 +405,15 @@ test("RP-9 · Fazer alteração → lançar → «Salvar alteração»: conta na
   await expect(situacao(page)).toBeVisible();
 
   /* As abas: a Minuta e só a Original — e o Reimprimir dela, também sem o tópico salvo. */
-  await expect(page.locator('[data-slot="abas-de-versao"] [role="tab"]')).toHaveCount(2);
+  await expect(
+    page.locator('[data-slot="abas-de-versao"] > [role="tablist"] [role="tab"]'),
+  ).toHaveCount(2);
   await expect(page.locator('[data-versao="0"]')).toContainText("Original");
   await expect(page.locator('[data-versao="1"]')).toHaveCount(0);
   await abrirAVersao(page, 0);
   await page.locator('[data-slot="papel-da-versao"] [data-slot="reimprimir-versao"]').click();
   await expect.poll(() => new URL(page.url()).searchParams.get("versao")).toBe("0");
-  await expect(page.locator('[data-slot="dsa-alt"]')).toHaveText("ALT —");
+  await expect(page.locator('[data-slot="dsa-alt"]')).toHaveText("ORIGINAL");
   await expect(cartaoNoPapel(daOriginal)).toHaveCount(1);
   await expect(cartaoNoPapel(daAlteracao)).toHaveCount(0);
   await page.goBack();

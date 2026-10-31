@@ -385,6 +385,16 @@ garantia do motor. Cite-a quando precisar do exemplo.
 >
 > ⚠️ O `.docx` **não** recebeu esta emenda (regra de precedência do `.md`, 17/09/2026).
 
+> ### ✅ Emenda de 31/10/2026 — uma tabela nova, do Bloco 16 do plano de correções (spec 031, ajuste D)
+>
+> - **`ajustes_de_avaliacao`** — o **ajuste manual** da situação e das datas de aplicação e de vista de uma avaliação da
+>   turma (a do currículo, ou a lançada sem item), com **justificativa** de 10 caracteres ou mais e o **autor** carimbado
+>   pelo banco. **Só de acréscimo**: o mais recente vale na linha, os anteriores são o histórico; o gatilho recusa
+>   reescrever. Lê quem lê o DSA ou as avaliações; grava quem **lança o DSA** da turma. **Não muda a CH** — nenhuma view
+>   a lê; a situação ajustada é aplicada em `lib/dominio/avaliacoes/ajustes.ts`.
+>
+> ⚠️ O `.docx` **não** recebeu esta emenda (regra de precedência do `.md`, 17/09/2026).
+
 > **Achado D-6 — resolvido aqui.** Três destas quatro (`unidades_ensino`,
 > `turma_disciplina_instrutor`, `configuracoes_horario`) **não constam do dicionário de entidades
 > do documento 05 §4**, porque nasceram depois dele: as duas primeiras de decisões de 26/08, a

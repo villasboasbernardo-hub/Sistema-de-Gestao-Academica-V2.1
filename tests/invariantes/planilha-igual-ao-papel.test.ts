@@ -363,6 +363,11 @@ describe.each(QUAIS)(
           lida,
           extras,
           hoje: HOJE,
+          /*
+           * Bloco 16 (ajuste B, D-20 da spec 031): o papel corta os tempos finais vazios; a planilha de contingência
+           * mantém o regime inteiro — a comparação é com o papel de linhas do regime.
+           */
+          ...(lida.relogio ? { minimoDeTempos: lida.relogio.temposDoRegime } : {}),
         });
         const lidaDaPlanilha = lerImpressao(pasta, g, s.rotulo, conhecidos);
         for (const d of divergenciasDoPapel(lidaDaPlanilha, g, {

@@ -116,7 +116,7 @@ test("US2 · BDA mostra «Apoio Individualizado» antes de gravar, grava fora da
   await page.locator('[data-tipo="Apoio_Individualizado"]').click();
   await page.locator("#dsa-subtipo").selectOption({ label: "BDA" });
   await expect(page.locator('[data-slot="categoria-do-tipo"]')).toHaveText(
-    "Conta como: Apoio Individualizado — alunos específicos (fora da CHT)",
+    "Conta como: Apoio Individualizado (fora da CHT)",
   );
   await page.locator("#dsa-descricao").fill(descricao);
   await page.locator("#dsa-quantidade-alunos").fill("3");
@@ -132,7 +132,9 @@ test("US2 · BDA mostra «Apoio Individualizado» antes de gravar, grava fora da
     escopo: "turma",
   });
   expect(gravada.tipo_atividade_id).not.toBeNull();
-  await expect(page.locator(GRADE)).toContainText("Apoio Individualizado — alunos específicos");
+  await expect(page.locator(GRADE)).toContainText("Apoio Individualizado");
+  /* Bloco 16 (FR-005): o sufixo saiu da tela e do papel. */
+  await expect(page.locator(GRADE)).not.toContainText("alunos específicos");
 });
 
 test("US2 · Recepção aos alunos conta como TAD; o externo é o «Outro responsável (nome livre)» (RN-RESP-1)", async ({

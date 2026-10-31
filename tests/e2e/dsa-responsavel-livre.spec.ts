@@ -152,7 +152,7 @@ test("RN-RESP-1 · fiscal do cadastro no formulário; atividade de nome livre tr
     await desfecho(page, FORMULARIO, "recusa-do-lancamento", "avisos-do-lancamento"),
   ).not.toMatch(/^recusou/);
   if ((await page.locator(FORMULARIO).count()) > 0) {
-    await page.getByRole("button", { name: "Entendi" }).click();
+    await page.locator('[data-slot="fechar-formulario"]').click();
   }
 
   const { data: prova, error: erroDaProva } = await banco()
@@ -186,7 +186,7 @@ test("RN-RESP-1 · fiscal do cadastro no formulário; atividade de nome livre tr
     await desfecho(page, FORMULARIO, "recusa-do-lancamento", "avisos-do-lancamento"),
   ).not.toMatch(/^recusou/);
   if ((await page.locator(FORMULARIO).count()) > 0) {
-    await page.getByRole("button", { name: "Entendi" }).click();
+    await page.locator('[data-slot="fechar-formulario"]').click();
   }
 
   const lerAtividade = async () => {

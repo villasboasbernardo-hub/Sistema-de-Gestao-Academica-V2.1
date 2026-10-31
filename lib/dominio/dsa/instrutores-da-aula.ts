@@ -89,7 +89,12 @@ export function idsDaListaDaAula(
 
 /** Por que a lista de instrutores chegou vazia, do lado do «não há» — o «você não vê» não é motivo daqui. */
 export type MotivoDaListaVazia =
-  "sem-disciplina" | "sem-habilitado" | "sem-atribuido" | "sem-cadastro" | "sem-leitura";
+  | "sem-disciplina"
+  | "sem-habilitado"
+  | "sem-atribuido"
+  | "sem-cadastro"
+  | "sem-leitura"
+  | "sem-outro-habilitado";
 
 const FRASE_DA_LISTA_VAZIA: Readonly<Record<MotivoDaListaVazia, string>> = {
   "sem-disciplina": "Escolha a disciplina.",
@@ -100,6 +105,9 @@ const FRASE_DA_LISTA_VAZIA: Readonly<Record<MotivoDaListaVazia, string>> = {
   "sem-cadastro": "Nenhum instrutor ativo no cadastro.",
   "sem-leitura":
     "A lista de instrutores não pôde ser lida agora. Recarregue a página; se continuar, avise o suporte.",
+  /* Bloco 16 (RD-9): a lista dos ADICIONAIS — a da aula, sem quem ministra e sem os já escolhidos. */
+  "sem-outro-habilitado":
+    "Nenhum outro instrutor habilitado nesta disciplina. A habilitação é feita na ficha do instrutor.",
 };
 
 /**

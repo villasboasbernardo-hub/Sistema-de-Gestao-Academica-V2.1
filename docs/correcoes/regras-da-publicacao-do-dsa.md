@@ -35,6 +35,7 @@ O DSA é por **turma e semana**. É impresso e distribuído a instrutores e alun
   o próximo Salvar). **Descartar rascunho** desfaz todos os rascunhos da semana (inativa, não apaga — regra 4);
   **Salvar** torna todos registrados de uma vez e marca a semana como salva.
 - **RP-1.** Antes da primeira publicação, editar é livre; depois dela, toda mudança é uma alteração numerada, com justificativa.
+  ⚠️ **Emenda de 30/10/2026** *(pedido de Bernardo Villas Boas no `/corrigir` do Bloco 16, spec 031, `FR-007`)*: *"Campo ALT do papel: a primeira versão publicada mostra 'ORIGINAL'; depois 'ALT 1', 'ALT 2'… A prévia continua com 'PRÉVIA'. Vale no Reimprimir das versões antigas e no carrossel do Início."* O campo *Alteração* do papel diz **ORIGINAL** na versão 0, **ALT N** na alteração N e **PRÉVIA** na prévia (D-13 da spec 031) — por `rotuloDoAlt`, o ponto único da impressão, do *Reimprimir*, das abas de versão e do carrossel. O número não fica no retrato, então as versões antigas mudam o campo sem que o retrato mude. Até ali, *"ALT —"* na original e na prévia.
 - **RP-2.** Alteração registrada é alteração publicada: não existe "alteração salva e não publicada" fora do modo *Fazer alteração* em andamento.
 - **RP-3.** Tela do DSA: mostra a situação da semana (em preenchimento, registrado, publicado, ALT N, ou *alteração em andamento*) e o **histórico**: original e alterações, com data, autor, justificativa e **Reimprimir** de cada uma.
   ⚠️ **Emenda de 29/10/2026** *(pedido de Bernardo Villas Boas no `/corrigir` do Bloco 15, spec 030, `FR-007`)*: o
