@@ -187,7 +187,9 @@ instrutores, com o TA. O conteúdo se **distribui** pela altura do cartão (`spa
 5. A **ficha da turma** (aba Avaliações) mostra a **mesma** situação ajustada, marcada *"ajustada à mão"*.
 6. **Banco**: uma migration que **só acrescenta** (`20261031151628_ajustes_de_avaliacao`). A situação das avaliações é
    calculada em TypeScript (`quadroDeAvaliacoesDaTurma`), não numa view: **nenhuma view muda** — efeito zero por
-   construção (pgTAP 155 confere que nenhuma view a lê).
+   construção (pgTAP 155 confere que nenhuma view a lê). **Aplicada no remoto em 31/10/2026**, depois do CI verde: backup
+   `remoto-20261031-141540.sql`, dry-run só com ela, `db push` 0; **103 e 103** migrations, impressão digital igual nos dois
+   bancos (2.781 objetos, `315a6f87…`), a tabela vazia e nenhuma view a lê.
 
 ### Critérios de sucesso dos ajustes
 

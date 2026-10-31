@@ -69,7 +69,12 @@
   histórico; a ficha com «ajustada à mão».
 - [X] T026 Ponta a ponta `bloco-16-dsa.spec.ts`: ajuste A no caso do formulário; o cartão adaptável na tela e na
   impressão; o ajuste D por clique, no banco, na linha e na ficha.
-- [ ] T027 Rito do remoto da `20261031151628` e CI verde. *[pendente]*
+- [X] T027 CI verde nos três blocos sobre `591a069` (run `41221670384`: 3.083 de unidade · 1.183 pgTAP · 497 RLS + 1
+  pulado · 616 de ponta a ponta, 1 instável — o `avaliacoes-nas-telas.spec.ts:55`, da `PEND-014-7` — e 7 pulados; o 1º CI
+  dos ajustes reprovou por teste e pelo cartão de 1 tempo no Linux, corrigido). Rito do remoto (31/10/2026): backup
+  `remoto-20261031-141540.sql`, dry-run só com a `20261031151628`, `db push` 0; **103 e 103** migrations; impressão
+  digital **igual nos dois bancos** (2.781 objetos, `315a6f87…`); RLS ligada, **0** policies de `DELETE`, a tabela vazia e
+  **nenhuma view** a lê; Production `/login` 200, `/` 307.
 
 - [ ] T019 Encerramento depois da aprovação (merge na virada de semana, CI da `main`, Production, ramo apagado, plano de
   correções, `CLAUDE.md`). *[pendente]*
