@@ -32,6 +32,16 @@ import {
 } from "./situacao";
 import { exigeVista, type InstrumentoDaVista } from "./vista-obrigatoria";
 
+/** Um ajuste manual no histórico da linha (Bloco 16, ajuste D) — `lib/dominio/avaliacoes/ajustes.ts`. */
+export type AjusteNoHistorico = {
+  readonly situacao: SituacaoDaAvaliacao;
+  readonly dataAplicacao: string | null;
+  readonly dataVista: string | null;
+  readonly justificativa: string;
+  readonly autor: string | null;
+  readonly em: string;
+};
+
 export type DisciplinaDoQuadro = {
   id: string;
   cod: string;
@@ -88,6 +98,10 @@ export type LinhaDeItem = {
   origemDaUe: string | null;
   situacao: SituacaoDaAvaliacao | null;
   aplicacao: string | null;
+  /** A data da última sessão de vista ATIVA da avaliação ligada (Bloco 16, ajuste D), ou nula. */
+  vista: string | null;
+  /** Bloco 16 (ajuste D): os ajustes manuais da linha, do mais novo ao mais velho (`comAjustes`). */
+  historico?: readonly AjusteNoHistorico[];
   /** A avaliação ligada ao item (para «juntar como sessão»), e quantas sessões de aplicação ela tem (1 = só a 1ª). */
   avaliacaoId: string | null;
   sessoes: number;
@@ -99,6 +113,10 @@ export type AvaliacaoSemItem = {
   tipo: string;
   instrumento: string | null;
   aplicacao: string | null;
+  /** A data da última sessão de vista ATIVA (Bloco 16, ajuste D), ou nula. */
+  vista: string | null;
+  /** Bloco 16 (ajuste D): os ajustes manuais da linha, do mais novo ao mais velho (`comAjustes`). */
+  historico?: readonly AjusteNoHistorico[];
   situacao: SituacaoDaAvaliacao | null;
   sessoes: number;
   juntarEm: ProvaParaJuntar[];
@@ -122,6 +140,11 @@ export type QuadroDeAvaliacoes = {
 };
 
 const APLICADA = new Set<SituacaoDaAvaliacao>(["concluida", "em_andamento", "atrasada"]);
+
+/** A data da última sessão de vista ativa (texto ISO: a maior é a mais tardia), ou nula. */
+function ultimaVista(a: AvaliacaoDoQuadro): string | null {
+  return a.sessoesDeVista.reduce<string | null>((m, d) => (m === null || d > m ? d : m), null);
+}
 
 export function quadroDeAvaliacoesDaTurma(entrada: {
   disciplinas: readonly DisciplinaDoQuadro[];
@@ -226,6 +249,7 @@ export function quadroDeAvaliacoesDaTurma(entrada: {
         origemDaUe: prevista.origemDaUe,
         situacao,
         aplicacao: ligada?.aplicacao ?? null,
+        vista: ligada ? ultimaVista(ligada) : null,
         avaliacaoId: ligada?.id ?? null,
         sessoes: ligada ? 1 + (ligada.sessoesDeAplicacao ?? []).length : 0,
         juntarEm: ligada ? juntarEm(ligada) : [],
@@ -239,6 +263,7 @@ export function quadroDeAvaliacoesDaTurma(entrada: {
         tipo: a.tipo,
         instrumento: instrumentoDa(a)?.valor ?? null,
         aplicacao: a.aplicacao,
+        vista: ultimaVista(a),
         situacao: situacaoDe(a),
         sessoes: 1 + (a.sessoesDeAplicacao ?? []).length,
         juntarEm: juntarEm(a),

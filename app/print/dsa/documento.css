@@ -346,6 +346,8 @@
   flex: 1 1 auto;
   display: flex;
   flex-direction: column;
+  /* Bloco 16 (ajuste C): o conteúdo se distribui pela altura — sem o branco grande no meio. */
+  justify-content: space-between;
   gap: 0.2mm;
   padding: 0.5mm 1.1mm 0.6mm;
   min-width: 0;
@@ -386,13 +388,15 @@
 }
 
 /*
- * O instrutor E O LOCAL: a última linha, que nunca encolhe (Bloco 16, spec 031, FR-008 — até ali o local ficava na
- * linha de dados e sumia no cartão de 1 TA). Os dois na mesma linha, separados por « · ».
+ * Bloco 16 (ajuste C da conferência de 31/10/2026): os INSTRUTORES — todos em negrito, a linha que nunca encolhe.
+ * Lado a lado (« / ») por padrão; empilhados, um por linha, quando o cartão tem altura (`dsa4-cartao-pe-pilha`,
+ * decidido por `arranjoDoCartao`). No cartão de 1 tempo, a mesma linha leva o TA, a T/E e o local, separados por « · ».
  */
 .dsa4-cartao-pe {
   flex: none;
   display: flex;
   flex-wrap: wrap;
+  align-items: baseline;
   gap: 0 1.1mm;
   font-size: 0.9em;
   line-height: 1.15;
@@ -403,6 +407,28 @@
   content: "· ";
 }
 
+.dsa4-cartao-instrutores {
+  display: inline-flex;
+  flex-wrap: wrap;
+  gap: 0 0.8mm;
+  color: var(--dsa4-marinho);
+}
+
+.dsa4-cartao-pe-pilha .dsa4-cartao-instrutores {
+  flex-direction: column;
+  gap: 0;
+}
+
+/* O local na última linha do cartão (com altura). */
+.dsa4-cartao-local {
+  flex: 0 10 auto;
+  min-height: 0;
+  overflow: hidden;
+  font-size: 0.9em;
+  line-height: 1.15;
+  color: var(--dsa4-suave);
+}
+
 /* No compacto, a entrelinha e o respiro do cartão apertam — é o que deixa título e instrutor caberem juntos. */
 .dsa4-compacto .dsa4-cartao-corpo {
   gap: 0.1mm;
@@ -411,19 +437,22 @@
 
 .dsa4-compacto .dsa4-cartao-titulo,
 .dsa4-compacto .dsa4-cartao-dados,
+.dsa4-compacto .dsa4-cartao-local,
 .dsa4-compacto .dsa4-cartao-pe {
   line-height: 1.05;
 }
 
-/* TA · local · T/E: cede antes do título (encolhe 100 vezes mais), depois do tópico (que encolhe 1.000). */
+/*
+ * TA · T/E: cede antes do título (encolhe 100 vezes mais), depois do tópico (que encolhe 1.000). Bloco 16 (ajuste C): sem
+ * o `margin-top: auto` — quem distribui a altura é o corpo (`space-between`), e o TA fica alinhado à esquerda, com o resto.
+ */
 .dsa4-cartao-dados {
   flex: 0 100 auto;
   min-height: 0;
   overflow: hidden;
-  margin-top: auto;
   display: flex;
   flex-wrap: wrap;
-  justify-content: flex-end;
+  justify-content: flex-start;
   gap: 0 1.1mm;
   align-items: baseline;
   font-size: 0.9em;

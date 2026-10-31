@@ -333,7 +333,12 @@ export function FormularioDeLancamento({
 
   function escolherTipo(novo: Tipo): void {
     definirTipo(novo);
-    definirSubtipo("");
+    /*
+     * Bloco 16 (ajuste A da conferência de 31/10/2026): *"quando o 'Tipo de atividade' só tem uma opção (EI), o campo não
+     * aparece e o padrão é EI."* — com uma opção só na categoria, ela já vem escolhida (e o campo some, abaixo).
+     */
+    const doNovo = subtipos.filter((s) => s.categoria === novo);
+    definirSubtipo(doNovo.length === 1 ? (doNovo[0]?.id ?? "") : "");
     if (novo === "Estudo_Individual") definirTodasAsTurmas(false);
     definirUnidade("");
     definirAvaliacao("");
@@ -563,15 +568,18 @@ export function FormularioDeLancamento({
          * de duas letras entra: a planilha usa `AD`, `TR`, `FR` com sentidos que mudam entre cursos.
          */
         <div className="flex flex-col gap-1">
-          <EscolhaSimples
-            id="dsa-subtipo"
-            rotulo="Tipo de atividade"
-            obrigatorio
-            textoVazio="Escolha o tipo…"
-            valor={subtipo}
-            aoMudar={definirSubtipo}
-            opcoes={subtiposDoTipo.map((s) => ({ valor: s.id, rotulo: s.valor }))}
-          />
+          {/* Bloco 16 (ajuste A): com uma opção só, o campo não aparece — ela já está escolhida. */}
+          {subtiposDoTipo.length === 1 ? null : (
+            <EscolhaSimples
+              id="dsa-subtipo"
+              rotulo="Tipo de atividade"
+              obrigatorio
+              textoVazio="Escolha o tipo…"
+              valor={subtipo}
+              aoMudar={definirSubtipo}
+              opcoes={subtiposDoTipo.map((s) => ({ valor: s.id, rotulo: s.valor }))}
+            />
+          )}
           {/* ⚠️ Spec 014, FR-011: a categoria que o tipo dá aparece ANTES de gravar. */}
           {tipoEscolhido ? (
             <p className="text-texto-suave text-xs" data-slot="categoria-do-tipo">

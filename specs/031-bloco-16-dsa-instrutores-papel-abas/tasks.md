@@ -52,5 +52,24 @@
 - [X] T018 PR #109; o 1º CI reprovou por teste (formatação de 2 arquivos e 3 seletores diante do formulário e do cartão
   novos) e foi corrigido em `b226843`; CI verde nos três blocos sobre `b226843` (run `41147205860`: 3.067 · 1.172 · 491 +
   1 pulado · 615 de ponta a ponta, nenhum instável, 7 pulados).
+## Fase 5 — ajustes da conferência de 31/10/2026 (spec §8)
+
+- [X] T020 Medição do "defeito" C na cópia `remoto-20261031-121200.sql` (só leitura): os adicionais da CAHO 2026 (semana do
+  curso 44) foram salvos em 31/10 numa alteração não publicada; a tela os mostra, o papel segue o publicado (RP-9).
+- [X] T021 [A] `FormularioDeLancamento.tsx`: uma opção só de *Tipo de atividade* → o campo some, já escolhida.
+- [X] T022 [B] `grade-do-papel.ts` corta os tempos finais vazios sem o mínimo da tela; testes em
+  `grade-do-papel.test.ts` (vistos reprovar); a planilha de contingência mantém o regime (sintético e invariante).
+- [X] T023 [C] `lib/dominio/dsa/arranjo-do-cartao.ts` + teste (1, 3 e 5 tempos × 1 e 4 nomes); o cartão do papel
+  (`DocumentoDoDsa.tsx`, `documento.css`) e o da tela (`grade-dsa.tsx`, `h-px` na célula da `grade-alocacao`).
+- [X] T024 [D] Migration `20261031151628_ajustes_de_avaliacao.sql` (só acrescenta), pgTAP `155` (visto reprovar sem ela,
+  `reversao-ajustes.sql`), RLS `tests/invariantes/rls/ajustes-de-avaliacao.test.ts` (defeito deliberado na policy: 3
+  reprovações), BRIEF §2.1 e as listas de `010`, `105` e `148`; a sequência em `scripts/etl/carregar.py`; as frases.
+- [X] T025 [D] `lib/dominio/avaliacoes/ajustes.ts` (`comAjustes`) + teste; `cancelada` na situação; a data da vista no
+  quadro; `lerAvaliacoesDaTurma` aplica os ajustes; `ajustarAvaliacao` (Zod + Server Action); a aba do DSA com *Editar* e o
+  histórico; a ficha com «ajustada à mão».
+- [X] T026 Ponta a ponta `bloco-16-dsa.spec.ts`: ajuste A no caso do formulário; o cartão adaptável na tela e na
+  impressão; o ajuste D por clique, no banco, na linha e na ficha.
+- [ ] T027 Rito do remoto da `20261031151628` e CI verde. *[pendente]*
+
 - [ ] T019 Encerramento depois da aprovação (merge na virada de semana, CI da `main`, Production, ramo apagado, plano de
   correções, `CLAUDE.md`). *[pendente]*

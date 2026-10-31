@@ -52,6 +52,127 @@ export type Database = {
         }
         Relationships: []
       }
+      ajustes_de_avaliacao: {
+        Row: {
+          autor_nome: string | null
+          avaliacao_curriculo_id: string | null
+          avaliacao_id: string | null
+          codigo: string
+          criado_em: string
+          criado_por: string | null
+          data_aplicacao: string | null
+          data_vista: string | null
+          editado_em: string | null
+          editado_por: string | null
+          id: string
+          justificativa: string
+          origem_migracao_v1: string | null
+          situacao: string
+          status: Database["public"]["Enums"]["status_registro"]
+          turma_id: string
+        }
+        Insert: {
+          autor_nome?: string | null
+          avaliacao_curriculo_id?: string | null
+          avaliacao_id?: string | null
+          codigo?: string
+          criado_em?: string
+          criado_por?: string | null
+          data_aplicacao?: string | null
+          data_vista?: string | null
+          editado_em?: string | null
+          editado_por?: string | null
+          id?: string
+          justificativa: string
+          origem_migracao_v1?: string | null
+          situacao: string
+          status?: Database["public"]["Enums"]["status_registro"]
+          turma_id: string
+        }
+        Update: {
+          autor_nome?: string | null
+          avaliacao_curriculo_id?: string | null
+          avaliacao_id?: string | null
+          codigo?: string
+          criado_em?: string
+          criado_por?: string | null
+          data_aplicacao?: string | null
+          data_vista?: string | null
+          editado_em?: string | null
+          editado_por?: string | null
+          id?: string
+          justificativa?: string
+          origem_migracao_v1?: string | null
+          situacao?: string
+          status?: Database["public"]["Enums"]["status_registro"]
+          turma_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "ajustes_de_avaliacao_avaliacao_curriculo_id_fkey"
+            columns: ["avaliacao_curriculo_id"]
+            isOneToOne: false
+            referencedRelation: "avaliacoes_curriculo"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "ajustes_de_avaliacao_avaliacao_id_fkey"
+            columns: ["avaliacao_id"]
+            isOneToOne: false
+            referencedRelation: "avaliacoes"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "ajustes_de_avaliacao_avaliacao_id_fkey"
+            columns: ["avaliacao_id"]
+            isOneToOne: false
+            referencedRelation: "vw_avaliacoes_situacao"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "ajustes_de_avaliacao_turma_id_fkey"
+            columns: ["turma_id"]
+            isOneToOne: false
+            referencedRelation: "turmas"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "ajustes_de_avaliacao_turma_id_fkey"
+            columns: ["turma_id"]
+            isOneToOne: false
+            referencedRelation: "vw_carga_horaria_turma"
+            referencedColumns: ["turma_id"]
+          },
+          {
+            foreignKeyName: "ajustes_de_avaliacao_turma_id_fkey"
+            columns: ["turma_id"]
+            isOneToOne: false
+            referencedRelation: "vw_carga_presencial_turma"
+            referencedColumns: ["turma_id"]
+          },
+          {
+            foreignKeyName: "ajustes_de_avaliacao_turma_id_fkey"
+            columns: ["turma_id"]
+            isOneToOne: false
+            referencedRelation: "vw_conformidade_tetos"
+            referencedColumns: ["turma_id"]
+          },
+          {
+            foreignKeyName: "ajustes_de_avaliacao_turma_id_fkey"
+            columns: ["turma_id"]
+            isOneToOne: false
+            referencedRelation: "vw_disciplinas_execucao"
+            referencedColumns: ["turma_id"]
+          },
+          {
+            foreignKeyName: "ajustes_de_avaliacao_turma_id_fkey"
+            columns: ["turma_id"]
+            isOneToOne: false
+            referencedRelation: "vw_turmas_rotulo"
+            referencedColumns: ["turma_id"]
+          },
+        ]
+      }
       arquivo_avaliacoes_v1: {
         Row: {
           arquivado_em: string

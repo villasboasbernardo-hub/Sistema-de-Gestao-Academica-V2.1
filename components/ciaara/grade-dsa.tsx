@@ -36,6 +36,8 @@
 import * as React from "react";
 import { cn } from "cn";
 
+import { arranjoDoCartao, instrutoresDoCartao } from "@/lib/dominio/dsa/arranjo-do-cartao";
+
 import {
   GradeAlocacao,
   type CelulaDaGrade,
@@ -282,9 +284,16 @@ function CorpoDoCartao({
   const normal = (v: string) => v.trim().toLowerCase().replace(/\s+/g, " ");
   const foraDaSala =
     bloco?.local != null && salaDaTurma != null && normal(bloco.local) !== normal(salaDaTurma);
+  /*
+   * Bloco 16 (ajuste C da conferência de 31/10/2026): o cartão adaptável — a mesma decisão do papel (`arranjoDoCartao`):
+   * os instrutores TODOS em negrito, empilhados quando há altura e lado a lado com « / » quando não há; o TA; o local na
+   * última linha, ou na dos instrutores no cartão de 1 tempo. O conteúdo se distribui pela altura (`justify-between`).
+   */
+  const nomesDosInstrutores = instrutoresDoCartao(linha.instrutor);
+  const arranjo = arranjoDoCartao(cartao.ta, nomesDosInstrutores.length);
   return (
     <div
-      className="flex flex-col gap-0.5 leading-tight"
+      className="flex h-full flex-col justify-between gap-0.5 leading-tight"
       data-slot="dsa-cartao"
       data-tipo={cartao.tipo}
       data-parte={cartao.parte}
@@ -297,17 +306,33 @@ function CorpoDoCartao({
         {cartao.tipo === "estudo" ? " *" : ""}
       </span>
       <TecnicaDoCartao tecnica={linha.te} />
-      {/*
-        ⚠️ O instrutor fica INTEIRO (FR-007.4): quebra a linha, nunca é cortado com reticências. Bloco 16 (spec 031,
-        `FR-008`): o LOCAL vem na mesma linha, depois de « · » — antes ele ficava na linha do TA.
-      */}
-      {linha.instrutor === "" && linha.local === "" ? null : (
-        <span className="break-words text-[10px]" data-slot="cartao-pe">
-          {linha.instrutor === "" ? null : (
-            <span data-slot="cartao-instrutor">{linha.instrutor}</span>
+      {/* ⚠️ O instrutor fica INTEIRO (FR-007.4): quebra a linha, nunca é cortado com reticências. */}
+      {nomesDosInstrutores.length === 0 &&
+      !(arranjo.localNaLinhaDosInstrutores && linha.local !== "") ? null : (
+        <span
+          className="flex flex-wrap items-baseline gap-x-1 break-words text-[10px]"
+          data-slot="cartao-pe"
+          data-arranjo={arranjo.emPilha ? "pilha" : "linha"}
+        >
+          {nomesDosInstrutores.length === 0 ? null : (
+            <span
+              data-slot="cartao-instrutor"
+              className={cn(
+                "text-texto font-semibold",
+                arranjo.emPilha ? "flex flex-col" : "inline",
+              )}
+            >
+              {nomesDosInstrutores.map((n, k) => (
+                <span key={`${n}-${k}`}>
+                  {n}
+                  {!arranjo.emPilha && k < nomesDosInstrutores.length - 1 ? " / " : ""}
+                </span>
+              ))}
+            </span>
           )}
-          {linha.instrutor !== "" && linha.local !== "" ? " · " : null}
-          {linha.local === "" ? null : <span data-slot="cartao-local">{linha.local}</span>}
+          {arranjo.localNaLinhaDosInstrutores && linha.local !== "" ? (
+            <span data-slot="cartao-local">· {linha.local}</span>
+          ) : null}
         </span>
       )}
       <span className="flex flex-wrap items-center gap-x-1.5 text-[10px] tabular-nums">
@@ -325,6 +350,11 @@ function CorpoDoCartao({
           </span>
         ) : null}
       </span>
+      {!arranjo.localNaLinhaDosInstrutores && linha.local !== "" ? (
+        <span className="text-[10px]" data-slot="cartao-local">
+          {linha.local}
+        </span>
+      ) : null}
       {/* Spec 024 (RP-0): o rascunho diz que é rascunho, em TEXTO (`RNF-USA-05`). */}
       {bloco?.rascunho ? (
         <span

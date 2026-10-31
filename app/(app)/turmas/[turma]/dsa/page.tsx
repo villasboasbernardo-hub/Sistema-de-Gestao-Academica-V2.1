@@ -34,6 +34,7 @@ import {
   mover,
   removerEstudoIndividualDaSemana,
 } from "@/lib/acoes/dsa";
+import { ajustarAvaliacao } from "@/lib/acoes/ajustes-de-avaliacao";
 import { desfazerParada, pararDia } from "@/lib/acoes/dia-parado";
 import {
   definirRegimeDaSemana,
@@ -46,7 +47,7 @@ import {
 import { permissoesDoPerfil, pode } from "@/lib/autorizacao/matriz";
 import { usuarioDaSessao } from "@/lib/autorizacao/sessao";
 import { QUEM_DESARQUIVA } from "@/lib/dominio/arquivamento-da-turma";
-import { datasDaSemanaIso, janelaDaCarga } from "@/lib/dominio/carga-semanal";
+import { datasDaSemanaIso } from "@/lib/dominio/carga-semanal";
 import {
   linhasDoAcompanhamentoDeAvaliacoes,
   type LinhaDoAcompanhamentoDeAvaliacoes,
@@ -434,54 +435,25 @@ export default async function SemanaDoDsa({
     readonly aviso: string | null;
   } | null = null;
   if (abaDoAcompanhamento === "avaliacoes") {
-    const periodo = {
-      inicio: (turma.data_inicio as string | null) ?? null,
-      termino: (turma.data_termino as string | null) ?? null,
-    };
     const lido = await lerAvaliacoesDaTurma({
       turmaId,
       cursoId,
       curriculoId: (turma.curriculo_id as string | null) ?? null,
       hoje: ultimoDia,
-      terminoDaTurma: periodo.termino,
+      terminoDaTurma: (turma.data_termino as string | null) ?? null,
       turmaCodigo: codigo,
     });
-    const terminoPorDisciplina = new Map(
-      extras.execucao.map((d) => [
-        d.disciplinaId,
-        janelaDaCarga(
-          { inicio: d.previsaoInicio || null, termino: d.previsaoTermino || null },
-          periodo,
-        ).termino,
-      ]),
-    );
     acompanhamentoDeAvaliacoes = {
       aviso: lido.aviso,
-      linhas: linhasDoAcompanhamentoDeAvaliacoes({
-        janela: {
-          dataInicio: periodo.inicio,
-          dataTermino: periodo.termino,
-          duracaoSemanasDoCurso: lida.duracaoSemanasDoCurso,
-        },
-        referencia: ultimoDia,
-        disciplinas: (lido.quadro?.disciplinas ?? []).map((d) => ({
+      linhas: linhasDoAcompanhamentoDeAvaliacoes(
+        (lido.quadro?.disciplinas ?? []).map((d) => ({
           id: d.disciplina.id,
           cod: d.disciplina.cod,
           nome: d.disciplina.nome,
-          terminoPrevisto: terminoPorDisciplina.get(d.disciplina.id) ?? null,
-          itens: d.itens.map((i) => ({
-            rotulo: i.rotulo,
-            situacao: i.situacao,
-            aplicacao: i.aplicacao,
-            tempo: i.tempo,
-          })),
-          semItem: d.semItem.map((a) => ({
-            tipo: a.tipo,
-            situacao: a.situacao,
-            aplicacao: a.aplicacao,
-          })),
+          itens: d.itens,
+          semItem: d.semItem,
         })),
-      }),
+      ),
     };
   }
   const quadros = quadrosDaSemana({
@@ -827,6 +799,9 @@ export default async function SemanaDoDsa({
             <AbasDeAcompanhamento atual={abaDoAcompanhamento}>
               {abaDoAcompanhamento === "avaliacoes" && acompanhamentoDeAvaliacoes !== null ? (
                 <AcompanhamentoDeAvaliacoes
+                  turmaId={turmaId}
+                  /* Bloco 16 (ajuste D): edita quem lança o DSA da turma; a turma arquivada só lê. */
+                  ajustar={podeOperarAPublicacao ? ajustarAvaliacao : undefined}
                   linhas={acompanhamentoDeAvaliacoes.linhas}
                   aviso={acompanhamentoDeAvaliacoes.aviso}
                   rotuloDaSemana={rotuloDaSemana(lida.dias)}

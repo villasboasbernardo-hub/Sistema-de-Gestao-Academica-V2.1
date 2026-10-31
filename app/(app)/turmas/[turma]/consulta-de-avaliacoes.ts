@@ -11,6 +11,7 @@
 import "server-only";
 
 import { STATUS_DE_AVALIACAO_VIVA } from "@/lib/dominio/avaliacao-viva";
+import { comAjustes } from "@/lib/dominio/avaliacoes/ajustes";
 import { alertasDeVista, type AlertaDeVista } from "@/lib/dominio/avaliacoes/alertas-de-vista";
 import {
   naturezaPeloTipo,
@@ -20,7 +21,7 @@ import {
   type ItemDoQuadro,
   type QuadroDeAvaliacoes,
 } from "@/lib/dominio/avaliacoes/quadro-da-turma";
-import type { NaturezaDaAvaliacao } from "@/lib/dominio/avaliacoes/situacao";
+import type { NaturezaDaAvaliacao, SituacaoDaAvaliacao } from "@/lib/dominio/avaliacoes/situacao";
 import type { OrigemDoTempo } from "@/lib/dominio/avaliacoes/previsto";
 import { exigeVista, instrumentoDaVista } from "@/lib/dominio/avaliacoes/vista-obrigatoria";
 import { criarClienteDeServidor } from "@/lib/supabase/server";
@@ -47,7 +48,7 @@ export async function lerAvaliacoesDaTurma(entrada: {
     .from("disciplinas")
     .select("id, cod_disciplina, nome_disciplina, carga_horaria_tempos")
     .eq("status", "ativo");
-  const [disc, ues, itens, ajustes, avals, execucao, prazo, breve] = await Promise.all([
+  const [disc, ues, itens, ajustes, avals, execucao, prazo, breve, manuais] = await Promise.all([
     curriculoId
       ? consultaDasDisciplinas.eq("curriculo_id", curriculoId)
       : consultaDasDisciplinas.eq("curso_id", entrada.cursoId),
@@ -100,9 +101,20 @@ export async function lerAvaliacoesDaTurma(entrada: {
       .eq("chave", "avaliacao.vence_em_breve_dias")
       .eq("status", "ativo")
       .maybeSingle(),
+    /*
+     * Bloco 16 (spec 031, ajuste D): os ajustes MANUAIS da situação e das datas — o mais recente vale na linha
+     * (`comAjustes`). Sem turma (a aba do curso), não há o que ler.
+     */
+    supabase
+      .from("ajustes_de_avaliacao")
+      .select(
+        "avaliacao_curriculo_id, avaliacao_id, situacao, data_aplicacao, data_vista, justificativa, autor_nome, criado_em",
+      )
+      .eq("turma_id", entrada.turmaId ?? "00000000-0000-0000-0000-000000000000")
+      .eq("status", "ativo"),
   ]);
 
-  const falha = [disc, ues, itens, ajustes, avals, execucao].find((r) => r.error);
+  const falha = [disc, ues, itens, ajustes, avals, execucao, manuais].find((r) => r.error);
   if (falha?.error) {
     return {
       quadro: null,
@@ -235,14 +247,26 @@ export async function lerAvaliacoesDaTurma(entrada: {
   );
   return {
     alertas,
-    quadro: quadroDeAvaliacoesDaTurma({
-      disciplinas: disciplinas.filter((d) => d.ch > 0),
-      itens: itensDoQuadro,
-      avaliacoes,
-      prazoDias,
-      hoje: entrada.hoje,
-      terminoDaTurma: entrada.terminoDaTurma,
-    }),
+    quadro: comAjustes(
+      quadroDeAvaliacoesDaTurma({
+        disciplinas: disciplinas.filter((d) => d.ch > 0),
+        itens: itensDoQuadro,
+        avaliacoes,
+        prazoDias,
+        hoje: entrada.hoje,
+        terminoDaTurma: entrada.terminoDaTurma,
+      }),
+      ((manuais.data ?? []) as Linha[]).map((m) => ({
+        avaliacaoCurriculoId: (m.avaliacao_curriculo_id as string | null) ?? null,
+        avaliacaoId: (m.avaliacao_id as string | null) ?? null,
+        situacao: m.situacao as SituacaoDaAvaliacao,
+        dataAplicacao: (m.data_aplicacao as string | null) ?? null,
+        dataVista: (m.data_vista as string | null) ?? null,
+        justificativa: String(m.justificativa ?? ""),
+        autor: (m.autor_nome as string | null) ?? null,
+        em: String(m.criado_em ?? ""),
+      })),
+    ),
     aviso: null,
   };
 }

@@ -19,6 +19,7 @@ import { dataParaLeitura } from "@/lib/formato/data";
 import { BadgeStatus } from "@/components/ciaara/badge-status";
 
 import { DefinirTempoArbitrado } from "./DefinirTempoArbitrado";
+import { TOM_DA_SITUACAO_DA_AVALIACAO } from "./tom-da-situacao";
 import { JuntarComoSessao } from "./JuntarComoSessao";
 
 type Acao = (
@@ -41,20 +42,27 @@ function Sessoes({ sessoes }: { readonly sessoes: number }) {
   );
 }
 
-const TOM: Record<
-  SituacaoDaAvaliacao,
-  "executado" | "planejado" | "atrasado" | "conflito" | "adiantado"
-> = {
-  concluida: "executado",
-  em_andamento: "adiantado",
-  pendente: "planejado",
-  atrasada: "atrasado",
-  sem_correspondencia: "conflito",
-};
+const TOM = TOM_DA_SITUACAO_DA_AVALIACAO;
 
-function Situacao({ situacao }: { readonly situacao: SituacaoDaAvaliacao | null }) {
+function Situacao({
+  situacao,
+  ajustada = false,
+}: {
+  readonly situacao: SituacaoDaAvaliacao | null;
+  /** Bloco 16 (ajuste D): a situação veio do ajuste manual (a aba Avaliações do DSA) — diz-se, para não parecer cálculo. */
+  readonly ajustada?: boolean;
+}) {
   if (situacao === null) return null;
-  return <BadgeStatus tom={TOM[situacao]} rotulo={ROTULO_DA_SITUACAO[situacao]} />;
+  return (
+    <span className="inline-flex items-center gap-1" data-situacao={situacao}>
+      <BadgeStatus tom={TOM[situacao]} rotulo={ROTULO_DA_SITUACAO[situacao]} />
+      {ajustada ? (
+        <span className="text-texto-suave text-xs" data-slot="situacao-ajustada">
+          ajustada à mão
+        </span>
+      ) : null}
+    </span>
+  );
 }
 
 export function AvaliacoesDaTurma({
@@ -176,7 +184,10 @@ export function AvaliacoesDaTurma({
                           {MARCA_SUGESTAO}
                         </span>
                       ) : null}
-                      <Situacao situacao={item.situacao} />
+                      <Situacao
+                        situacao={item.situacao}
+                        ajustada={(item.historico ?? []).length > 0}
+                      />
                       {item.aplicacao ? (
                         <span className="text-texto-suave text-xs">
                           {dataParaLeitura(item.aplicacao)}
@@ -222,7 +233,7 @@ export function AvaliacoesDaTurma({
                         {a.aplicacao ? (
                           <span className="text-texto-suave">{dataParaLeitura(a.aplicacao)}</span>
                         ) : null}
-                        <Situacao situacao={a.situacao} />
+                        <Situacao situacao={a.situacao} ajustada={(a.historico ?? []).length > 0} />
                         <Sessoes sessoes={a.sessoes} />
                         {juntar ? (
                           <JuntarComoSessao

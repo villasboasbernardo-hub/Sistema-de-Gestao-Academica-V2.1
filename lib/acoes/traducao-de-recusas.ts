@@ -370,6 +370,11 @@ function porChave(
     case "semana_do_dsa_nao_salva":
       return "Salve a semana antes de publicar (e não deixe rascunho por salvar).";
     /* Bloco 11 (RD-3): a semana salva ou publicada nunca muda de regime de tempos. */
+    /* Bloco 16 (ajuste D): o ajuste manual da avaliação — só de acréscimo, e da própria turma. */
+    case "ajuste_de_avaliacao_imutavel":
+      return "Um ajuste gravado não se altera. Para corrigir, grave um ajuste novo — ele vai para o histórico.";
+    case "ajuste_fora_da_turma":
+      return "Esta avaliação não é desta turma.";
     /* Bloco 16 (RD-9): os instrutores adicionais da aula, conferidos pelo gatilho. */
     case "instrutor_adicional_inexistente":
       return "Um dos instrutores adicionais não existe no cadastro. Escolha-os pela lista.";

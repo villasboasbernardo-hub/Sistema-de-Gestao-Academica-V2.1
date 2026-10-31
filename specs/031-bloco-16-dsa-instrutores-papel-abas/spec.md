@@ -140,6 +140,64 @@ no remoto com o mesmo md5 da medição (`21e538e8…`, 182 linhas) — o efeito 
 - Juntar *Tipo de avaliação* e *Instrumento* (`PEND-031-3`, parado por instrução).
 - O conteúdo das abas APOINST e Palestras.
 
+## 8. Ajustes da conferência de 31/10/2026
+
+*"Conferência do Bloco 16, Bernardo, 31/10/2026. O que não está abaixo: APROVADO."* Decisões: **item 3a** — *Tipo de
+avaliação* e *Instrumento* ficam **os dois** (a `PEND-031-3` fecha com o motivo medido); **`PEND-031-1`** fica aberta,
+sem mexer nas 25 aulas; **D-10** aprovada (os adicionais contam na ministrada). Ajustes no PR #109, antes do merge:
+
+### FR-010 — Estudo Individual sem *Tipo de atividade* (ajuste A)
+
+Quando a categoria tem **uma opção só** de *Tipo de atividade* (o Estudo Individual: 1 tipo no remoto e na base limpa),
+o campo **não aparece** e a opção **já vem escolhida**. Vale para qualquer categoria nessa situação (D-19).
+
+### FR-011 — O papel corta os tempos finais vazios (ajuste B)
+
+*"se o último tempo do regime não tem nenhum lançamento na semana inteira, ele não sai no papel (repetir para os tempos
+finais seguintes enquanto estiverem vazios), e as linhas restantes dividem a altura."* No **papel** — impressão, prévia e
+o retrato das versões publicadas **a partir de agora** —, as linhas vão até o **último tempo ocupado** em qualquer dia da
+semana (aula, avaliação, atividade, EI ou parada de parte do dia); as que sobram dividem a altura. A semana sem nada
+mantém o regime. A **tela** continua com todas as linhas (é onde se lança num tempo vazio), e o *Reimprimir* das versões
+já publicadas sai **idêntico** — o retrato guarda a grade dele. A orientação do papel não muda. A **planilha de
+contingência** mantém o regime inteiro (D-20).
+
+### FR-012 — O cartão adaptável (ajuste C)
+
+**O "defeito" medido não é defeito do lançamento**: na CAHO 2026, semana do curso 44 (02 a 06/11), os adicionais foram
+**salvos em 31/10/2026 dentro de uma alteração ainda não publicada** (a semana tem Original e ALT 1, de 27/10). A tela
+(Minuta) os mostra; o **papel** mostra a versão publicada até *Publicar alteração* (RP-9) — por isso eles não estavam lá.
+Medido na cópia `remoto-20261031-121200.sql`, só leitura (D-21).
+
+Layout novo do cartão, na grade e no papel (`arranjoDoCartao`): **disciplina + código no topo**; **todos os instrutores
+em negrito**, **empilhados** um por linha quando há altura (`instrutores ≤ 2 × tempos − 2`) e **lado a lado** com « / »
+quando não há; a **quantidade de TA**; o **local** na última linha — ou, no cartão de **1 tempo**, na linha dos
+instrutores, com o TA. O conteúdo se **distribui** pela altura do cartão (`space-between`). Provado com 1, 3 e 5 tempos ×
+1 e 4 instrutores, na tela e na impressão: todo nome dentro do cartão (D-22).
+
+### FR-013 — A aba Avaliações com *Editar* e histórico (ajuste D)
+
+1. Colunas **Avaliação · Situação · Data de aplicação · Data da vista**; as semanas e o TA saem (D-23).
+2. Ícone **Editar** por linha (diálogo): **situação** (*Pendente · Em andamento · Concluída · Cancelada · Atrasada · Sem
+   correspondência*), **data de aplicação** e **data da vista**, com **justificativa obrigatória** (10 caracteres ou mais).
+   Cada ajuste é uma linha nova de `ajustes_de_avaliacao` (só de acréscimo); o **mais recente vale**, e o **histórico**
+   (autor, data e justificativa) aparece na linha. O autor é carimbado pelo banco.
+3. **Edita quem lança o DSA da turma** (`registros_aula.criar` + alcance + turma em oferta; a arquivada só lê).
+4. **A edição manual NÃO muda a CH**: nenhuma view lê a tabela; o ajuste vale só na linha — a contagem do quadro, a
+   projeção e os alertas continuam os do lançado (D-24).
+5. A **ficha da turma** (aba Avaliações) mostra a **mesma** situação ajustada, marcada *"ajustada à mão"*.
+6. **Banco**: uma migration que **só acrescenta** (`20261031151628_ajustes_de_avaliacao`). A situação das avaliações é
+   calculada em TypeScript (`quadroDeAvaliacoesDaTurma`), não numa view: **nenhuma view muda** — efeito zero por
+   construção (pgTAP 155 confere que nenhuma view a lê).
+
+### Critérios de sucesso dos ajustes
+
+- **SC-011** — No Estudo Individual não há campo *Tipo de atividade*; o lançamento grava com o tipo único.
+- **SC-012** — No papel da semana com o último tempo vazio, ele não sai; na tela, sai.
+- **SC-013** — Nos 6 cartões (1, 3 e 5 tempos × 1 e 4 nomes), na tela e no papel, todo nome fica dentro do cartão; o de 5
+  tempos com 4 nomes, empilhado; o de 1 tempo, lado a lado com o local na mesma linha.
+- **SC-014** — Um ajuste pela tela grava no banco (com o autor), aparece no histórico da linha e a ficha mostra a mesma
+  situação; o Chefe de Departamento (lê, não lança) é recusado pelo banco (`42501`).
+
 ## Clarifications
 
 ### Session 2026-10-30
@@ -185,3 +243,26 @@ Decisões adotadas por padrão — **Bernardo confere no fim**.
 - **D-17** — APOINST e Palestras: a aba existe e diz *"Em breve"*, sem consulta.
 - **D-18** — A regra nova vai como **RD-9** em `regras-do-dsa-lancamento.md` e como **nota datada na `RN-INST-04`** do
   documento 04 (só no `.md`; o `.docx` não recebe emenda).
+
+### Session 2026-10-31 (ajustes da conferência)
+
+Decisões adotadas por padrão — **Bernardo confere no fim**.
+
+- **D-19** — A regra "uma opção só → o campo some e ela vem escolhida" vale para qualquer categoria de atividade, não só o
+  EI (hoje só o EI tem um tipo). *Alternativa: só o EI.*
+- **D-20** — A planilha de contingência mantém todas as linhas do regime (é formulário de preencher à mão). *Alternativa:
+  cortar também na planilha.*
+- **D-21** — O papel da semana em alteração continua o publicado (RP-9): os adicionais salvos na alteração aparecem no
+  papel ao *Publicar alteração*. Nada muda nessa regra.
+- **D-22** — "Há altura" = `instrutores ≤ 2 × tempos − 2` (cada tempo comporta duas linhas curtas; título, tópico e TA
+  ocupam duas). No cartão de 1 tempo, a linha dos instrutores leva também o TA e o local. O layout novo vale também no
+  *Reimprimir* das versões antigas (o conteúdo do retrato não muda, só a arrumação). *Alternativa: medir a altura no
+  navegador.*
+- **D-23** — A aba Avaliações perde também a coluna TA (o pedido listou as quatro colunas); a disciplina aparece no
+  começo da célula da avaliação. *Alternativa: manter o TA.*
+- **D-24** — O ajuste vale **só na linha** (situação e datas); a contagem do quadro, a projeção e os alertas de vista
+  seguem o lançado. *Alternativa: o ajuste também mudar as contagens e os alertas.*
+- **D-25** — Na tabela, sem `UPDATE` nem `DELETE` para quem usa a tela (sem policy e sem privilégio); o gatilho recusa
+  reescrever inclusive para a `service_role`; o `DELETE` da `service_role` fica, como em toda tabela, para as amostras de
+  teste (as FKs são `restrict`).
+

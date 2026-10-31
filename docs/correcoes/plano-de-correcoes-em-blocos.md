@@ -738,13 +738,24 @@ de efeito zero medido na cópia do remoto. ⚠️ **O papel do DSA muda** (itens
 9. **Abas de acompanhamento**: *Disciplinas* (igual) · *Avaliações* · *APOINST* · *Palestras* (*Em breve*), em
    `?acompanhamento=`.
 
+**Conferência de 31/10/2026** (Bernardo Villas Boas): *"O que não está abaixo: APROVADO."* O item 3a fica como está
+(`PEND-031-3` fechada), a `PEND-031-1` fica aberta e a D-10 aprovada. **Ajustes no mesmo PR**, antes do merge (spec 031,
+§8): **A.** o Estudo Individual sem o campo *Tipo de atividade* (uma opção só, já escolhida); **B.** o papel corta os
+tempos finais sem lançamento na semana, e as linhas que sobram dividem a altura (a tela e o *Reimprimir* das versões já
+publicadas não mudam); **C.** o cartão adaptável — os instrutores todos em negrito, empilhados quando há altura, o local na
+última linha ou na dos instrutores, o conteúdo distribuído pela altura (o "defeito" da CAHO 2026 era a alteração ainda
+não publicada: o papel segue o publicado, RP-9); **D.** a aba *Avaliações* com *Avaliação · Situação · Data de aplicação ·
+Data da vista* e o **Editar** por linha (situação e datas com justificativa, histórico na linha, edita quem lança o DSA,
+não muda a CH; a ficha mostra a mesma situação) — **uma migration que só acrescenta** (`20261031151628`, a tabela
+`ajustes_de_avaliacao`; nenhuma view muda).
+
 **Pendências novas:**
 
 | # | Pendência | Bloqueia |
 |---|---|---|
 | **PEND-031-1** | **As 25 aulas com «Demais instrutores» em texto livre não contam na carga** *(medido no remoto, só leitura, 30/10/2026)*: o texto (`outros_instrutores`, spec 014 FR-046) guarda o código do 2º instrutor; trazê-las para os adicionais daria **+72 TA** ao instrutor de código 162 e **+34 TA** ao 40 em 2026, e **1** código não casa com instrutor nenhum. É migration que muda resultado de tela: portão 9.4, decisão de Bernardo | Nada |
 | **PEND-031-2** | **O conflito de instrutor (`RN-CONF-01`) não olha os adicionais** *(spec 031, D-12)*: um adicional em duas turmas no mesmo tempo não acusa conflito. Recriar `vw_ocupacao_ta` | Nada |
-| **PEND-031-3** | **Tipo de avaliação × Instrumento** *(item 3a do pedido, parado por instrução)*: guardam informação diferente (no remoto: *Prova Escrita* com PE, PM, PO e TI; *Prova Prática* com PP e PM; *Trabalho* com TG, TI e PM), e os dois são lidos — o tipo pelo papel, pela planilha e pelo casamento com o planejado (`RN-AVAL-01`); o instrumento pela vista obrigatória (`RN-AV-13`). Decidir se um deve sair, e como | Nada |
+| ~~**PEND-031-3**~~ | ✅ **FECHADA em 31/10/2026** *(decisão de Bernardo Villas Boas na conferência do Bloco 16: "Tipo de avaliação e Instrumento ficam os DOIS")*. **O motivo, medido no remoto em 30/10/2026 (só leitura):** os dois guardam informação diferente — *Prova Escrita* aparece com os instrumentos PE, PM, PO e TI; *Prova Prática* com PP e PM; *Trabalho* com TG, TI e PM —, e os dois são lidos: o **tipo** pelo título da prova no papel, pela planilha e pelo casamento com o planejado (`RN-AVAL-01`); o **instrumento** pela vista obrigatória (`RN-AV-13`). | — |
 
 ---
 

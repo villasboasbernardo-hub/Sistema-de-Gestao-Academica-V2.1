@@ -28,6 +28,13 @@ plano de correções.")*
 
 > **Emenda de 30/10/2026** *(pedido de Bernardo Villas Boas no `/corrigir` do Bloco 16, spec 031)*: nasce a **RD-9** (mais de um instrutor por aula), e recebe nota datada a RD-1 (os adicionais também habilitados). O pedido também mexe no formulário (Lançar e Cancelar em ícones; *Início* no lugar de *Em qual tempo começa*; a avaliação sem *Técnica de ensino*; o Estudo Individual sem instrutor), no texto do Apoio Individualizado, no campo ALT do papel (RP-1 de `regras-da-publicacao-do-dsa.md`), no pé do cartão (instrutor e local na mesma linha) e no acompanhamento em abas — tudo descrito na spec 031. As **D-** das notas são da spec 031, adotadas por padrão e conferidas por Bernardo no fim.
 
+> **Emenda de 31/10/2026** *(conferência do Bloco 16 por Bernardo Villas Boas, spec 031 §8)*: o papel do DSA **corta os
+> tempos finais sem lançamento na semana** (a tela não; o *Reimprimir* das versões já publicadas não muda); o **cartão** é
+> adaptável — os instrutores todos em negrito, empilhados quando há altura, o local na última linha ou na dos instrutores
+> (`arranjoDoCartao`); com uma opção só de *Tipo de atividade* (o Estudo Individual), o campo some e ela vem escolhida; e a
+> aba *Avaliações* do acompanhamento ganha o **Editar** por linha — situação e datas com justificativa, só de acréscimo, sem
+> mudar a CH (`ajustes_de_avaliacao`). A RD-9 não muda.
+
 A primeira coluna é o texto de Bernardo; a segunda, como a regra se aplica no código.
 
 | # | A regra | Como se aplica |
