@@ -13,6 +13,7 @@
  */
 import { lerContagemPresencial } from "../turmas/contagem-presencial";
 import { lerRegimesDasSemanas } from "../turmas/regimes-das-semanas";
+import { lerDiasBloqueadosAFrente } from "../turmas/dias-bloqueados";
 import { COLUNAS_DA_ABRANGENCIA, linhasComAbrangencia } from "@/lib/calendario/abrangencia";
 import { diasBloqueadosComLancamento } from "@/lib/dominio/calendario";
 import { idsArquivados } from "@/lib/dominio/arquivamento-da-turma";
@@ -194,6 +195,7 @@ export async function lerAvisos(
     previstaRes,
     presenciais,
     semanasDasTurmas,
+    diasBloqueados,
   ] = await Promise.all([
     supabase
       .from("cursos")
@@ -292,6 +294,8 @@ export async function lerAvisos(
     lerContagemPresencial(supabase, hoje),
     /* Spec 029 (`FR-005`): o regime das semanas do DSA — o «em atraso» daqui é o mesmo do Início. */
     lerRegimesDasSemanas(supabase, { hoje }),
+    /* Bloco 17 (`RN-SALDO-01`): os dias bloqueados no DSA não contam como dia útil do saldo. */
+    lerDiasBloqueadosAFrente(supabase, hoje),
   ]);
 
   const naoLidos = new Set<ModuloDeAviso>();
@@ -366,6 +370,7 @@ export async function lerAvisos(
           ),
           presenciais,
           semanasDasTurmas.porTurma,
+          diasBloqueados,
         )
           .filter((t) => t.emAtraso)
           .map((t) => t.turmaCodigo);

@@ -23,7 +23,13 @@ import type { ReactNode } from "react";
 import { BadgeStatus } from "@/components/ciaara/badge-status";
 import { BarraDeProgresso } from "@/components/ciaara/barra-de-progresso";
 import { CardKpi } from "@/components/ciaara/card-kpi";
-import type { Andamento } from "@/lib/dominio/andamento-da-turma";
+import {
+  FRASE_DA_SITUACAO_DO_SALDO,
+  ROTULO_DA_SITUACAO_DO_SALDO,
+  TOM_DA_SITUACAO_DO_SALDO,
+  type Andamento,
+} from "@/lib/dominio/andamento-da-turma";
+import type { Tom } from "@/lib/design/vocabulario";
 import type { ContagemDeAvaliacoes } from "@/lib/dominio/avaliacoes/contagem";
 import { AVISO_DE_TURMA_EAD } from "@/lib/dominio/dsa/ead-puro";
 import type { CardDeTeto, Categoria, TetosDaTurma } from "@/lib/dominio/tetos-da-turma";
@@ -98,6 +104,7 @@ function CartaoDeTeto({
   return (
     <div data-teto-card={categoria} className="h-full">
       <CardKpi
+        compacto
         rotulo={NOME_DA_CATEGORIA[categoria]}
         valor={`${emTa(card.cumprido)} TA`}
         acao={edicao}
@@ -159,8 +166,16 @@ export function IndicadoresDaTurma({
   edicao,
   avaliacoes,
   turmaCodigo,
+  situacaoDaTurma,
 }: {
   readonly andamento: Andamento;
+  /** Bloco 17 (item 1): a situação da turma — o cartão tingido na cor dela. */
+  readonly situacaoDaTurma: {
+    readonly valor: string;
+    readonly rotulo: string;
+    readonly tom: Tom;
+    readonly arquivada: boolean;
+  };
   /** O término **gravado na turma** — é ele que a frase de `sem_termino` manda informar. */
   readonly dataTermino: string | null;
   /** *"45 TA executados · 40 no DSA · 5 fora do DSA"* (D-COR-3), quando há TA fora do DSA. */
@@ -196,8 +211,18 @@ export function IndicadoresDaTurma({
     );
   }
 
-  const { prevista, executada, percentual, saldo, saldoEmDias, capacidadeDiaria, diasUteis } =
-    andamento;
+  const {
+    prevista,
+    executada,
+    restante,
+    percentual,
+    saldo,
+    saldoEmDias,
+    capacidade,
+    capacidadeDiaria,
+    diasUteis,
+  } = andamento;
+  const situacao = andamento.situacaoDoSaldo;
   const calculada = andamento.situacaoDaCapacidade === "calculada";
   const razaoCurta =
     andamento.situacaoDaCapacidade === "sem_termino" ? "sem término" : "sem regime vigente";
@@ -214,15 +239,20 @@ export function IndicadoresDaTurma({
           Andamento
         </h2>
         {/*
-          ⚠️ A TARJA É O VEREDITO, E FICA AO LADO DO TÍTULO: só para turma ativa com saldo negativo (`RF-INI-01`),
-             decidida pelo módulo puro. Alerta, nunca bloqueio (`RN-DEG-02`).
+          ⚠️ A TARJA É O VEREDITO DO SALDO (`RN-SALDO-01`, Bloco 17), decidido pelo módulo puro: só na turma ativa com
+             capacidade calculada. Alerta, nunca bloqueio (`RN-DEG-02`).
         */}
-        {andamento.emAtraso ? (
-          <span className="flex items-center gap-2 text-sm" data-slot="em-atraso">
-            <BadgeStatus tom="atrasado" rotulo="Em atraso" />
-            <span className="text-texto-suave">
-              A capacidade restante até o término não cobre a carga que falta.
-            </span>
+        {situacao !== null ? (
+          <span
+            className="flex items-center gap-2 text-sm"
+            data-slot={situacao === "atrasada" ? "em-atraso" : "situacao-do-saldo"}
+            data-situacao-do-saldo={situacao}
+          >
+            <BadgeStatus
+              tom={TOM_DA_SITUACAO_DO_SALDO[situacao]}
+              rotulo={ROTULO_DA_SITUACAO_DO_SALDO[situacao]}
+            />
+            <span className="text-texto-suave">{FRASE_DA_SITUACAO_DO_SALDO[situacao]}</span>
           </span>
         ) : null}
       </div>
@@ -234,15 +264,30 @@ export function IndicadoresDaTurma({
       ) : null}
 
       <div
-        className="grid auto-rows-fr gap-3 sm:grid-cols-2 lg:grid-cols-4"
+        className="grid auto-rows-fr grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6"
         data-slot="grade-de-indicadores"
       >
+        {/* Bloco 17 (item 1): a situação da turma é um cartão na cor dela, com o texto dentro. */}
+        <div
+          className="h-full"
+          data-slot="cartao-da-situacao"
+          data-situacao={situacaoDaTurma.valor}
+        >
+          <CardKpi
+            compacto
+            tom={situacaoDaTurma.tom}
+            rotulo="Situação"
+            valor={situacaoDaTurma.rotulo}
+            {...(situacaoDaTurma.arquivada ? { detalhe: <span>Arquivada</span> } : {})}
+          />
+        </div>
         <div className="contents" data-slot="andamento-da-turma">
           <div data-andamento="prevista" className="h-full">
-            <CardKpi rotulo="CH prevista" valor={`${prevista} TA`} />
+            <CardKpi compacto rotulo="CH prevista" valor={`${prevista} TA`} />
           </div>
           <div data-andamento="executada" className="h-full">
             <CardKpi
+              compacto
               rotulo="CH executada"
               valor={`${executada} TA`}
               {...(execucaoSeparada
@@ -250,8 +295,17 @@ export function IndicadoresDaTurma({
                 : {})}
             />
           </div>
+          <div data-andamento="restante" className="h-full">
+            <CardKpi
+              compacto
+              rotulo="CH restante"
+              valor={`${restante} TA`}
+              detalhe={<span>prevista − executada</span>}
+            />
+          </div>
           <div data-andamento="percentual" className="h-full">
             <CardKpi
+              compacto
               rotulo="Progresso"
               valor={percentual === null ? "—" : `${percentual} %`}
               detalhe={
@@ -271,19 +325,51 @@ export function IndicadoresDaTurma({
               }
             />
           </div>
+          <div data-andamento="dias-uteis" className="h-full">
+            <CardKpi
+              compacto
+              rotulo="Dias úteis até o término"
+              valor={diasUteis === null ? "—" : diasUteis}
+              {...(calculada ? {} : { unidade: razaoCurta })}
+              detalhe={
+                <span>
+                  de amanhã
+                  {dataTermino === null ? "" : ` a ${dataParaLeitura(dataTermino)}`}, sem feriados,
+                  licenças e dias parados
+                </span>
+              }
+            />
+          </div>
+          <div data-andamento="disponivel" className="h-full">
+            <CardKpi
+              compacto
+              rotulo="CH disponível até o término"
+              valor={capacidade === null ? "—" : `${capacidade} TA`}
+              {...(calculada ? {} : { unidade: razaoCurta })}
+              detalhe={
+                /*
+                  ⚠️ SPEC 029 (`FR-005.4`, D-13): COM O TA/DIA VARIANDO DE SEMANA PARA SEMANA (o regime do relógio do
+                     DSA), a capacidade diz a FAIXA — «8 a 9 TA/dia» —, e não o TA/dia do primeiro dia útil.
+                */
+                capacidadeDiaria !== null && diasUteis !== null ? (
+                  <span data-andamento="capacidade">
+                    {andamento.faixaDiaria === null
+                      ? capacidadeDiaria
+                      : `${andamento.faixaDiaria.minima} a ${andamento.faixaDiaria.maxima}`}{" "}
+                    TA/dia · {diasUteis} dias úteis
+                    {dataTermino === null ? "" : ` até ${dataParaLeitura(dataTermino)}`}
+                  </span>
+                ) : null
+              }
+            />
+          </div>
           <div data-andamento="saldo" className="h-full">
             <CardKpi
-              rotulo="Saldo de capacidade (TA)"
+              compacto
+              rotulo="Saldo de CH"
               valor={saldo === null ? "—" : `${comSinal(saldo)} TA`}
+              {...(situacao !== null ? { tom: TOM_DA_SITUACAO_DO_SALDO[situacao] } : {})}
               {...(calculada ? {} : { unidade: razaoCurta })}
-              {...(calculada && saldoEmDias !== null
-                ? {
-                    variacao: {
-                      texto: `${emDias(saldoEmDias)} de capacidade`,
-                      favoravel: saldo !== null && saldo >= 0,
-                    },
-                  }
-                : {})}
               detalhe={
                 andamento.situacaoDaCapacidade === "sem_termino" ? (
                   <Frase slot="sem-termino">
@@ -296,29 +382,18 @@ export function IndicadoresDaTurma({
                   </Frase>
                 ) : (
                   <>
-                    <span>
-                      Saldo em dias:{" "}
-                      <span
-                        className={
-                          andamento.emAtraso ? "text-atrasado-tinta font-medium" : undefined
-                        }
-                        data-andamento="saldo-em-dias"
-                      >
-                        {emDias(saldoEmDias ?? 0)}
+                    {situacao !== null ? (
+                      <span className="font-medium" data-andamento="situacao-do-saldo">
+                        {ROTULO_DA_SITUACAO_DO_SALDO[situacao]}
                       </span>
+                    ) : null}
+                    <span>
+                      disponível − restante · em dias:{" "}
+                      <span data-andamento="saldo-em-dias">{emDias(saldoEmDias ?? 0)}</span>
                     </span>
-                    {/*
-                      ⚠️ SPEC 029 (`FR-005.4`, D-13): COM O TA/DIA VARIANDO DE SEMANA PARA SEMANA (o regime do relógio
-                         do DSA), a capacidade diz a FAIXA — «8 a 9 TA/dia» —, e não o TA/dia do primeiro dia útil, que
-                         sozinho daria a entender que a janela inteira tem aquele regime. A faixa sai do módulo puro.
-                    */}
-                    {capacidadeDiaria !== null && diasUteis !== null ? (
-                      <span data-andamento="capacidade">
-                        {andamento.faixaDiaria === null
-                          ? capacidadeDiaria
-                          : `${andamento.faixaDiaria.minima} a ${andamento.faixaDiaria.maxima}`}{" "}
-                        TA/dia · {diasUteis} dias úteis
-                        {dataTermino === null ? "" : ` até ${dataParaLeitura(dataTermino)}`}
+                    {andamento.semanaDeAula !== null ? (
+                      <span data-andamento="semana-de-aula">
+                        uma semana de aula = {andamento.semanaDeAula} TA
                       </span>
                     ) : null}
                   </>
@@ -351,6 +426,7 @@ export function IndicadoresDaTurma({
             data-previstas={avaliacoes.previstas}
           >
             <CardKpi
+              compacto
               rotulo="Avaliações"
               valor={`${avaliacoes.aplicadas} de ${avaliacoes.previstas}`}
               href={enderecoDasAvaliacoesDaTurma(turmaCodigo)}

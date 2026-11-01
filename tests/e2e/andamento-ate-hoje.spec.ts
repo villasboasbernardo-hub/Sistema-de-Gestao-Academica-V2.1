@@ -111,7 +111,7 @@ test.describe("⚠️ D-COR-2 · FR-014.4 · o lançamento no futuro não conta 
       String(SALDO_ATE_HOJE),
     );
     /* A marca de atraso é a mesma do `/inicio` (Q-6): a turma não cabe no prazo. */
-    await expect(linha.locator('[data-slot="coluna-saldo"]')).toContainText("em atraso");
+    await expect(linha.locator('[data-slot="coluna-saldo"]')).toContainText("Atrasada");
 
     /* ── a ficha: o andamento e a tabela de disciplinas, até hoje ────────────────────────────── */
     await linha

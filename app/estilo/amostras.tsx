@@ -27,6 +27,7 @@ import { BadgeTeto, type Teto } from "@/components/ciaara/badge-teto";
 import { CampoObrigatorio, propsDoControle } from "@/components/ciaara/campo-obrigatorio";
 import { BarraDeProgresso } from "@/components/ciaara/barra-de-progresso";
 import { CardKpi } from "@/components/ciaara/card-kpi";
+import { EmBreve } from "@/components/ciaara/em-breve";
 import { Carrossel } from "@/components/ciaara/carrossel";
 import { DialogoConfirmacao } from "@/components/ciaara/dialogo-confirmacao";
 import { ExclusaoPermanente } from "@/components/ciaara/exclusao-permanente";
@@ -125,6 +126,17 @@ export function AmostraIndicadores() {
         valor={13}
         variacao={{ texto: "+3 na semana", favoravel: false }}
       />
+      {/* Bloco 17 (RT-7): o cartão compacto da ficha da turma, e o tingido na cor da situação. */}
+      <CardKpi
+        compacto
+        rotulo="CH restante"
+        valor="647 TA"
+        detalhe={<span>prevista − executada</span>}
+      />
+      <CardKpi compacto tom="executado" rotulo="Situação" valor="Ativa" />
+      <CardKpi compacto tom="atrasado" rotulo="Saldo de CH" valor="-24 TA" />
+      {/* Blocos 16 e 17: a aba que ainda não tem conteúdo. */}
+      <EmBreve slot="amostra-em-breve" />
     </div>
   );
 }

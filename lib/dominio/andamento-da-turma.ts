@@ -39,6 +39,14 @@
  *   curso» do saldo continua sendo o **padrão vigente hoje** (D-12 da spec 029), e não o do DSA (exceção > padrão na
  *   data da semana): é o que faz só as turmas com «desde» ou *só esta semana* mudarem.
  *
+ * - **`RN-SALDO-01`** (Bloco 17, spec 032 — *"SALDO DE CH, regra nova (substitui o cálculo atual, D-COR-2): saldo = CH
+ *   disponível − CH restante. Situação: ADIANTADA se saldo > uma semana de aula (TA/dia do regime em vigor × 5); DENTRO
+ *   DO PREVISTO se 0 ≤ saldo ≤ uma semana; ATRASADA se saldo < 0."* — Bernardo Villas Boas, 01/11/2026; documento 04).
+ *   A CH disponível é a capacidade de sempre (o regime em vigor dia a dia, de amanhã ao término); os dias úteis passam a
+ *   descontar também os **dias bloqueados no DSA** — o dia parado e o TR bloqueante de dia inteiro, da turma ou de todas
+ *   (`datasBloqueadasDaTurma`, a mesma noção de `RN-EVT-04`) —, e a situação ganha três níveis (`situacaoDoSaldo`). O
+ *   `emAtraso` é a situação *atrasada*: o mesmo veredito de antes (`saldo < 0` na turma ativa).
+ *
  * ⚠️ **TypeScript puro: sem `next`, sem `react`, sem `supabase`.** `hoje`, os feriados e o regime
  * chegam **por parâmetro**, como em todo módulo desta pasta — é o que permite provar as contas com
  * casos sintéticos, sem subir banco. E `hoje` é `string` `yyyy-mm-dd`, nunca `Date`: a convenção da
@@ -85,6 +93,66 @@ export type SituacaoDaCapacidade =
   /** Spec 024 (FR-018): turma EAD — o andamento é controlado pela Divisão de Ensino a Distância; nada se conta. */
   | "controle_da_dead";
 
+/**
+ * A situação do saldo da turma ativa (`RN-SALDO-01`, Bloco 17): *adiantada* com mais de uma semana de aula de folga,
+ * *dentro do previsto* de zero a uma semana, *atrasada* abaixo de zero.
+ */
+export type SituacaoDoSaldo = "adiantada" | "dentro_do_previsto" | "atrasada";
+
+/** O nome de tela de cada situação do saldo — o único lugar onde ele é escrito. */
+export const ROTULO_DA_SITUACAO_DO_SALDO: Readonly<Record<SituacaoDoSaldo, string>> = {
+  adiantada: "Adiantada",
+  dentro_do_previsto: "Dentro do previsto",
+  atrasada: "Atrasada",
+};
+
+/** O tom da etiqueta de cada situação do saldo — ao lado do rótulo. Tom não é cor: resolve para token no componente. */
+export const TOM_DA_SITUACAO_DO_SALDO: Readonly<
+  Record<SituacaoDoSaldo, "adiantado" | "executado" | "atrasado">
+> = {
+  adiantada: "adiantado",
+  dentro_do_previsto: "executado",
+  atrasada: "atrasado",
+};
+
+/** A frase ao lado da etiqueta — o que a situação diz ao operador. */
+export const FRASE_DA_SITUACAO_DO_SALDO: Readonly<Record<SituacaoDoSaldo, string>> = {
+  adiantada: "A CH disponível até o término passa da que falta em mais de uma semana de aula.",
+  dentro_do_previsto:
+    "A CH disponível até o término cobre a que falta, com até uma semana de folga.",
+  atrasada:
+    "A CH disponível até o término não cobre a que falta: mude o regime ou dê aula no sábado.",
+};
+
+/**
+ * `RN-SALDO-01`: a situação pelo saldo e por uma semana de aula (`TA/dia do regime em vigor × 5`). Os limites: o zero
+ * e a semana inteira são *dentro do previsto*.
+ */
+export function situacaoDoSaldo(saldo: number, semanaDeAula: number): SituacaoDoSaldo {
+  if (saldo < 0) return "atrasada";
+  return saldo > semanaDeAula ? "adiantada" : "dentro_do_previsto";
+}
+
+/**
+ * Um dia bloqueado no DSA (`RN-EVT-04`): o dia parado (`dias_parados`) ou o TR bloqueante, da turma ou de todas
+ * (`turmaId` nulo). Só o de **dia inteiro** tira o dia da conta; o de parte do dia não (D-3 da spec 032).
+ */
+export type DiaBloqueado = {
+  readonly data: string;
+  readonly turmaId: string | null;
+  readonly diaInteiro: boolean;
+};
+
+/** As datas que a turma não tem para dar aula pelo DSA — somam-se às do calendário em `andamentoDaTurma`. */
+export function datasBloqueadasDaTurma(
+  bloqueios: readonly DiaBloqueado[],
+  turmaId: string,
+): string[] {
+  return bloqueios
+    .filter((b) => b.diaInteiro && (b.turmaId === null || b.turmaId === turmaId))
+    .map((b) => b.data.slice(0, 10));
+}
+
 export type Andamento = {
   readonly prevista: number;
   readonly executada: number;
@@ -112,6 +180,10 @@ export type Andamento = {
   readonly situacaoDaCapacidade: SituacaoDaCapacidade;
   /** `status === "ativa" && saldo < 0` — só com capacidade calculada (`RF-INI-01`). */
   readonly emAtraso: boolean;
+  /** `RN-SALDO-01`: uma semana de aula — o TA/dia do regime em vigor × 5; `null` sem capacidade calculada. */
+  readonly semanaDeAula: number | null;
+  /** `RN-SALDO-01`: a situação do saldo — só na turma ATIVA com capacidade calculada; `null` nas demais. */
+  readonly situacaoDoSaldo: SituacaoDoSaldo | null;
 };
 
 /**
@@ -395,6 +467,8 @@ export function andamentoDaTurma(
       saldoEmDias: null,
       situacaoDaCapacidade: "controle_da_dead",
       emAtraso: false,
+      semanaDeAula: null,
+      situacaoDoSaldo: null,
     };
   }
   const prevista = Number(turma.prevista) || 0;
@@ -420,6 +494,8 @@ export function andamentoDaTurma(
     semLancamentos,
     capacidadeDiaria: capDiaria,
     faixaDiaria: null,
+    semanaDeAula: null,
+    situacaoDoSaldo: null,
   };
 
   if (turma.dataTermino === null || turma.dataTermino === "") {
@@ -485,6 +561,13 @@ export function andamentoDaTurma(
   const capacidade =
     minima === maxima ? diasUteis * taDoPrimeiroDia : validos.reduce((soma, t) => soma + t, 0);
   const saldo = capacidade - restante;
+  /*
+   * `RN-SALDO-01`: UMA SEMANA DE AULA é o TA/dia do regime EM VIGOR × 5 — o do primeiro dia útil da janela, o mesmo que
+   * divide o saldo em dias (D-13 da spec 029). Só a turma ativa recebe veredito (`RF-INI-01`: atraso é de turma em
+   * andamento); a planejada mostra o saldo, sem situação (D-4 da spec 032).
+   */
+  const semanaDeAula = taDoPrimeiroDia * 5;
+  const veredito = turma.status === "ativa" ? situacaoDoSaldo(saldo, semanaDeAula) : null;
 
   return {
     ...base,
@@ -502,7 +585,10 @@ export function andamentoDaTurma(
      */
     saldoEmDias: Math.floor(saldo / taDoPrimeiroDia),
     situacaoDaCapacidade: "calculada",
-    emAtraso: turma.status === "ativa" && saldo < 0,
+    /* `RN-SALDO-01`: a situação é a do saldo, só na turma ativa; o «em atraso» é ela — o mesmo veredito de antes. */
+    emAtraso: turma.status === "ativa" && veredito === "atrasada",
+    semanaDeAula,
+    situacaoDoSaldo: veredito,
   };
 }
 

@@ -25,6 +25,10 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 
+import {
+  ROTULO_DA_SITUACAO_DO_SALDO,
+  TOM_DA_SITUACAO_DO_SALDO,
+} from "@/lib/dominio/andamento-da-turma";
 import { BadgeStatus } from "@/components/ciaara/badge-status";
 import { TabelaDensa, type Coluna } from "@/components/ciaara/tabela-densa";
 import {
@@ -230,7 +234,12 @@ const COLUNAS: readonly Coluna<TurmaNaLista>[] = [
         className="inline-flex items-center justify-end gap-2 whitespace-nowrap tabular-nums"
       >
         {l.saldo === null ? "—" : l.saldo}
-        {l.saldo !== null && l.emAtraso ? <BadgeStatus tom="atrasado" rotulo="em atraso" /> : null}
+        {l.saldo !== null && l.situacaoDoSaldo ? (
+          <BadgeStatus
+            tom={TOM_DA_SITUACAO_DO_SALDO[l.situacaoDoSaldo]}
+            rotulo={ROTULO_DA_SITUACAO_DO_SALDO[l.situacaoDoSaldo]}
+          />
+        ) : null}
       </span>
     ),
   },

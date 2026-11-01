@@ -29,6 +29,9 @@ import { compararTurmas } from "@/lib/dominio/ordem-de-cursos";
 import { regimeEfetivo } from "@/lib/dominio/regime-da-turma";
 import {
   andamentoDaTurma,
+  datasBloqueadasDaTurma,
+  type DiaBloqueado,
+  type SituacaoDoSaldo,
   type RegimeDoCurso,
   contagemDaTurma,
   type ContagemPresencial,
@@ -100,6 +103,8 @@ export type TurmaNoPanorama = {
    * que ninguém pode mais consertar — ruído que ensina a ignorar a região de alertas inteira.
    */
   readonly emAtraso: boolean;
+  /** Bloco 17 (`RN-SALDO-01`): adiantada, dentro do previsto ou atrasada — só a turma ativa com saldo calculado. */
+  readonly situacaoDoSaldo: SituacaoDoSaldo | null;
   /**
    * A turma é EAD puro — o bloco não oferece o DSA, e mostra o aviso (`Q-13`; item 9 da conferência
    * do PR #40, 08/10/2026). ⚠️ Sem a linha da turma, `false`: o link aparece e a rota do DSA, que lê
@@ -133,6 +138,8 @@ export function montarPanorama(
    * «só esta semana» e o «desde» do DSA. Ausente, ou turma fora do mapa = um TA/dia só, a conta de antes do Bloco 14.
    */
   semanasDasTurmas: ReadonlyMap<string, ExcecoesDoRegime> = new Map(),
+  /** Bloco 17 (`RN-SALDO-01`): os dias bloqueados no DSA (`lerDiasBloqueadosAFrente`). Ausente = nenhum. */
+  diasBloqueados: readonly DiaBloqueado[] = [],
 ): readonly TurmaNoPanorama[] {
   const porId = new Map(cursos.map((c) => [c.id, c]));
   const turmaPorId = new Map(turmas.map((t) => [t.id, t]));
@@ -183,7 +190,10 @@ export function montarPanorama(
           doCurso,
           daTabela?.regime ? { regimeTempos: daTabela.regime.regime_tempos } : null,
         ),
-        datasQueAlcancam(feriadosDiaInteiro, c.turma_id),
+        [
+          ...datasQueAlcancam(feriadosDiaInteiro, c.turma_id),
+          ...datasBloqueadasDaTurma(diasBloqueados, c.turma_id),
+        ],
         hoje,
         /* Spec 029 (`FR-005`, D-12): o regime de cada semana, com o padrão de hoje do curso como o «do curso». */
         regimesDasSemanas(semanasDasTurmas.get(c.turma_id), doCurso),
@@ -213,6 +223,8 @@ export function montarPanorama(
          */
         percentual: andamento.percentual ?? 0,
         emAtraso: andamento.emAtraso,
+        /* Bloco 17 (`RN-SALDO-01`): a situação do saldo — repassada, nunca decidida aqui. */
+        situacaoDoSaldo: andamento.situacaoDoSaldo,
         /* ⚠️ A modalidade da TURMA, como a capacidade acima — nunca a do curso (`RN-MAT-04`). */
         eadPuro: ehEadPuro(daTabela?.modalidade),
       };

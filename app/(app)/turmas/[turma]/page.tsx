@@ -17,7 +17,6 @@
 import Link from "next/link";
 
 import { BarraDeAcoes } from "@/components/ciaara/barra-de-acoes";
-import { BadgeStatus } from "@/components/ciaara/badge-status";
 import { BotaoDeIcone } from "@/components/ciaara/botao-de-icone";
 import { ExclusaoPermanente } from "@/components/ciaara/exclusao-permanente";
 import { SePodeVer } from "@/components/ciaara/SePodeVer";
@@ -35,6 +34,7 @@ import { COLUNAS_DA_ABRANGENCIA, linhasComAbrangencia } from "@/lib/calendario/a
 import { ROTULO_DA_MODALIDADE } from "@/lib/constantes/curso";
 import {
   andamentoDaTurma,
+  datasBloqueadasDaTurma,
   AVISO_DA_CONTAGEM_PRESENCIAL,
   contagemDaTurma,
   regimesDasSemanas,
@@ -47,6 +47,7 @@ import {
   RECURSO_DO_ARQUIVAMENTO,
 } from "@/lib/dominio/arquivamento-da-turma";
 import { feriadosDaTurma } from "@/lib/dominio/calendario";
+import { lerDiasBloqueadosAFrente } from "../dias-bloqueados";
 import { rotuloDoCurriculo } from "@/lib/dominio/curriculos";
 import { AVISO_DE_TURMA_EAD, ehEadPuro } from "@/lib/dominio/dsa/ead-puro";
 import { estadoDaExclusaoDaTurma } from "@/lib/dominio/exclusao-de-turma";
@@ -215,6 +216,7 @@ export default async function FichaDaTurma({
     contagensPresenciais,
     impedimentosRes,
     semanasDaTurma,
+    diasBloqueados,
   ] = await Promise.all([
     supabase.from("cursos").select("codigo, nome_curso, status").eq("id", cursoId).maybeSingle(),
     /* A carga vem da MESMA view do `/inicio`: a CH curricular e os cartões de AEC, TAD e TR. */
@@ -264,6 +266,8 @@ export default async function FichaDaTurma({
     impedimentosPromessa,
     /* Spec 029 (`FR-005`): o regime das semanas do DSA desta turma — o saldo soma o TA/dia da semana de cada dia. */
     lerRegimesDasSemanas(supabase, { hoje, turmaId }),
+    /* Bloco 17 (`RN-SALDO-01`): os dias bloqueados no DSA não contam como dia útil do saldo. */
+    lerDiasBloqueadosAFrente(supabase, hoje),
   ]);
 
   const trocas = (trocasRes.data ?? []) as {
@@ -315,9 +319,12 @@ export default async function FichaDaTurma({
       regimeDoCursoHoje,
       regimeDaFicha ? { regimeTempos: Number(regimeDaFicha.regime_tempos) } : null,
     ),
-    datasDeFeriado(
-      feriadosDaTurma(linhasComAbrangencia<{ data: string }>(feriadosRes?.data), turmaId),
-    ),
+    [
+      ...datasDeFeriado(
+        feriadosDaTurma(linhasComAbrangencia<{ data: string }>(feriadosRes?.data), turmaId),
+      ),
+      ...datasBloqueadasDaTurma(diasBloqueados, turmaId),
+    ],
     hoje,
     /* Spec 029 (`FR-005`, D-12): o regime de cada semana, com o padrão de hoje do curso como o «do curso». */
     regimesDasSemanas(semanasDaTurma.porTurma.get(turmaId), regimeDoCursoHoje),
@@ -545,16 +552,6 @@ export default async function FichaDaTurma({
                 "—"
               )}
             </dd>
-            <Rotulo>Situação</Rotulo>
-            <dd className="flex items-center gap-2">
-              <BadgeStatus
-                tom={TOM_DO_STATUS_DE_TURMA[turma.status as string] ?? "planejado"}
-                rotulo={
-                  ROTULO_DO_STATUS_DE_TURMA[turma.status as string] ?? (turma.status as string)
-                }
-              />
-              {arquivada ? <BadgeStatus tom="inativo" rotulo="Arquivada" /> : null}
-            </dd>
           </dl>
         </div>
 
@@ -644,6 +641,12 @@ export default async function FichaDaTurma({
         {...(edicao ? { edicao } : {})}
         avaliacoes={avaliacoes?.quadro?.contagem ?? null}
         turmaCodigo={turma.codigo as string}
+        situacaoDaTurma={{
+          valor: turma.status as string,
+          rotulo: ROTULO_DO_STATUS_DE_TURMA[turma.status as string] ?? (turma.status as string),
+          tom: TOM_DO_STATUS_DE_TURMA[turma.status as string] ?? "planejado",
+          arquivada,
+        }}
       />
 
       <HistoricoDaTurma eventos={historico} />

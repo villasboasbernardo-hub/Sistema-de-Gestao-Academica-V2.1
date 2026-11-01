@@ -110,7 +110,7 @@ test.describe("`FR-023`, `FR-024` · a turma que calcula — e o excesso NÃO é
     ).toBeVisible();
     await expect(
       page.locator('[data-slot="indicadores-da-turma"] [data-slot="em-atraso"]'),
-    ).toContainText(/em atraso/i);
+    ).toContainText(/atrasada/i);
     await expect(campo(page, "saldo")).toContainText("-");
     await expect(campo(page, "saldo-em-dias")).toContainText("-");
   });
@@ -248,5 +248,65 @@ test.describe("`FR-033` · nenhum estado do andamento bloqueia a edição da fic
      */
     await expect(page.getByLabel("Término", { exact: true })).toBeVisible();
     await expect(page.getByRole("button", { name: /salvar/i })).toBeVisible();
+  });
+});
+
+/*
+ * Bloco 17 (spec 032, itens 1 a 4): os cartões compactos, a situação da turma num cartão tingido, os três cartões novos
+ * e as abas APOINST e Palestras. Chega por clique às abas; a ficha, pelo caminho de sempre (`irAFichaDaTurma`).
+ */
+test.describe("Bloco 17 · a ficha da turma: situação, CH restante, dias úteis, CH disponível e saldo", () => {
+  test("os cartões novos, com a conta que fecha: saldo = disponível − restante, e a situação do saldo", async ({
+    page,
+  }) => {
+    await irAFichaDaTurma(page, EMAIL, PANORAMA.turmaSemCapacidade);
+
+    /* Item 1: a situação da turma é um cartão na cor dela, com o texto dentro — e saiu da lista de dados. */
+    const situacao = page.locator('[data-slot="cartao-da-situacao"]');
+    await expect(situacao).toHaveAttribute("data-situacao", "ativa");
+    await expect(situacao).toContainText("Ativa");
+    await expect(situacao.locator('[data-slot="card-kpi"]')).toHaveAttribute(
+      "data-tom",
+      "executado",
+    );
+
+    /* Item 2: os três cartões novos. */
+    const numero = async (nome: string) =>
+      Number(
+        (
+          (await campo(page, nome)
+            .locator('[data-slot="card-kpi"] .tabular-nums')
+            .first()
+            .textContent()) ?? ""
+        ).replace(/[^\d+-]/g, ""),
+      );
+    await expect(campo(page, "restante")).toContainText("TA");
+    await expect(campo(page, "dias-uteis")).toContainText("de amanhã");
+    await expect(campo(page, "disponivel")).toContainText("TA/dia");
+    const restante = await numero("restante");
+    const disponivel = await numero("disponivel");
+    const saldo = await numero("saldo");
+    expect(restante, "CH restante = prevista − executada").toBe(100 - (await numero("executada")));
+    expect(saldo, "saldo = CH disponível − CH restante (RN-SALDO-01)").toBe(disponivel - restante);
+
+    /* Item 3: a situação do saldo, no cartão e na tarja. */
+    await expect(campo(page, "situacao-do-saldo")).toHaveText("Atrasada");
+    await expect(campo(page, "semana-de-aula")).toContainText("uma semana de aula = 40 TA");
+  });
+
+  test("item 4: as abas APOINST e Palestras da turma, por clique, com «Em breve» e a aba na URL", async ({
+    page,
+  }) => {
+    await irAFichaDaTurma(page, EMAIL, PANORAMA.turmaSemCapacidade);
+    const abas = page.getByRole("tablist", { name: "Seções da turma" });
+    await expect(abas.getByRole("tab")).toHaveText(["Ficha", "Avaliações", "APOINST", "Palestras"]);
+
+    await abas.getByRole("tab", { name: "APOINST" }).click();
+    await expect.poll(() => new URL(page.url()).searchParams.get("aba")).toBe("apoinst");
+    await expect(page.locator('[data-slot="aba-apoinst-em-breve"]')).toHaveText("Em breve");
+
+    await abas.getByRole("tab", { name: "Palestras" }).click();
+    await expect.poll(() => new URL(page.url()).searchParams.get("aba")).toBe("palestras");
+    await expect(page.locator('[data-slot="aba-palestras-em-breve"]')).toHaveText("Em breve");
   });
 });

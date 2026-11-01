@@ -496,7 +496,9 @@ describe("`FR-031` · turma e salas: identidade no caminho, nada na consulta", (
     ]);
     const aba = parametrosDaRota("/turmas/[turma]").find((p) => p.nome === "aba") as Parametro;
     expect(aba.tipo).toBe("escolha");
-    if (aba.tipo === "escolha") expect([...aba.opcoes]).toEqual(["ficha", "avaliacoes"]);
+    // ⚠️ Bloco 17 (item 4): as abas APOINST e Palestras («Em breve») entraram em 01/11/2026.
+    if (aba.tipo === "escolha")
+      expect([...aba.opcoes]).toEqual(["ficha", "avaliacoes", "apoinst", "palestras"]);
     expect([aba.padrao, aba.historico]).toEqual(["ficha", "empilha"]);
   });
 });

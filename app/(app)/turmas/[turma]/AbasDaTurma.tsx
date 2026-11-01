@@ -13,6 +13,7 @@
 import * as React from "react";
 
 import { cn } from "cn";
+import { EmBreve } from "@/components/ciaara/em-breve";
 import {
   ANCORA_DAS_ABAS_DA_TURMA,
   ROTA_DA_FICHA_DA_TURMA,
@@ -22,7 +23,12 @@ import { useParametro } from "@/lib/navegacao/usar-parametro";
 const ABAS = [
   { valor: "ficha", rotulo: "Ficha" },
   { valor: "avaliacoes", rotulo: "Avaliações" },
+  /* Bloco 17 (item 4): em branco, com «Em breve». */
+  { valor: "apoinst", rotulo: "APOINST" },
+  { valor: "palestras", rotulo: "Palestras" },
 ] as const;
+
+type Aba = (typeof ABAS)[number]["valor"];
 
 export function AbasDaTurma({
   ficha,
@@ -32,7 +38,7 @@ export function AbasDaTurma({
   readonly avaliacoes: React.ReactNode;
 }) {
   const [aba, definirAba] = useParametro(ROTA_DA_FICHA_DA_TURMA, "aba");
-  const atual = aba === "avaliacoes" ? "avaliacoes" : "ficha";
+  const atual: Aba = ABAS.some((a) => a.valor === aba) ? (aba as Aba) : "ficha";
   const raiz = React.useRef<HTMLDivElement>(null);
 
   /*
@@ -85,7 +91,13 @@ export function AbasDaTurma({
         aria-labelledby={`aba-${atual}`}
         className="flex flex-col gap-5"
       >
-        {atual === "avaliacoes" ? avaliacoes : ficha}
+        {atual === "avaliacoes" ? (
+          avaliacoes
+        ) : atual === "apoinst" || atual === "palestras" ? (
+          <EmBreve slot={`aba-${atual}-em-breve`} />
+        ) : (
+          ficha
+        )}
       </div>
     </div>
   );

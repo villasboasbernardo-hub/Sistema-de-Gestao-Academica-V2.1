@@ -14,7 +14,7 @@ import {
   type CampoDeFiltro,
   type EstadoDeFiltro,
 } from "@/components/ciaara/filtro-avancado";
-import { CATEGORIAS_DE_ATIVIDADE } from "@/lib/navegacao/contrato";
+import { CATEGORIAS_DA_LISTA_DE_ATIVIDADES } from "@/lib/navegacao/contrato";
 import { filtrosForaDoPadrao } from "@/lib/navegacao/filtros-fora-do-padrao";
 import { useParametro } from "@/lib/navegacao/usar-parametro";
 
@@ -35,7 +35,7 @@ export function FiltrosDeAtividades({ turmas }: { readonly turmas: readonly stri
       chave: "categoria",
       rotulo: "Categoria",
       tipo: "escolha",
-      opcoes: CATEGORIAS_DE_ATIVIDADE.map((c) => ({
+      opcoes: CATEGORIAS_DA_LISTA_DE_ATIVIDADES.map((c) => ({
         valor: c,
         rotulo: ROTULO_DA_CATEGORIA[c] ?? c,
       })),

@@ -32,6 +32,7 @@
 import { estadosPorRegistro, type ImpedimentosDoRegistro } from "@/lib/dominio/exclusao-permanente";
 import { lerContagemPresencial } from "./contagem-presencial";
 import { lerRegimesDasSemanas } from "./regimes-das-semanas";
+import { lerDiasBloqueadosAFrente } from "./dias-bloqueados";
 import { AvisoDoRegimeNaoLido } from "./AvisoDoRegimeNaoLido";
 import { COLUNAS_DA_ABRANGENCIA, linhasComAbrangencia } from "@/lib/calendario/abrangencia";
 import { BarraDeAcoes } from "@/components/ciaara/barra-de-acoes";
@@ -113,6 +114,7 @@ export default async function Turmas({
     parametroRes,
     presenciais,
     semanasDasTurmas,
+    diasBloqueados,
   ] = await Promise.all([
     usuarioDaSessao(),
     montarConsultaDeTurmas(supabase.from("turmas").select(COLUNAS_DA_LISTA_DE_TURMAS), parametros),
@@ -152,6 +154,8 @@ export default async function Turmas({
     lerContagemPresencial(supabase, hoje),
     /* Spec 029 (`FR-005`): o regime das semanas do DSA — o Saldo soma o TA/dia da semana de cada dia útil. */
     lerRegimesDasSemanas(supabase, { hoje }),
+    /* Bloco 17 (`RN-SALDO-01`): os dias bloqueados no DSA não contam como dia útil do saldo. */
+    lerDiasBloqueadosAFrente(supabase, hoje),
   ]);
 
   const permissoes = await permissoesDoPerfil(usuario?.perfil ?? null);
@@ -185,6 +189,7 @@ export default async function Turmas({
       hoje,
       presenciais,
       semanasDasTurmas: semanasDasTurmas.porTurma,
+      diasBloqueados,
     },
   );
   /*

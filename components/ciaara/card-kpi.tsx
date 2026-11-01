@@ -22,7 +22,9 @@ import Link from "next/link";
 import { cn } from "cn";
 import { TrendingDownIcon, TrendingUpIcon } from "lucide-react";
 
+import { TONS } from "@/components/ciaara/badge-status";
 import { Card, CardContent } from "@/components/ui/card";
+import type { Tom } from "@/lib/design/vocabulario";
 
 export type Variacao = {
   /** O número já formatado por quem chama — o componente não formata nada. */
@@ -42,6 +44,10 @@ export type CardKpiProps = {
   readonly acao?: React.ReactNode;
   /** O cartão inteiro leva a este endereço (ex.: a aba Avaliações da turma). */
   readonly href?: string;
+  /** Bloco 17 (RT-7): o cartão no mínimo necessário — menos respiro e o número menor. */
+  readonly compacto?: boolean;
+  /** Bloco 17: o cartão tingido na cor de um tom (ex.: a situação da turma), com o texto dentro. */
+  readonly tom?: Tom;
   readonly className?: string;
 };
 
@@ -53,6 +59,8 @@ export function CardKpi({
   detalhe,
   acao,
   href,
+  compacto = false,
+  tom,
   className,
 }: CardKpiProps) {
   const Seta = variacao?.favoravel ? TrendingUpIcon : TrendingDownIcon;
@@ -60,15 +68,32 @@ export function CardKpi({
   const cartao = (
     <Card
       data-slot="card-kpi"
-      className={cn("h-full gap-0 py-4", href ? "hover:bg-marca-suave" : undefined, className)}
+      data-compacto={compacto ? "" : undefined}
+      data-tom={tom}
+      className={cn(
+        "h-full gap-0",
+        compacto ? "py-2" : "py-4",
+        tom ? TONS[tom] : undefined,
+        href ? "hover:bg-marca-suave" : undefined,
+        className,
+      )}
     >
-      <CardContent className="flex h-full flex-col gap-1 px-4">
+      <CardContent className={cn("flex h-full flex-col gap-1", compacto ? "px-3" : "px-4")}>
         <div className="flex items-start justify-between gap-2">
-          <p className="text-texto-suave text-sm font-medium">{rotulo}</p>
+          <p className={cn("text-sm font-medium", tom ? undefined : "text-texto-suave")}>
+            {rotulo}
+          </p>
           {acao ?? null}
         </div>
         <p className="flex items-baseline gap-1">
-          <span className="text-kpi leading-none font-semibold tabular-nums">{valor}</span>
+          <span
+            className={cn(
+              "leading-none font-semibold tabular-nums",
+              compacto ? "text-xl" : "text-kpi",
+            )}
+          >
+            {valor}
+          </span>
           {unidade ? (
             /* veste: a unidade do indicador — texto estático, nunca o valor (FR-031) */
             <span className="text-texto-tenue text-2xs font-medium">{unidade}</span>
