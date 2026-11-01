@@ -38,8 +38,13 @@
  * ⚠️ TypeScript puro: sem `next`, sem `react`, sem `supabase` (Princípio II).
  */
 
+/**
+ * ⚠️ **`cancelada` SÓ NASCE DO AJUSTE MANUAL** (Bloco 16, spec 031, ajuste D de 31/10/2026): `situacaoDaAvaliacao` nunca
+ *    a devolve — a avaliação cancelada no registro sai da conta (`null`). Quem a escreve é quem lança o DSA, com
+ *    justificativa, em `ajustes_de_avaliacao`, e ela vale na linha (`comAjustes`).
+ */
 export type SituacaoDaAvaliacao =
-  "pendente" | "em_andamento" | "concluida" | "atrasada" | "sem_correspondencia";
+  "pendente" | "em_andamento" | "concluida" | "atrasada" | "sem_correspondencia" | "cancelada";
 
 /** A natureza do instrumento (`config_listas.instrumentos_avaliacao.metadados.natureza`). */
 export type NaturezaDaAvaliacao = "prova" | "trabalho" | "od";
@@ -112,4 +117,5 @@ export const ROTULO_DA_SITUACAO: Record<SituacaoDaAvaliacao, string> = {
   concluida: "Concluída",
   atrasada: "Atrasada",
   sem_correspondencia: "Sem correspondência",
+  cancelada: "Cancelada",
 };

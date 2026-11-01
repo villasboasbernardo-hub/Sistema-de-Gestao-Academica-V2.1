@@ -347,7 +347,10 @@ test.describe("FR-007 · o cartão do DSA com o nome que cabe e o instrutor inte
     const falhas: string[] = [];
     for (let i = 0; i < DIAS.length * TEMPOS_POR_DIA; i += 1) {
       const c = cartoes.nth(i);
-      const erro = await dentroDoCartao(c, c.locator(".dsa4-cartao-pe > span").first());
+      const erro = await dentroDoCartao(
+        c,
+        c.locator('.dsa4-cartao-pe > [data-slot="cartao-instrutor"]'),
+      );
       if (erro) falhas.push(`cartão ${i}: ${erro}`);
     }
     expect(falhas, "algum cartão de 1 TA cortou o instrutor").toEqual([]);

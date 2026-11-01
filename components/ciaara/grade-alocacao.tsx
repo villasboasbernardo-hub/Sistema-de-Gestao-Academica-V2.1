@@ -348,8 +348,14 @@ export function GradeAlocacao({
                                   }
                                 : undefined
                             }
+                            /*
+                             * Bloco 16 (ajuste C): `h-px` é o que deixa o conteúdo da célula ocupar a altura dela
+                             * (`h-full` no filho) — célula de tabela sem altura não dá referência ao `100%`, e o cartão
+                             * do DSA não conseguia distribuir o conteúdo pelos tempos dele. A linha continua crescendo
+                             * com o conteúdo.
+                             */
                             className={cn(
-                              "border-l border-t border-borda p-1 align-top outline-none focus-visible:ring-2 focus-visible:ring-foco",
+                              "h-px border-l border-t border-borda p-1 align-top outline-none focus-visible:ring-2 focus-visible:ring-foco",
                               TINTA_DO_TOM[tom],
                               aoAtivarCelula && "cursor-pointer hover:bg-marca-suave",
                               celula?.arrastavel === true && aoArrastar && "cursor-grab",

@@ -59,6 +59,14 @@ const outrosInstrutores = z
   .max(5, "Até cinco outros instrutores.")
   .default([]);
 
+/**
+ * Os **instrutores adicionais** da aula (Bloco 16, RD-9): ids do cadastro, cada um com os TA inteiros na própria carga.
+ * A habilitação, o repetido e quem ministra são conferidos na ação (`recusaDosAdicionais`, `conferirHabilitacao`).
+ */
+const instrutoresAdicionais = z
+  .array(z.string().uuid("Escolha o instrutor adicional pela lista."))
+  .max(10, "Até dez instrutores adicionais.");
+
 const comum = {
   turmaId: uuid,
   cursoId: uuid,
@@ -92,6 +100,7 @@ const aula = z
     tecnica: textoOuNulo,
     /* ⚠️ Campo vazio chega como texto vazio: a frase diz o que escolher, e não "identificador". */
     instrutorId: z.string().uuid("Escolha quem ministra a aula."),
+    instrutoresAdicionais: instrutoresAdicionais.default([]),
     outrosInstrutores,
   })
   .superRefine((v, ctx) => {
@@ -376,6 +385,8 @@ const camposDaEdicao = z.object({
   unidadeEnsinoId: uuid.nullable().optional(),
   /* Spec 014, FR-046: os demais instrutores; `undefined` não mexe. */
   outrosInstrutores: z.array(z.string().trim().min(1).max(120)).max(5).optional(),
+  /* Bloco 16 (RD-9): os instrutores adicionais da AULA; `undefined` não mexe. */
+  instrutoresAdicionais: instrutoresAdicionais.optional(),
   /*
    * `RN-RESP-1` (emenda de 15/10/2026): o «outro responsável (nome livre)» da ATIVIDADE
    * (`atividades_nao_letivas.responsavel_externo`). Exclusivo com o instrutor do cadastro — o banco impõe pelo

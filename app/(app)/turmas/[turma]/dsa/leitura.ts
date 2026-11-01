@@ -482,7 +482,7 @@ export async function lerPeriodoDoDsa(
       supabase
         .from("registros_aula")
         .select(
-          "id, codigo, criado_em, data, ta_inicial, tempos_consumidos, conteudo_resumo, metodologia, status, unidade_ensino_id, disciplina_id, outros_instrutores",
+          "id, codigo, criado_em, data, ta_inicial, tempos_consumidos, conteudo_resumo, metodologia, status, unidade_ensino_id, disciplina_id, outros_instrutores, instrutores_adicionais",
           contagemNaPrimeira(f),
         )
         .eq("turma_id", turmaId)
@@ -1285,6 +1285,7 @@ export function montarSemanaDoDsa(
     unidade_ensino_id: string | null;
     disciplina_id: string | null;
     outros_instrutores?: string[] | null;
+    instrutores_adicionais?: string[] | null;
   }[]) {
     conteudos.set(a.id, {
       codigo: a.codigo ?? null,
@@ -1294,6 +1295,7 @@ export function montarSemanaDoDsa(
       unidadeEnsinoId: a.unidade_ensino_id,
       disciplinaColuna: a.disciplina_id,
       outros: nomesDosOutros(a.outros_instrutores),
+      adicionais: a.instrutores_adicionais ?? [],
     });
   }
   for (const a of (avaliacoesRes.data ?? []) as {

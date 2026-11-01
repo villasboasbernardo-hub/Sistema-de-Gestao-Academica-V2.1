@@ -25,7 +25,7 @@ const admin = createClient(chaveLocal("API_URL"), chaveLocal("SECRET_KEY"), {
 
 const GRADE = '[data-slot="grade-alocacao"]';
 const FORMULARIO = '[data-slot="formulario-de-lancamento"]';
-const SELETOR = `${FORMULARIO} [data-slot="seletor-instrutor"]`;
+const SELETOR = `${FORMULARIO} [data-slot="responsavel-do-lancamento"] [data-slot="seletor-instrutor"]`;
 
 let EMAIL = "";
 let SEMEADO: DsaSemeado;

@@ -334,8 +334,12 @@ test("itens 5 e 7 · editar antes de publicar sem ALT; as abas de versão", asyn
   const dia = segundaDe(SEMANA_PUBLICADA);
 
   /* Semana nunca publicada: só a aba Minuta (FR-007.2). */
-  await expect(page.locator('[data-slot="abas-de-versao"] [role="tab"]')).toHaveCount(1);
-  await expect(page.locator('[data-slot="abas-de-versao"] [role="tab"]')).toContainText("Minuta");
+  await expect(
+    page.locator('[data-slot="abas-de-versao"] > [role="tablist"] [role="tab"]'),
+  ).toHaveCount(1);
+  await expect(
+    page.locator('[data-slot="abas-de-versao"] > [role="tablist"] [role="tab"]'),
+  ).toContainText("Minuta");
 
   /* Item 5: lançar → salvar → prévia → editar → salvar → prévia → publicar = Original, sem ALT. */
   await lancarAula(page, 1, dia, topico("previa"));
@@ -356,7 +360,7 @@ test("itens 5 e 7 · editar antes de publicar sem ALT; as abas de versão", asyn
   await salvarASemana(page);
   await page.locator('[data-slot="imprimir-dsa"]').click();
   await expect(page.locator('[data-slot="dsa-previa"]')).toHaveText("PRÉVIA");
-  await expect(page.locator('[data-slot="dsa-alt"]')).toHaveText("ALT —");
+  await expect(page.locator('[data-slot="dsa-alt"]')).toHaveText("PRÉVIA");
   await page.goBack();
   await expect(page.locator('[data-slot="publicacao-do-dsa"]')).toBeVisible();
   await publicar(page);
@@ -371,7 +375,7 @@ test("itens 5 e 7 · editar antes de publicar sem ALT; as abas de versão", asyn
   expect(eventos, "nasceu ALT antes da 1ª publicação").toEqual([{ tipo: "publicado", numero: 0 }]);
 
   /* Item 7: Minuta · Original; a aba na URL; o papel da Original com Reimprimir. */
-  const abas = page.locator('[data-slot="abas-de-versao"] [role="tab"]');
+  const abas = page.locator('[data-slot="abas-de-versao"] > [role="tablist"] [role="tab"]');
   await expect(abas).toHaveCount(2);
   await page.locator('[data-slot="abas-de-versao"] [data-versao="0"]').click();
   await expect.poll(() => new URL(page.url()).searchParams.get("versao")).toBe("0");
@@ -761,7 +765,11 @@ test("item 8 · semana com todos os tempos lançados: a PRÉVIA na frente dos ca
       ponto,
     );
     expect(recebe, "o clique no cartão sob a PRÉVIA não chega ao cartão").toBe(true);
-    await cartao.locator(".dsa4-cartao-pe > span").dblclick({ timeout: 5_000 });
+    /* Bloco 16 (ajuste C): os nomes são elementos próprios — o duplo clique vai no primeiro, não no vão entre eles. */
+    await cartao
+      .locator('.dsa4-cartao-pe > [data-slot="cartao-instrutor"] > *')
+      .first()
+      .dblclick({ timeout: 5_000 });
     const selecao = await page.evaluate(() => {
       const s = window.getSelection();
       const no = s?.anchorNode ?? null;

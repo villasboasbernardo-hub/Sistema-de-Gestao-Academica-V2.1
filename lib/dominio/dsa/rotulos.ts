@@ -183,10 +183,18 @@ export function conteudoOuSubtipo(fato: {
 }
 
 /**
- * A marca do Apoio Individualizado na grade e no papel — `FR-019` da spec 014: *"A grade e o papel do
- * DSA MUST marcar essas linhas com «Apoio Individualizado — alunos específicos»"*.
+ * A marca do Apoio Individualizado na grade e no papel — `FR-019` da spec 014, com o texto emendado pelo Bloco 16.
+ *
+ * > *"APOIO INDIVIDUALIZADO: tirar ' - alunos específicos' do texto do lançamento (tela e papel)."* — Bernardo Villas
+ * > Boas, 30/10/2026 (spec 031, `FR-005`). Até ali: *"Apoio Individualizado — alunos específicos"*.
  */
-export const ROTULO_DO_APOIO = "Apoio Individualizado — alunos específicos";
+export const ROTULO_DO_APOIO = "Apoio Individualizado";
+
+/**
+ * O texto do Apoio até 30/10/2026 — só para o RP-4 ler o retrato já publicado como o papel de hoje (D-6 da spec 031):
+ * o retrato não muda, e a troca do texto não é mudança de dado.
+ */
+export const ROTULO_DO_APOIO_ATE_O_BLOCO_16 = "Apoio Individualizado — alunos específicos";
 
 /** A marca do TR que bloqueia aula (licença não prevista, spec 014 Q-13): é TR **e** bloqueio. */
 export const ROTULO_DO_TR_BLOQUEANTE = "TR — tempo bloqueado para aula";

@@ -42,7 +42,7 @@ import { enderecoDoDsa, ROTA_DO_DSA } from "@/lib/navegacao/endereco-de-turma";
 
 /** Nunca `select *`. */
 export const COLUNAS_DA_TURMA_DO_DSA =
-  "id, codigo, turma, ano_letivo, status, modalidade, sala_alocada, alunos, curso_id, data_inicio, data_termino, inicio_etapa_presencial, termino_etapa_presencial";
+  "id, codigo, turma, ano_letivo, status, modalidade, sala_alocada, alunos, curso_id, curriculo_id, data_inicio, data_termino, inicio_etapa_presencial, termino_etapa_presencial";
 
 export const COLUNAS_DA_OCUPACAO =
   "turma_id, data, ta_inicial, ta_final, tempos_consumidos, origem, fato_id, disciplina_id, instrutor_id, fiscal_id, local, herdado, sessao_id, numero_sessao";
@@ -302,6 +302,8 @@ export type ConteudoDoFato = {
   readonly conteudoGravado?: string | null | undefined;
   /** Spec 014, FR-046: os demais instrutores, como vieram — o 2º nome de *"CC A. / 1ºTen B."*. */
   readonly outros?: readonly string[] | undefined;
+  /** Bloco 16 (RD-9): os instrutores ADICIONAIS da aula, por id (`registros_aula.instrutores_adicionais`). */
+  readonly adicionais?: readonly string[] | undefined;
   /** Spec 014, FR-043: quem conduz a sessão de vista, quando é de fora do cadastro. */
   readonly conduzExterno?: string | null | undefined;
   /** Spec 014, FR-033: a faixa *"U.E. 3 a 6"* da avaliação, que não consome TA de UE. */
@@ -395,7 +397,14 @@ export function fatoDaOcupacao(
    *    juntar ao `principal` nulo da atividade sem instrutor fazia os demais SUMIREM da grade e do papel (achado pela
    *    ponta a ponta da T208, 15/10/2026). Sem 1º nenhum, os demais aparecem sozinhos — gravados, nunca invisíveis.
    */
-  const outros = (extra?.outros ?? []).filter((n) => n.trim() !== "");
+  /*
+   * Bloco 16 (RD-9): os ADICIONAIS do cadastro vêm antes do texto livre antigo, na ordem gravada (a de antiguidade, que a
+   * tela grava). Um id que o perfil não lê (RLS) não vira nome inventado: fica de fora.
+   */
+  const nomesDosAdicionais = (extra?.adicionais ?? [])
+    .map((id) => nomes.instrutores.get(id) ?? null)
+    .filter((n): n is string => n !== null && n.trim() !== "");
+  const outros = [...nomesDosAdicionais, ...(extra?.outros ?? [])].filter((n) => n.trim() !== "");
   const primeiro = responsavelDoFato(principal, extra?.externo);
   const responsavel =
     outros.length === 0
@@ -446,6 +455,8 @@ export function fatoDaOcupacao(
       local: linha.local,
       /* `RN-RESP-1`: o nome livre da atividade, para o cartão reabrir com ele (e não o apagar sem querer). */
       responsavelExterno: linha.origem === "atividade_nao_letiva" ? (extra?.externo ?? null) : null,
+      /* Bloco 16 (RD-9): os adicionais da AULA, para o cartão reabrir com eles. */
+      ...(linha.origem === "aula" ? { instrutoresAdicionais: extra?.adicionais ?? [] } : {}),
       /* A2: o instrumento e o item da AVALIAÇÃO (a 1ª sessão) — só ela os edita. */
       ...(linha.origem === "avaliacao"
         ? {

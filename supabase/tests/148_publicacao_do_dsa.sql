@@ -151,7 +151,9 @@ select is(
         'protecao_das_vigencias_por_atividade_global',
         -- · spec 026 (Bloco 11): o porteiro do regime da semana só cita o RECURSO `registros_aula` da matriz de
         --   permissões (`app.pode`), como `registrar_evento_do_dsa`; a semana salva ele lê de `vw_ocupacao_ta`.
-        'porteiro_do_regime_do_dsa')),
+        'porteiro_do_regime_do_dsa',
+        -- · spec 031 (Bloco 16, ajuste D): o gatilho do ajuste manual só confere a TURMA da avaliação ajustada.
+        'guardar_ajuste_de_avaliacao')),
   '',
   'RP-8: todo objeto que lê uma tabela de lançamento filtra «salvo» (ou está na lista nominal)');
 

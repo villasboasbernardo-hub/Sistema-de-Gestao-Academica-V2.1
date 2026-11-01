@@ -156,7 +156,8 @@ test("US6 e US7 · a PM 1 aponta o item, a vista abre a sessão 1 e a 2, e os pa
   await expect(page.locator('[data-slot="avisos-do-lancamento"]')).toContainText(
     "não está habilitado",
   );
-  await page.getByRole("button", { name: "Entendi" }).click();
+  /* Bloco 16 (FR-001): o «Entendi» virou o ícone «Fechar» do rodapé. */
+  await page.locator('[data-slot="fechar-formulario"]').click();
 
   const { turmaId } = await turmaECurso();
   const { data: av } = await banco()
@@ -212,14 +213,15 @@ test("US6 e US7 · a PM 1 aponta o item, a vista abre a sessão 1 e a 2, e os pa
     { numero: 2, data: "2026-04-10", conduz_nome_externo: null },
   ]);
 
-  // ── T208: o 2º nome em AULA (sexta, 1º tempo) e em ATIVIDADE (sexta, 3º tempo) ──
+  /*
+   * ── T208: o 2º nome em ATIVIDADE (sexta, 3º tempo). ⚠️ Na AULA o texto livre saiu no Bloco 16 (spec 031, FR-006.6):
+   *    ela tem os instrutores adicionais do cadastro (RD-9), provados em `bloco-16-dsa.spec.ts`. ──
+   */
   await abrirCelula(page, "0:4");
   await escolherDisciplina(page, S.codDisciplina);
   await page.locator("#dsa-unidade").selectOption({ index: 1 });
-  await escolherNoSeletor(page, S.nomeHabilitado);
-  await page.locator("#dsa-tempos").fill("1");
-  await page.locator("#dsa-outros-instrutores").fill("CT Aula Segundo");
-  expect(await lancar(page)).not.toMatch(/^recusou/);
+  await expect(page.locator("#dsa-outros-instrutores")).toHaveCount(0);
+  await page.locator('[data-slot="fechar-formulario"]').click();
 
   await abrirCelula(page, "2:4");
   await page.locator('[data-tipo="AEC"]').click();
@@ -229,20 +231,11 @@ test("US6 e US7 · a PM 1 aponta o item, a vista abre a sessão 1 e a 2, e os pa
   await page.locator("#dsa-outros-instrutores").fill("1ºSG Atividade Dois");
   expect(await lancar(page)).not.toMatch(/^recusou/);
 
-  const [{ data: aula }, { data: atividade }] = await Promise.all([
-    banco()
-      .from("registros_aula")
-      .select("outros_instrutores")
-      .eq("turma_id", turmaId)
-      .eq("data", "2026-04-10")
-      .contains("outros_instrutores", ["CT Aula Segundo"]),
-    banco()
-      .from("atividades_nao_letivas")
-      .select("outros_instrutores, observacoes")
-      .eq("turma_id", turmaId)
-      .eq("descricao", "Palestra com dois instrutores"),
-  ]);
-  expect(aula).toHaveLength(1);
+  const { data: atividade } = await banco()
+    .from("atividades_nao_letivas")
+    .select("outros_instrutores, observacoes")
+    .eq("turma_id", turmaId)
+    .eq("descricao", "Palestra com dois instrutores");
   expect(atividade).toEqual([{ outros_instrutores: ["1ºSG Atividade Dois"], observacoes: null }]);
 
   // ── a grade: as duas sessões, cada uma no seu dia; o fiscal, o 2º instrutor e quem conduz de fora ──
@@ -253,7 +246,6 @@ test("US6 e US7 · a PM 1 aponta o item, a vista abre a sessão 1 e a 2, e os pa
   await expect(page.locator(`${GRADE} td[data-celula="6:1"]`)).toContainText(
     "SO Fiscal De Fora (FISCAL)",
   );
-  await expect(page.locator(`${GRADE} td[data-celula="0:4"]`)).toContainText("CT Aula Segundo");
   await expect(page.locator(`${GRADE} td[data-celula="2:4"]`)).toContainText("1ºSG Atividade Dois");
 
   // ── T218: o PAPEL, pelo botão Imprimir — a faixa, as sessões, quem conduz, o fiscal e os demais instrutores ──
@@ -269,7 +261,6 @@ test("US6 e US7 · a PM 1 aponta o item, a vista abre a sessão 1 e a 2, e os pa
     /CF Conduz De Fora/i,
     /SO Fiscal De Fora \(FISCAL\)/i,
     /1ºTen Segundo Nome/i,
-    /CT Aula Segundo/i,
     /1ºSG Atividade Dois/i,
   ]) {
     await expect(papel).toContainText(esperado);

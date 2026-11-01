@@ -194,7 +194,7 @@ test.describe("⚠️ `D-DSA-2` · a turma semipresencial só tem DSA na etapa p
     await expect(recusa).toBeVisible({ timeout: 60_000 });
     await expect(recusa).toContainText("Fora da etapa presencial (05/05/2027 a 28/05/2027)");
     expect(await aulasDaTurma(), "a aula entrou num dia da etapa a distância").toBe(antes);
-    await page.locator(FORMULARIO).getByRole("button", { name: "Cancelar" }).click();
+    await page.locator(FORMULARIO).locator('[data-slot="fechar-formulario"]').click();
 
     /* ── 6. ⚠️ CONTROLE POSITIVO: a quarta, dentro da etapa, na MESMA semana, grava ─────── */
     await lancarNaCelula(page, "0:2", "Aula no primeiro dia da etapa presencial");

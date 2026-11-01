@@ -25,6 +25,8 @@ import type { Assinatura } from "@/lib/dominio/dsa/assinaturas";
 import type { CartaoDaGrade, GradeDoPapel } from "@/lib/dominio/dsa/grade-do-papel";
 import type { DiaImpresso, LinhaImpressa } from "@/lib/dominio/dsa/impressao";
 import { NOTA_DO_ESTUDO_INDIVIDUAL, ROTULO_DE_OBSERVACOES } from "@/lib/dominio/dsa/impressao";
+import { arranjoDoCartao, instrutoresDoCartao } from "@/lib/dominio/dsa/arranjo-do-cartao";
+import { rotuloDoAlt } from "@/lib/dominio/dsa/publicacao";
 import { ROTULO_DO_CAMPO_DA_SEMANA } from "@/lib/dominio/dsa/semana-do-curso";
 import {
   dataComDiaDaSemana,
@@ -52,7 +54,7 @@ export function DocumentoDoDsa({
   nomeDeQuemImprime,
   geradoEm,
   assinaturasEditadas = {},
-  alteracao = "ALT —",
+  alteracao = rotuloDoAlt(null),
   previa = false,
   nivelDoTitulo = 1,
 }: {
@@ -66,8 +68,8 @@ export function DocumentoDoDsa({
    */
   readonly assinaturasEditadas?: EdicaoDasAssinaturas;
   /**
-   * Spec 024 (RP-1, ciclo): o campo ALT — *"ALT —"* na original e antes de publicar; *"ALT N"* na alteração N
-   * (`rotuloDoAlt`). Ausente = *"ALT —"*, o papel de antes do Bloco 9.
+   * O campo ALT (`rotuloDoAlt`; RP-1, emenda do Bloco 16): *"ORIGINAL"* na versão 0, *"ALT N"* na alteração N e
+   * *"PRÉVIA"* na prévia. Ausente = a prévia. Até 30/10/2026, *"ALT —"* na original e antes de publicar.
    */
   readonly alteracao?: string;
   /** Spec 024 (FR-010): a PRÉVIA sai com a marca bem visível, e não é versão. */
@@ -466,6 +468,8 @@ function Cartao({
   readonly bloqueado: boolean;
 }) {
   const { linha } = cartao;
+  const nomes = instrutoresDoCartao(linha.instrutor);
+  const arranjo = arranjoDoCartao(cartao.ta, nomes.length);
   return (
     <div
       className={`dsa4-cartao dsa4-cartao-${cartao.tipo}`}
@@ -492,17 +496,52 @@ function Cartao({
           {cartao.tipo === "estudo" ? " *" : ""}
         </div>
         {/*
-          ⚠️ **OS DADOS NUMA LINHA PRÓPRIA, ACIMA DO INSTRUTOR** (spec 017, FR-007.4): é a linha que cede espaço
-             antes do título quando o cartão de 1 TA aperta — o instrutor fica, sempre, na última linha.
+          ⚠️ **BLOCO 16 (ajuste C da conferência de 31/10/2026): O CARTÃO ADAPTÁVEL** — os instrutores TODOS em negrito,
+             empilhados quando há altura e lado a lado com « / » quando não há; a quantidade de TA; o local na última linha,
+             ou na dos instrutores no cartão de 1 tempo (`arranjoDoCartao`, a mesma decisão da tela). O corpo distribui o
+             conteúdo pela altura (`space-between`), e a linha dos instrutores nunca encolhe.
         */}
-        <div className="dsa4-cartao-dados">
-          <span>{cartao.ta} TA</span>
-          {linha.local === "" ? null : <span>{linha.local}</span>}
-          <b className="dsa-te">{linha.te}</b>
+        <div
+          className={`dsa4-cartao-pe${arranjo.emPilha ? " dsa4-cartao-pe-pilha" : ""}${
+            cartao.ta <= 1
+              ? nomes.length >= 3
+                ? " dsa4-cartao-pe-um-tempo dsa4-cartao-pe-muitos"
+                : " dsa4-cartao-pe-um-tempo"
+              : ""
+          }`}
+          data-slot="cartao-pe"
+          data-arranjo={arranjo.emPilha ? "pilha" : "linha"}
+        >
+          {nomes.length === 0 ? null : (
+            <span data-slot="cartao-instrutor" className="dsa4-cartao-instrutores">
+              {nomes.map((n, k) => (
+                <b key={`${n}-${k}`}>
+                  {n}
+                  {!arranjo.emPilha && k < nomes.length - 1 ? " /" : ""}
+                </b>
+              ))}
+            </span>
+          )}
+          {cartao.ta <= 1 ? (
+            <span>
+              {cartao.ta} TA <b className="dsa-te">{linha.te}</b>
+            </span>
+          ) : null}
+          {arranjo.localNaLinhaDosInstrutores && linha.local !== "" ? (
+            <span data-slot="cartao-local">{linha.local}</span>
+          ) : null}
         </div>
-        <div className="dsa4-cartao-pe">
-          <span>{linha.instrutor}</span>
-        </div>
+        {cartao.ta > 1 ? (
+          <div className="dsa4-cartao-dados">
+            <span>{cartao.ta} TA</span>
+            <b className="dsa-te">{linha.te}</b>
+          </div>
+        ) : null}
+        {!arranjo.localNaLinhaDosInstrutores && linha.local !== "" ? (
+          <div className="dsa4-cartao-local" data-slot="cartao-local">
+            {linha.local}
+          </div>
+        ) : null}
       </div>
     </div>
   );

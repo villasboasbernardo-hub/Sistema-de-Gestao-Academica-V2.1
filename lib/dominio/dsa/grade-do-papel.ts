@@ -137,12 +137,30 @@ export function gradeDoPapel(
       if (l.taInicial === null) continue;
       maior = Math.max(maior, l.taInicial + Math.max(1, l.tempos ?? 1) - 1);
     }
+    /* A parada de parte do dia também ocupa: ela sai marcada no papel. */
+    for (const p of dia.paradas ?? [])
+      maior = Math.max(maior, p.taInicial + Math.max(1, p.tempos) - 1);
     return maior;
   }, 0);
-  const quantos = Math.min(
-    relogio.tempos.length,
-    Math.max(relogio.temposDoRegime, ultimoOcupado, opcoes.minimoDeTempos ?? 0),
-  );
+  /*
+   * ⚠️ **BLOCO 16 (ajuste B da conferência de 31/10/2026): O PAPEL CORTA OS TEMPOS FINAIS VAZIOS.**
+   *
+   * > *"se o último tempo do regime não tem nenhum lançamento na semana inteira, ele não sai no papel (repetir para os
+   * > tempos finais seguintes enquanto estiverem vazios), e as linhas restantes dividem a altura. Vale para todas as
+   * > turmas, na prévia e nas versões publicadas a partir de agora (…)."* — Bernardo Villas Boas, 31/10/2026
+   *
+   * Sem o mínimo da TELA (o papel: impressão, prévia, retrato da publicação), as linhas vão até o último tempo ocupado em
+   * qualquer dia da semana; a semana sem nada mantém o regime (o papel em branco). A tela passa o mínimo e continua com
+   * todas as linhas — é onde se lança num tempo vazio. As linhas que sobram dividem a altura (`1fr` em `DocumentoDoDsa`).
+   * ⚠️ O retrato JÁ publicado guarda a grade dele: o *Reimprimir* das versões antigas não muda.
+   */
+  const piso =
+    opcoes.minimoDeTempos !== undefined
+      ? Math.max(relogio.temposDoRegime, opcoes.minimoDeTempos)
+      : ultimoOcupado > 0
+        ? 0
+        : relogio.temposDoRegime;
+  const quantos = Math.min(relogio.tempos.length, Math.max(piso, ultimoOcupado));
   const tempos = [...relogio.tempos].sort((a, b) => a.numero - b.numero).slice(0, quantos);
 
   const faixas: FaixaDaGrade[] = [];

@@ -161,6 +161,7 @@ const TODOS_OS_MOTIVOS = [
   "sem-atribuido",
   "sem-cadastro",
   "sem-leitura",
+  "sem-outro-habilitado",
 ] as const satisfies readonly MotivoDaListaVazia[];
 
 describe("vazioDaListaDeInstrutores — sem `instrutores.ler`, «você não vê», seja qual for o motivo (FR-006.3)", () => {

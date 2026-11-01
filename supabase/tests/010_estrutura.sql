@@ -132,7 +132,10 @@ select set_eq(
            -- Spec 026 (Bloco 11), 26/10/2026. REGRA DOS VALORES ESPERADOS: (a). Entraram no BRIEF §2.1 (emenda de
            -- 26/10/2026) antes de entrar aqui: o regime de tempos da semana do DSA e o «desde» da turma (RD-3).
            ('dsa_regime_da_semana'),
-           ('turma_regime_vigencia')$$,
+           ('turma_regime_vigencia'),
+           -- Spec 031 (Bloco 16, ajuste D), 31/10/2026. REGRA DOS VALORES ESPERADOS: (a). Entrou no BRIEF §2.1 (emenda
+           -- de 31/10/2026) antes de entrar aqui: o ajuste manual da situacao e das datas de uma avaliacao.
+           ('ajustes_de_avaliacao')$$,
   'FR-001: o conjunto de tabelas de public E o conjunto declarado no BRIEF §2.1 — nem mais, nem menos'
 );
 

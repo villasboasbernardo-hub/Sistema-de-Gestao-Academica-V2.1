@@ -107,6 +107,8 @@ export type ValoresGravados = {
    */
   readonly instrumentoId?: string | null;
   readonly avaliacaoCurriculoId?: string | null;
+  /** Os instrutores adicionais da AULA (Bloco 16, RD-9) — só a aula os tem; ausentes valem nenhum. */
+  readonly instrutoresAdicionais?: readonly string[];
 };
 
 export type BlocoNaGrade = FatoDaSemana & {
@@ -158,7 +160,7 @@ export type Semana = {
 
 /** O motivo de o Apoio sair da célula: ele divide o tempo com outro lançamento, e isso não é conflito. */
 export const MOTIVO_DO_APOIO_NO_MESMO_TEMPO =
-  "Apoio Individualizado — alunos específicos, no mesmo tempo de outro lançamento da turma (não é conflito).";
+  "Apoio Individualizado, no mesmo tempo de outro lançamento da turma (não é conflito).";
 
 /**
  * O motivo do segundo lançamento que começa no MESMO TA de outro (FR-012.3 da spec 016): ele sai da

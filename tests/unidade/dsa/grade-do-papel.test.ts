@@ -61,9 +61,12 @@ describe("as linhas da grade saem do relógio vigente", () => {
     expect(intervalos).toEqual([5, 5, 5, 5, 5, 10, 5]);
   });
 
-  it("o regime de 8 TA mostra 8 linhas — e cresce até o último tempo ocupado da semana (EI excepcional)", () => {
+  it("o regime de 8 TA mostra 8 linhas NA TELA — e cresce até o último tempo ocupado da semana (EI excepcional)", () => {
     const relogio = relogioDoRegime(G45);
-    const oito = gradeDoPapel([dia("2026-10-05", [linha()])], relogio);
+    /* A tela passa o mínimo de linhas (para lançar num tempo vazio); o papel corta os finais vazios (Bloco 16, ajuste B). */
+    const oito = gradeDoPapel([dia("2026-10-05", [linha()])], relogio, {
+      minimoDeTempos: G45.regimeTempos,
+    });
     expect(oito?.faixas.filter((f) => f.tipo === "tempo")).toHaveLength(G45.regimeTempos);
     const comEi = gradeDoPapel(
       [
@@ -85,7 +88,8 @@ describe("as linhas da grade saem do relógio vigente", () => {
       minimoDeTempos: G45.regimeTempos + 2,
     });
     const contar = (g: typeof papel) => g?.faixas.filter((f) => f.tipo === "tempo").length;
-    expect(contar(papel)).toBe(G45.regimeTempos);
+    /* Bloco 16 (ajuste B): o papel vai só até o último tempo ocupado da semana (a aula de 2 TA). */
+    expect(contar(papel)).toBe(2);
     expect(contar(tela)).toBe(G45.regimeTempos + 2);
   });
 
@@ -191,5 +195,48 @@ describe("spec 014, FR-027 · os tempos parados no papel", () => {
 
   it("controle: sem parada, nada", () => {
     expect(gradeDoPapel([dia("2026-07-20", [])], relogioDoCatalogo(CFG_H, 9))?.paradas).toEqual([]);
+  });
+});
+
+describe("Bloco 16, ajuste B · o PAPEL corta os tempos finais sem lançamento na semana", () => {
+  const relogio = relogioDoRegime(G45);
+  const tempos = (g: ReturnType<typeof gradeDoPapel>) =>
+    (g?.faixas.filter((f) => f.tipo === "tempo") ?? []).map((f) =>
+      f.tipo === "tempo" ? f.numero : 0,
+    );
+
+  it("o último tempo ocupado em QUALQUER dia da semana é o último que sai — os seguintes, vazios, não", () => {
+    const g = gradeDoPapel(
+      [
+        dia("2026-10-05", [linha({ taInicial: 1, tempos: 4 })]),
+        dia("2026-10-06", [linha({ chave: "l2", taInicial: 5, tempos: 2 })]),
+      ],
+      relogio,
+    );
+    expect(tempos(g)).toEqual([1, 2, 3, 4, 5, 6]);
+  });
+
+  it("a parada de parte do dia conta como ocupada (ela sai no papel)", () => {
+    const g = gradeDoPapel(
+      [
+        {
+          ...dia("2026-10-05", [linha({ taInicial: 1, tempos: 2 })]),
+          paradas: [{ taInicial: 6, tempos: 2, rotulo: "Parada" }],
+        } as DiaImpresso,
+      ],
+      relogio,
+    );
+    expect(tempos(g)).toEqual([1, 2, 3, 4, 5, 6, 7]);
+  });
+
+  it("a semana sem lançamento nenhum mantém o regime inteiro (papel em branco)", () => {
+    expect(tempos(gradeDoPapel([dia("2026-10-05", [])], relogio))).toHaveLength(G45.regimeTempos);
+  });
+
+  it("com o mínimo da TELA, nada é cortado", () => {
+    const g = gradeDoPapel([dia("2026-10-05", [linha({ taInicial: 1, tempos: 2 })])], relogio, {
+      minimoDeTempos: G45.regimeTempos,
+    });
+    expect(tempos(g)).toHaveLength(G45.regimeTempos);
   });
 });

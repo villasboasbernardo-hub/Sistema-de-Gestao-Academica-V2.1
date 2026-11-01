@@ -627,6 +627,9 @@ SEQUENCIAS_DE_CODIGO: tuple[tuple[str, str, str], ...] = (
     # A do Bloco 8 (spec 023, M1): a turma escolhida de uma linha do calendário (FTU-), gravada só pela tela.
     ("app.feriado_turma_codigo_seq", "feriado_turma",
      "case when codigo ~ '^FTU-[0-9]+$' then substring(codigo from 5)::bigint end"),
+    # A do Bloco 16 (spec 031, ajuste D): o ajuste manual da situação e das datas de uma avaliação (AJA-), só pela tela.
+    ("app.ajustes_de_avaliacao_codigo_seq", "ajustes_de_avaliacao",
+     "case when codigo ~ '^AJA-[0-9]+$' then substring(codigo from 5)::bigint end"),
 )
 
 

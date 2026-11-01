@@ -12,14 +12,14 @@ import {
 } from "@/lib/dominio/dsa/rotulos";
 
 describe("FR-019 · a marca do Apoio", () => {
-  it("o Apoio sai marcado com «alunos específicos»", () => {
+  it("o Apoio sai marcado como «Apoio Individualizado» (o sufixo saiu no Bloco 16, FR-005)", () => {
     expect(
       conteudoDaAtividade({
         descricao: "Monitoria de cálculo",
         categoria: "Apoio_Individualizado",
       }),
     ).toBe(`${ROTULO_DO_APOIO}: Monitoria de cálculo`);
-    expect(ROTULO_DO_APOIO).toBe("Apoio Individualizado — alunos específicos");
+    expect(ROTULO_DO_APOIO).toBe("Apoio Individualizado");
   });
 
   it("sem descrição, só a marca", () => {

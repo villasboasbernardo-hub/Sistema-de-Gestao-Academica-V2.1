@@ -151,6 +151,13 @@ const FOLHAS_DE_CLIENTE: Readonly<Record<string, string>> = {
     "a barra do DSA: regime, limpar, salvar, descartar, publicar e fazer alteração, com confirmação e diálogos",
   "app/(app)/turmas/[turma]/dsa/PainelDeSituacao.tsx":
     "a situação por disciplina, com a cascata das unidades de ensino — abrir e fechar a linha da tabela única é interação",
+  /* Bloco 16 (spec 031): as abas do acompanhamento, a tabela das avaliações e os instrutores adicionais da aula. */
+  "app/(app)/turmas/[turma]/dsa/AbasDeAcompanhamento.tsx":
+    "as abas Disciplinas · Avaliações · APOINST · Palestras — a aba mora no `?acompanhamento=` e EMPILHA no histórico",
+  "app/(app)/turmas/[turma]/dsa/AcompanhamentoDeAvaliacoes.tsx":
+    "a situação das avaliações da turma na tabela única, cujas colunas são funções",
+  "app/(app)/turmas/[turma]/dsa/InstrutoresAdicionais.tsx":
+    "acrescentar e retirar instrutores adicionais da aula pelo seletor canônico (RD-9)",
   "app/(app)/instrutores/TabelaDeInstrutores.tsx": "a grade navegável por teclado",
   "app/(app)/instrutores/FormularioDeInstrutor.tsx": "cadastrar e editar instrutor",
   "app/(app)/instrutores/PainelDeDisciplinas.tsx": "marcar e desmarcar habilitações",

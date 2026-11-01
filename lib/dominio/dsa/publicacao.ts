@@ -24,6 +24,7 @@
  */
 
 import { ehLinhaFixaDoEstudoIndividual } from "./impressao";
+import { ROTULO_DO_APOIO, ROTULO_DO_APOIO_ATE_O_BLOCO_16 } from "./rotulos";
 
 export type TipoDeEvento =
   "salvo" | "rascunho_descartado" | "publicado" | "alteracao_iniciada" | "alteracao_publicada";
@@ -159,9 +160,18 @@ export function situacaoDaSemana(
   };
 }
 
-/** O campo ALT do papel: em branco na original e antes de publicar (RP, ciclo); *"ALT N"* na alteração N. */
+/**
+ * O campo ALT do papel (RP-1, emenda de 30/10/2026 — Bloco 16, spec 031, `FR-007`):
+ *
+ * > *"Campo ALT do papel: a primeira versão publicada mostra 'ORIGINAL'; depois 'ALT 1', 'ALT 2'… A prévia continua
+ * > com 'PRÉVIA'. Vale no Reimprimir das versões antigas e no carrossel do Início."* — Bernardo Villas Boas, 30/10/2026
+ *
+ * `null` é a prévia (e a minuta), que não é versão; `0` a original; `N` a alteração N. Até ali, *"ALT —"* na original e
+ * na prévia. ⚠️ O número não está no retrato: o *Reimprimir* das versões antigas muda o campo sem que o retrato mude.
+ */
 export function rotuloDoAlt(numero: number | null): string {
-  return numero === null || numero === 0 ? "ALT —" : `ALT ${numero}`;
+  if (numero === null) return "PRÉVIA";
+  return numero === 0 ? "ORIGINAL" : `ALT ${numero}`;
 }
 
 /** O texto curto da situação, para a tela. */
@@ -217,8 +227,23 @@ export function conteudoComparavel<
     assinaturas: dados.assinaturas,
     dias: dados.dias.map((dia) => ({
       ...dia,
-      linhas: dia.linhas.filter((l) => !ehLinhaFixaDoEstudoIndividual(l)),
+      linhas: dia.linhas.filter((l) => !ehLinhaFixaDoEstudoIndividual(l)).map(comOApoioDeHoje),
     })),
+  };
+}
+
+/**
+ * A linha com o texto do Apoio de hoje no lugar do de antes do Bloco 16 (D-6 da spec 031): o retrato publicado com
+ * *"Apoio Individualizado — alunos específicos"* é o mesmo papel que o de hoje, e não *"alterado desde a publicação"*.
+ */
+function comOApoioDeHoje<L>(linha: L): L {
+  const conteudo = (linha as { readonly conteudo?: unknown }).conteudo;
+  if (typeof conteudo !== "string" || !conteudo.startsWith(ROTULO_DO_APOIO_ATE_O_BLOCO_16)) {
+    return linha;
+  }
+  return {
+    ...linha,
+    conteudo: ROTULO_DO_APOIO + conteudo.slice(ROTULO_DO_APOIO_ATE_O_BLOCO_16.length),
   };
 }
 
