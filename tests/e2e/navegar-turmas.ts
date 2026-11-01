@@ -135,9 +135,10 @@ export async function esperarGravacaoDaTurma(page: Page): Promise<void> {
   await abrirEdicaoDaTurma(page);
 }
 
-/** O selo de situação do cabeçalho da ficha. */
+/** O cartão da situação da turma, na ficha (Bloco 17; era o selo do cabeçalho). */
 export const seloDaSituacao = (page: Page) =>
-  page.locator('[data-slot="cabecalho-da-turma"] [data-slot="badge-status"]').first();
+  /* Bloco 17 (item 1): a situação saiu do cabeçalho e virou o cartão tingido dos indicadores. */
+  page.locator('[data-slot="cartao-da-situacao"]').first();
 
 /**
  * Troca a situação **dentro de Editar turma** (spec 025, D-2; era o botão *"Trocar situação"* do cabeçalho, spec 016)

@@ -171,10 +171,11 @@ test.describe("item 1 · a ficha da turma", () => {
     await cabecalho.locator('[data-slot="editar-turma"]').hover();
     await expect(page.getByRole("tooltip")).toHaveText("Editar");
 
-    // RT-7: os cartões de andamento, tetos e avaliações numa grade só.
+    // RT-7: os cartões de andamento, tetos e avaliações numa grade só — 12 desde o Bloco 17 (a situação, a CH
+    // restante, os dias úteis e a CH disponível entraram).
     await expect(
       page.locator('[data-slot="grade-de-indicadores"] [data-slot="card-kpi"]'),
-    ).toHaveCount(8);
+    ).toHaveCount(12);
     // O fim da página não tem mais *Editar turma*.
     await expect(page.locator('[data-slot="abrir-edicao-da-turma"]')).toHaveCount(0);
   });

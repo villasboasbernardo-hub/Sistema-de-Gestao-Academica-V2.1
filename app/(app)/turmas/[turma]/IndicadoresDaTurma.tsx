@@ -191,6 +191,18 @@ export function IndicadoresDaTurma({
   readonly avaliacoes: ContagemDeAvaliacoes | null;
   readonly turmaCodigo: string;
 }) {
+  const cartaoDaSituacao = (
+    <div className="h-full" data-slot="cartao-da-situacao" data-situacao={situacaoDaTurma.valor}>
+      <CardKpi
+        compacto
+        tom={situacaoDaTurma.tom}
+        rotulo="Situação"
+        valor={situacaoDaTurma.rotulo}
+        {...(situacaoDaTurma.arquivada ? { detalhe: <span>Arquivada</span> } : {})}
+      />
+    </div>
+  );
+
   if (andamento.situacaoDaCapacidade === "controle_da_dead") {
     return (
       <section
@@ -201,6 +213,10 @@ export function IndicadoresDaTurma({
         <h2 id="titulo-dos-indicadores" className="text-texto text-base font-semibold">
           Andamento
         </h2>
+        {/* Bloco 17 (item 1): a situação da turma também na EAD — ela não conta TA, mas tem situação. */}
+        <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6">
+          {cartaoDaSituacao}
+        </div>
         {/* O mesmo aviso diz por que não há DSA nem planilha na barra (Q-13 da spec 013): um texto só na página. */}
         <div data-slot="andamento-ead">
           <p className="text-texto-suave max-w-prose text-sm" data-slot="dsa-turma-ead">
@@ -268,19 +284,7 @@ export function IndicadoresDaTurma({
         data-slot="grade-de-indicadores"
       >
         {/* Bloco 17 (item 1): a situação da turma é um cartão na cor dela, com o texto dentro. */}
-        <div
-          className="h-full"
-          data-slot="cartao-da-situacao"
-          data-situacao={situacaoDaTurma.valor}
-        >
-          <CardKpi
-            compacto
-            tom={situacaoDaTurma.tom}
-            rotulo="Situação"
-            valor={situacaoDaTurma.rotulo}
-            {...(situacaoDaTurma.arquivada ? { detalhe: <span>Arquivada</span> } : {})}
-          />
-        </div>
+        {cartaoDaSituacao}
         <div className="contents" data-slot="andamento-da-turma">
           <div data-andamento="prevista" className="h-full">
             <CardKpi compacto rotulo="CH prevista" valor={`${prevista} TA`} />
