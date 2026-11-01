@@ -42,7 +42,7 @@ _Decisão de Bernardo Villas Boas, 19/10/2026._ Todo pedido de correção ou mud
 | **13** | Abertura com a moeda do CIAARA na raiz — ✅ **concluído em 28/10/2026** | não | 028 |
 | **14** | DSA (TFM sem teto, EI sem «O que é», Salvar alteração), Início em nova ordem e as pendências dos Blocos 10 e 11 — ✅ **concluído em 29/10/2026** | uma migration, que só acrescenta | 029 |
 | **15** | Início (tela cheia, setas), ano no cabeçalho e ajustes do DSA (EI só lançado, abas de versão, barra única, cabeçalho numa linha) e a `PEND-029-1` — ✅ **concluído em 30/10/2026** | não | 030 |
-| **16** | Lançamento no DSA (ícones, *Início*, avaliação sem técnica, EI sem instrutor), mais de um instrutor por aula (RD-9), papel (Apoio, ORIGINAL/ALT, instrutor e local na mesma linha) e abas de acompanhamento — 🟨 **em conferência** | uma migration, que só acrescenta (efeito zero medido) | 031 |
+| **16** | Lançamento no DSA (ícones, *Início*, avaliação sem técnica, EI sem instrutor), mais de um instrutor por aula (RD-9), papel (Apoio, ORIGINAL/ALT, instrutor e local na mesma linha) e abas de acompanhamento; e os ajustes de 31/10 (EI, papel sem os tempos finais vazios, cartão adaptável, Editar nas avaliações) — ✅ **concluído em 01/11/2026** | duas migrations, que só acrescentam (a recriação da view de carga com efeito zero medido) | 031 |
 
 ---
 
@@ -716,7 +716,16 @@ sobreposição. Os dois têm caso de ponta a ponta visto reprovar com o defeito 
 
 ---
 
-## Bloco 16 — Lançamento no DSA, mais de um instrutor, papel e abas de acompanhamento (spec própria) — 🟨 EM CONFERÊNCIA
+## Bloco 16 — Lançamento no DSA, mais de um instrutor, papel e abas de acompanhamento (spec própria) — ✅ CONCLUÍDO em 01/11/2026
+
+> ✅ **Concluído em 01/11/2026** — spec `031-bloco-16-dsa-instrutores-papel-abas`, pelo fluxo `/corrigir`, num PR só:
+> **#109**, **APROVADO** por Bernardo Villas Boas em duas conferências (31/10/2026: o pedido, com o item 3a mantido, a
+> `PEND-031-1` aberta e a D-10 aprovada; 01/11/2026: os ajustes A a D, com D-19 a D-25 como estão) e mesclado por squash
+> na `main` em **`9f79d68`**, na virada de semana — o papel do DSA mudou. Duas migrations que só acrescentam, as duas no
+> remoto antes do merge: `20261030224204` (backup `remoto-20261030-211901.sql`) e `20261031151628` (backup
+> `remoto-20261031-141540.sql`); 103 e 103 migrations e a impressão digital igual nos dois bancos (2.781 objetos,
+> `315a6f87…`). CI da `main` sobre `9f79d68` verde nos três blocos (run `41311437377`: 3.083 de unidade · 1.183 pgTAP · 497 RLS + 1 pulado · 616 de ponta a ponta, 1 instável — o `inicio.spec.ts:363`, da `PEND-022-1`, que passou na repetição — e 7 pulados), e o deploy de Production de `9f79d68` em `success`. O ramo foi
+> apagado, local e remoto.
 
 _Pedido de Bernardo Villas Boas, 30/10/2026, pelo `/corrigir`._ Spec `031-bloco-16-dsa-instrutores-papel-abas`, ramo
 `fix/BLOCO-16-dsa-instrutores-papel-abas`, um PR. Regras: **RD-9** (nova) e nota na **RD-1** em

@@ -76,5 +76,6 @@
   digital **igual nos dois bancos** (2.781 objetos, `315a6f87…`); RLS ligada, **0** policies de `DELETE`, a tabela vazia e
   **nenhuma view** a lê; Production `/login` 200, `/` 307.
 
-- [ ] T019 Encerramento depois da aprovação (merge na virada de semana, CI da `main`, Production, ramo apagado, plano de
-  correções, `CLAUDE.md`). *[pendente]*
+- [X] T019 Encerramento (01/11/2026): aprovado por Bernardo Villas Boas (D-19 a D-25 como estão), mesclado por squash
+  em `9f79d68` (a árvore igual à de `cf0cb01`); CI da `main` verde nos três blocos (run `41311437377`: 3.083 de unidade · 1.183 pgTAP · 497 RLS + 1 pulado · 616 de ponta a ponta, 1 instável — o `inicio.spec.ts:363`, da `PEND-022-1`, que passou na repetição — e 7 pulados); deploy de Production em `success`; o ramo apagado,
+  local e remoto; plano de correções, `CLAUDE.md`, RD-9, RD-10 e RP-1.
