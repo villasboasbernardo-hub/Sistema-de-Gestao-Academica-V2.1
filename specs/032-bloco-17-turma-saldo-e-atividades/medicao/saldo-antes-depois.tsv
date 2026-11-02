@@ -1,0 +1,9 @@
+hoje=2026-11-01 · dias bloqueados lidos (a partir de hoje): 6
+turma	situacao	saldo_antes	veredito_antes	saldo_depois	situacao_depois
+CAHO 2027	planejada	692	—	692	—
+CAHO 2026	ativa	62	—	62	adiantada
+C-Ap-FR 2026	ativa	-9	em atraso	-9	atrasada
+C-Ap-HN 2026	ativa	37	—	37	dentro_do_previsto
+C-Espc-FR 2026	ativa	-80	em atraso	-80	atrasada
+C-Espc-HN 2026	ativa	25	—	25	dentro_do_previsto
+C-ApA-AuxNav-PR-SP T2 2026	ativa	-228	em atraso	-228	atrasada

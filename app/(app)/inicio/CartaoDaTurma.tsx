@@ -15,6 +15,10 @@
  */
 import Link from "next/link";
 
+import {
+  ROTULO_DA_SITUACAO_DO_SALDO,
+  TOM_DA_SITUACAO_DO_SALDO,
+} from "@/lib/dominio/andamento-da-turma";
 import { BadgeStatus } from "@/components/ciaara/badge-status";
 import { BarraDeProgresso } from "@/components/ciaara/barra-de-progresso";
 import { AVISO_DE_TURMA_EAD } from "@/lib/dominio/dsa/ead-puro";
@@ -45,7 +49,12 @@ export function CartaoDaTurma({ turma: t }: { readonly turma: TurmaNoPanorama })
             tom={TOM_DA_TURMA[t.status as keyof typeof TOM_DA_TURMA] ?? "planejado"}
             rotulo={t.status}
           />
-          {t.emAtraso ? <BadgeStatus tom="atrasado" rotulo="em atraso" /> : null}
+          {t.situacaoDoSaldo ? (
+            <BadgeStatus
+              tom={TOM_DA_SITUACAO_DO_SALDO[t.situacaoDoSaldo]}
+              rotulo={ROTULO_DA_SITUACAO_DO_SALDO[t.situacaoDoSaldo]}
+            />
+          ) : null}
         </span>
         {/* Spec 024 (FR-018): a EAD não conta TA — sem barra nem «x/y TA»; o aviso abaixo diz de quem é o controle. */}
         {t.eadPuro ? null : (

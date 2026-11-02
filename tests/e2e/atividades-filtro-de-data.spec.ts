@@ -28,6 +28,8 @@ let PREFIXO = "";
 /** Duas atividades da turma da semente, em meses diferentes — o filtro separa uma da outra. */
 const ANTES = { data: "2026-03-10", descricao: "Atividade de março do filtro de data" };
 const DEPOIS = { data: "2026-05-12", descricao: "Atividade de maio do filtro de data" };
+/* Bloco 17 (item 6): um Estudo Individual da mesma turma — ele NÃO aparece na lista. */
+const ESTUDO = { data: "2026-05-13", descricao: "Estudo individual que não aparece na lista" };
 
 test.beforeAll(async ({}, info) => {
   EMAIL = emailDeTeste("atvdata", info.workerIndex);
@@ -57,6 +59,21 @@ test.beforeAll(async ({}, info) => {
     );
     if (error) throw new Error(`falha ao semear a atividade ${a.data}: ${error.message}`);
   }
+  const { error } = await admin.from("atividades_nao_letivas").upsert(
+    {
+      codigo: `${PREFIXO}-EI`,
+      categoria_normativa: "Estudo_Individual",
+      escopo: "turma",
+      turma_id: (turma as { id: string }).id,
+      data: ESTUDO.data,
+      subtipo: "Estudo Individual",
+      descricao: ESTUDO.descricao,
+      ta_inicial: 9,
+      tempos_consumidos: 1,
+    },
+    { onConflict: "codigo" },
+  );
+  if (error) throw new Error(`falha ao semear o Estudo Individual: ${error.message}`);
 });
 
 test.afterAll(async () => {
@@ -93,4 +110,33 @@ test("menu Atividades → Filtros → a data no calendário: URL em ISO e a list
   await expect(lista).not.toContainText(ANTES.descricao);
   /* A data da linha continua em DD/MM/AAAA. */
   await expect(page.locator('[data-slot="tabela-de-atividades"]')).toContainText("12/05/2026");
+});
+
+test("Bloco 17 · itens 5 e 6: o Estudo Individual sai da lista, do filtro e da contagem; a aba Palestras diz «Em breve»", async ({
+  page,
+}) => {
+  test.setTimeout(90_000);
+  await entrar(page, EMAIL, "/inicio");
+  await page
+    .getByRole("navigation", { name: "Navegação principal" })
+    .getByRole("link", { name: "Atividades", exact: true })
+    .click();
+  await expect.poll(() => new URL(page.url()).pathname).toBe("/atividades");
+  const lista = page.locator('[data-slot="lista-de-atividades"]');
+  await expect(lista).toContainText(DEPOIS.descricao);
+  /* Item 6: o EI continua no banco (semeado acima) e não aparece na lista nem na categoria. */
+  await expect(lista).not.toContainText(ESTUDO.descricao);
+  await expect(
+    page.locator('[data-slot="tabela-de-atividades"] [data-categoria="Estudo_Individual"]'),
+  ).toHaveCount(0);
+  await abrirPainelDeFiltros(page);
+  await expect(page.getByRole("option", { name: "Estudo Individual" })).toHaveCount(0);
+  await page.keyboard.press("Escape");
+
+  /* Item 5: Atividades · Calendário · Palestras — a última em branco. */
+  const abas = page.getByRole("tablist", { name: "Seções de Atividades" });
+  await expect(abas.getByRole("tab")).toHaveText(["Atividades", "Calendário", "Palestras"]);
+  await abas.getByRole("tab", { name: "Palestras" }).click();
+  await expect.poll(() => new URL(page.url()).searchParams.get("aba")).toBe("palestras");
+  await expect(page.locator('[data-slot="aba-palestras-em-breve"]')).toHaveText("Em breve");
 });

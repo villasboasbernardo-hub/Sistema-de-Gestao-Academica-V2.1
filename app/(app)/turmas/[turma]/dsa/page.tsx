@@ -17,6 +17,7 @@
  * acontece quando o aviso vai junto está medido: *"VERIFICAR Nº DE TA"* saiu **impresso** em 10 das
  * 15 planilhas (`D-2`).
  */
+import { EmBreve } from "@/components/ciaara/em-breve";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 
@@ -807,13 +808,7 @@ export default async function SemanaDoDsa({
                   rotuloDaSemana={rotuloDaSemana(lida.dias)}
                 />
               ) : abaDoAcompanhamento === "apoinst" || abaDoAcompanhamento === "palestras" ? (
-                <p
-                  role="status"
-                  data-slot="acompanhamento-em-breve"
-                  className="rounded-ciaara border-borda text-texto-suave border border-dashed p-6 text-center text-sm"
-                >
-                  Em breve
-                </p>
+                <EmBreve slot="acompanhamento-em-breve" />
               ) : (
                 <PainelDeSituacao
                   quadros={quadros}

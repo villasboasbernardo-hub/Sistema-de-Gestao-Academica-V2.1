@@ -129,18 +129,24 @@ test.describe("`RF-INI-01` · o panorama mostra previsto, executado e o que est�
      */
     await expect
       .soft(
-        page.locator(`[data-turma="${SEMEADO.turmaSemCapacidade}"]`).getByText("em atraso"),
+        page
+          .locator(`[data-turma="${SEMEADO.turmaSemCapacidade}"]`)
+          .getByText("Atrasada", { exact: true }),
         "a turma que NÃO cabe no prazo não foi sinalizada: o painel não está lendo capacidade",
       )
       .toBeVisible();
     await expect
       .soft(
-        page.locator(`[data-turma="${SEMEADO.turmaEmExcesso}"]`).getByText("em atraso"),
+        page
+          .locator(`[data-turma="${SEMEADO.turmaEmExcesso}"]`)
+          .getByText("Atrasada", { exact: true }),
         "a turma que executou MAIS do que o previsto foi sinalizada: é o indicador invertido de volta",
       )
       .toHaveCount(0);
     await expect
-      .soft(page.locator(`[data-turma="${SEMEADO.turmaEmDia}"]`).getByText("em atraso"))
+      .soft(
+        page.locator(`[data-turma="${SEMEADO.turmaEmDia}"]`).getByText("Atrasada", { exact: true }),
+      )
       .toHaveCount(0);
   });
 

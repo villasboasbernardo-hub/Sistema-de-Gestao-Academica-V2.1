@@ -147,6 +147,15 @@ export const SITUACOES_DE_TURMA = Constants.public.Enums.status_turma;
 export const CATEGORIAS_DE_ATIVIDADE = Constants.public.Enums.categoria_normativa;
 
 /**
+ * Bloco 17 (item 6): as categorias da LISTA de `/atividades` — todas menos o Estudo Individual, que só some da lista (os
+ * lançamentos continuam no DSA e na CH; nada é apagado). O filtro, a contagem e a tabela usam esta.
+ */
+export const CATEGORIA_FORA_DA_LISTA_DE_ATIVIDADES = "Estudo_Individual";
+export const CATEGORIAS_DA_LISTA_DE_ATIVIDADES = CATEGORIAS_DE_ATIVIDADE.filter(
+  (c) => c !== CATEGORIA_FORA_DA_LISTA_DE_ATIVIDADES,
+);
+
+/**
  * As quatro situações de execução de uma disciplina numa turma (`FR-053`).
  *
  * ⚠️ **ELA NÃO VEM DE UM ENUM DO BANCO, porque NÃO HÁ enum: a situação é DERIVADA** da CH prevista,
@@ -642,7 +651,7 @@ export const CONTRATO = {
         nome: "categoria",
         tipo: "escolha",
         padrao: "",
-        opcoes: CATEGORIAS_DE_ATIVIDADE,
+        opcoes: CATEGORIAS_DA_LISTA_DE_ATIVIDADES,
         historico: "substitui",
         avisaServidor: true,
       },
@@ -665,7 +674,8 @@ export const CONTRATO = {
         nome: "aba",
         tipo: "escolha",
         padrao: "atividades",
-        opcoes: ["atividades", "calendario"],
+        /* Bloco 17 (item 5): a aba Palestras, em branco com «Em breve». */
+        opcoes: ["atividades", "calendario", "palestras"],
         historico: "empilha",
         avisaServidor: true,
       },
@@ -711,7 +721,8 @@ export const CONTRATO = {
         nome: "aba",
         tipo: "escolha",
         padrao: "ficha",
-        opcoes: ["ficha", "avaliacoes"],
+        /* Bloco 17 (item 4): APOINST e Palestras, em branco com «Em breve». */
+        opcoes: ["ficha", "avaliacoes", "apoinst", "palestras"],
         historico: "empilha",
         avisaServidor: true,
       },

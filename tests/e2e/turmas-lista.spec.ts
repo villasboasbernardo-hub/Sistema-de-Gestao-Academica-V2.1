@@ -78,7 +78,9 @@ test.describe("`SC-002` · do menu à ficha, sem passar pelo curso", () => {
     // situação); modalidade, período, sala e efetivo foram para *Dados da turma*, na aba Ficha.
     const cabecalho = page.locator('[data-slot="cabecalho-da-turma"]');
     await expect(cabecalho).toBeVisible();
-    await expect(cabecalho).toContainText("Situação");
+    /* Bloco 17 (item 1): a situação saiu do cabeçalho e virou um cartão na cor dela, nos indicadores. */
+    await expect(cabecalho).not.toContainText("Situação");
+    await expect(page.locator('[data-slot="cartao-da-situacao"]')).toContainText("Situação");
     await expect(cabecalho).toContainText("Currículo");
     await expect(cabecalho).not.toContainText("Modalidade");
     await expect(page.locator('[data-slot="dados-da-turma"]')).toContainText("Modalidade");

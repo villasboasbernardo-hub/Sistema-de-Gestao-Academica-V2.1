@@ -45,7 +45,8 @@ const EXTENSOES = /\.(ts|tsx|sql|mjs|js)$/;
 const PROIBIDO = "gord" + "ura";
 
 /** O que o indicador se chama — e onde ele **tem** de aparecer. */
-const CERTO = "Saldo de capacidade";
+// ⚠️ Bloco 17 (`RN-SALDO-01`, 01/11/2026): o indicador passou a se chamar «Saldo de CH», o nome do pedido.
+const CERTO = "Saldo de CH";
 const ONDE_O_CERTO_VIVE = "app/(app)/turmas/[turma]/IndicadoresDaTurma.tsx";
 
 function semComentario(fonte: string): string {
@@ -92,7 +93,7 @@ describe("`SC-007` · o termo informal não aparece em código, schema nem tela"
     expect(
       infratores,
       `o termo informal entrou no produto, em: ${infratores.join(", ")}. O Glossário 07 não o ` +
-        `reconhece; o indicador chama-se "${CERTO} (TA)" e a reserva normativa é o Tempo ` +
+        `reconhece; o indicador chama-se "${CERTO}" e a reserva normativa é o Tempo ` +
         `Reserva (TR). Em comentário e em spec ele pode ficar — é lá que se explica por que ele ` +
         `não está no código.`,
     ).toEqual([]);

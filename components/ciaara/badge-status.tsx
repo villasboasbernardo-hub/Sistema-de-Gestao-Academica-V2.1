@@ -18,7 +18,8 @@ import { cn } from "cn";
 
 import type { Tom } from "@/lib/design/vocabulario";
 
-const TONS: Record<Tom, string> = {
+/** As classes de cada tom — exportadas para o cartão tingido (`CardKpi` com `tom`, Bloco 17): um mapa só. */
+export const TONS: Record<Tom, string> = {
   planejado: "bg-planejado-fundo text-planejado-tinta border-planejado-borda",
   executado: "bg-executado-fundo text-executado-tinta border-executado-borda",
   adiantado: "bg-adiantado-fundo text-adiantado-tinta border-adiantado-borda",

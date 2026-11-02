@@ -21,6 +21,9 @@ import { datasQueAlcancam } from "@/lib/dominio/calendario";
 import { emOrdemDeTurma } from "@/lib/dominio/ordem-de-cursos";
 import {
   andamentoDaTurma,
+  datasBloqueadasDaTurma,
+  type DiaBloqueado,
+  type SituacaoDoSaldo,
   contagemDaTurma,
   type ContagemPresencial,
   type ExcecoesDoRegime,
@@ -147,6 +150,8 @@ export type TurmaNaLista = {
    * andamento (sem carga): a guarda `andamento-unico.test.ts` lê um `false` escrito à mão como decisão.
    */
   readonly emAtraso?: boolean;
+  /** Bloco 17 (`RN-SALDO-01`): a situação do saldo — repassada de `andamentoDaTurma`, nunca decidida aqui. */
+  readonly situacaoDoSaldo?: SituacaoDoSaldo | null;
   /** D-COR-5 (spec 017): arquivada — só aparece com *Mostrar arquivadas*, e com o selo ao lado da situação. */
   readonly arquivada?: boolean;
   /**
@@ -183,6 +188,8 @@ export type InsumosDoAndamentoDaLista = {
    * fora do mapa = um TA/dia só, a conta de antes do Bloco 14.
    */
   readonly semanasDasTurmas?: ReadonlyMap<string, ExcecoesDoRegime>;
+  /** Bloco 17 (`RN-SALDO-01`): os dias bloqueados no DSA (`lerDiasBloqueadosAFrente`). Ausente = nenhum. */
+  readonly diasBloqueados?: readonly DiaBloqueado[];
 };
 
 /**
@@ -225,7 +232,10 @@ export function comAndamento(
       },
       /* Spec 018 (C-9): o regime nomeado da turma troca os TA presenciais; o limite EAD fica (`RN-MAT-04`). */
       regimeEfetivo(doCurso, l.regimeTempos == null ? null : { regimeTempos: l.regimeTempos }),
-      datasQueAlcancam(insumos.feriadosDiaInteiro, l.id),
+      [
+        ...datasQueAlcancam(insumos.feriadosDiaInteiro, l.id),
+        ...datasBloqueadasDaTurma(insumos.diasBloqueados ?? [], l.id),
+      ],
       insumos.hoje,
       /* Spec 029 (`FR-005`, D-12): o regime de cada semana, com o padrão de hoje do curso como o «do curso». */
       regimesDasSemanas(insumos.semanasDasTurmas?.get(l.id), doCurso),
@@ -235,6 +245,7 @@ export function comAndamento(
       progresso: andamento.percentual,
       saldo: SITUACOES_COM_SALDO.has(l.status) ? andamento.saldo : null,
       emAtraso: andamento.emAtraso,
+      situacaoDoSaldo: SITUACOES_COM_SALDO.has(l.status) ? andamento.situacaoDoSaldo : null,
     };
   });
 }

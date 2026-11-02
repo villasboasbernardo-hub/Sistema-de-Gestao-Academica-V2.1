@@ -15,11 +15,21 @@ import { useParametro } from "@/lib/navegacao/usar-parametro";
 const ABAS = [
   { valor: "atividades", rotulo: "Atividades" },
   { valor: "calendario", rotulo: "Calendário" },
+  /* Bloco 17 (item 5): em branco, com «Em breve». */
+  { valor: "palestras", rotulo: "Palestras" },
 ] as const;
 
-export function AbasDeAtividades({ children }: { readonly children: React.ReactNode }) {
+export function AbasDeAtividades({
+  children,
+  comCalendario,
+}: {
+  readonly children: React.ReactNode;
+  /** A aba Calendário só existe para quem tem permissão de calendário (spec 023, D-6). */
+  readonly comCalendario: boolean;
+}) {
   const [aba, definirAba] = useParametro("/atividades", "aba");
-  const atual = aba === "calendario" ? "calendario" : "atividades";
+  const abas = ABAS.filter((a) => comCalendario || a.valor !== "calendario");
+  const atual = abas.find((a) => a.valor === aba)?.valor ?? "atividades";
 
   return (
     <div className="flex flex-col gap-4" data-slot="abas-de-atividades">
@@ -28,7 +38,7 @@ export function AbasDeAtividades({ children }: { readonly children: React.ReactN
         aria-label="Seções de Atividades"
         className="border-borda flex gap-1 border-b"
       >
-        {ABAS.map((a) => (
+        {abas.map((a) => (
           <button
             key={a.valor}
             type="button"

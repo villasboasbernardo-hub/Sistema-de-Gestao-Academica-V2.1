@@ -16,6 +16,8 @@
  *    (as datas *De* e *Até* recortam dentro dele), e o filtro de turma oferece só as turmas do ano. O seletor é o mesmo de
  *    todo módulo, no canto superior direito, e o *Filtros* da lista é um ícone ao lado dele (RT-4).
  */
+import { EmBreve } from "@/components/ciaara/em-breve";
+import { CATEGORIA_FORA_DA_LISTA_DE_ATIVIDADES } from "@/lib/navegacao/contrato";
 import { BarraDeAcoes } from "@/components/ciaara/barra-de-acoes";
 import { EstadoVazio } from "@/components/ciaara/EstadoVazio";
 import {
@@ -75,11 +77,30 @@ export default async function Atividades({
   const podeCriarNoCalendario = pode(permissoes, "calendario", "criar");
   const podeEditarCalendario = pode(permissoes, "calendario", "editar");
   const temCalendario = podeCriarNoCalendario || podeEditarCalendario;
-  const aba = temCalendario && valores.aba === "calendario" ? "calendario" : "atividades";
+  const aba =
+    valores.aba === "palestras"
+      ? "palestras"
+      : temCalendario && valores.aba === "calendario"
+        ? "calendario"
+        : "atividades";
 
   const hoje = hojeNaCiaara();
   const escolha = await anoEscolhido(String(valores.ano ?? ""), hoje);
   const ano = escolha.ano;
+
+  /* Bloco 17 (item 5): a aba Palestras, em branco com «Em breve», para todos. */
+  if (aba === "palestras") {
+    return (
+      <div className="flex flex-col gap-4" data-slot="lista-de-atividades">
+        <header className="flex flex-col gap-1">
+          <h1 className="text-texto text-xl font-semibold">Atividades</h1>
+        </header>
+        <AbasDeAtividades comCalendario={temCalendario}>
+          <EmBreve slot="aba-palestras-em-breve" />
+        </AbasDeAtividades>
+      </div>
+    );
+  }
 
   if (aba === "calendario") {
     const dados = await lerCalendario(supabase, ano);
@@ -99,7 +120,7 @@ export default async function Atividades({
             </p>
           </div>
         </header>
-        <AbasDeAtividades>
+        <AbasDeAtividades comCalendario={temCalendario}>
           <PainelDoCalendario
             ano={ano}
             dados={dados}
@@ -139,6 +160,8 @@ export default async function Atividades({
     .eq("status", "ativo")
     /* Spec 024 (RP-0/RP-8): o rascunho só aparece no DSA da turma; a lista é do salvo. */
     .eq("salvo", true)
+    /* Bloco 17 (item 6): o Estudo Individual só some da lista — continua no DSA e na CH. */
+    .neq("categoria_normativa", CATEGORIA_FORA_DA_LISTA_DE_ATIVIDADES)
     /* RT-6 (spec 025, D-26; conferência de 24/10/2026): só o ano escolhido — o da turma. */
     .or(predicadoDoAno(ano, idsDoAno));
   if (filtro.turma) consulta = consulta.eq("turmas.codigo", filtro.turma);
@@ -159,7 +182,8 @@ export default async function Atividades({
       .from("atividades_nao_letivas")
       .select("id", { count: "exact", head: true })
       .eq("status", "ativo")
-      .eq("salvo", true),
+      .eq("salvo", true)
+      .neq("categoria_normativa", CATEGORIA_FORA_DA_LISTA_DE_ATIVIDADES),
   ]);
   const podeLer = pode(permissoes, "atividades_nao_letivas", "ler");
   const alcance = alcanceDoPerfil(usuario?.perfil, usuario?.escopoCurso);
@@ -278,17 +302,10 @@ export default async function Atividades({
           </BarraDeAcoes>
         </header>
 
-        {temCalendario ? (
-          <AbasDeAtividades>
-            {filtros}
-            {corpo}
-          </AbasDeAtividades>
-        ) : (
-          <>
-            {filtros}
-            {corpo}
-          </>
-        )}
+        <AbasDeAtividades comCalendario={temCalendario}>
+          {filtros}
+          {corpo}
+        </AbasDeAtividades>
       </div>
     </ProvedorDePaineis>
   );

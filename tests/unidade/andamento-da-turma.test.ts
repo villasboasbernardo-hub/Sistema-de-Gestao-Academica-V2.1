@@ -36,6 +36,7 @@ import { describe, expect, it } from "vitest";
 import {
   andamentoDaTurma,
   capacidadeDiaria,
+  datasBloqueadasDaTurma,
   diaSeguinte,
   diasUteisEntre,
   percentualExecutado,
@@ -884,5 +885,66 @@ describe("D-14 da spec 026 · a ordem da resolução mora em `regimeDaSemana`, e
       /from\s+["'](?:\.\/dsa|@\/lib\/dominio\/dsa)\/regime-da-semana["']/,
     );
     expect(codigo, "o saldo não chama `regimeDaSemana`").toMatch(/\bregimeDaSemana\s*[<(]/);
+  });
+});
+
+describe("`RN-SALDO-01` · Bloco 17 (spec 032) — a situação do saldo em três níveis", () => {
+  /*
+   * CONTA de base (U1): 9 dias úteis × 8 TA = 72 de CH disponível; uma semana de aula = 8 × 5 = 40.
+   *   restante 60 → saldo 12  → DENTRO DO PREVISTO (0 ≤ 12 ≤ 40)
+   *   restante 20 → saldo 52  → ADIANTADA (52 > 40)
+   *   restante 32 → saldo 40  → DENTRO (o limite é inclusivo)
+   *   restante 73 → saldo −1  → ATRASADA
+   */
+  it.each([
+    [40, 12, "dentro_do_previsto"],
+    [80, 52, "adiantada"],
+    [68, 40, "dentro_do_previsto"],
+    [27, -1, "atrasada"],
+  ] as const)("executada %i → saldo %i → %s", (executada, saldo, situacao) => {
+    const a = andamentoDaTurma(turma({ executada }), PRESENCIAL_8, [], SEGUNDA);
+    expect(a.saldo).toBe(saldo);
+    expect(a.semanaDeAula).toBe(40);
+    expect(a.situacaoDoSaldo).toBe(situacao);
+    expect(a.emAtraso).toBe(situacao === "atrasada");
+  });
+
+  it("só a turma ATIVA tem veredito (RF-INI-01): a planejada tem saldo e nenhuma situação", () => {
+    const a = andamentoDaTurma(
+      turma({ status: "planejada", executada: 0 }),
+      PRESENCIAL_8,
+      [],
+      SEGUNDA,
+    );
+    expect(a.saldo).toBe(-28);
+    expect(a.situacaoDoSaldo).toBeNull();
+    expect(a.emAtraso).toBe(false);
+  });
+
+  it("sem capacidade calculada, nenhuma situação (RN-DEG-01)", () => {
+    const a = andamentoDaTurma(turma({ dataTermino: null }), PRESENCIAL_8, [], SEGUNDA);
+    expect(a.situacaoDoSaldo).toBeNull();
+    expect(a.semanaDeAula).toBeNull();
+  });
+});
+
+describe("Bloco 17 (spec 032) · os dias bloqueados no DSA não contam como dia útil", () => {
+  it("DISCRIMINA: o dia parado de dia inteiro da turma (ou de todas) sai; o de outra turma e o de parte do dia, não", () => {
+    const bloqueios = [
+      { data: "2026-03-04", turmaId: "t1", diaInteiro: true },
+      { data: "2026-03-05", turmaId: null, diaInteiro: true },
+      { data: "2026-03-06", turmaId: "t2", diaInteiro: true },
+      { data: "2026-03-09", turmaId: "t1", diaInteiro: false },
+    ];
+    expect(datasBloqueadasDaTurma(bloqueios, "t1")).toEqual(["2026-03-04", "2026-03-05"]);
+    /* 9 dias úteis − 2 bloqueados = 7; 7 × 8 = 56 de CH disponível. */
+    const a = andamentoDaTurma(
+      turma(),
+      PRESENCIAL_8,
+      datasBloqueadasDaTurma(bloqueios, "t1"),
+      SEGUNDA,
+    );
+    expect(a.diasUteis).toBe(7);
+    expect(a.capacidade).toBe(56);
   });
 });

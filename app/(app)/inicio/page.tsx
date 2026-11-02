@@ -24,6 +24,7 @@
  */
 import { lerContagemPresencial } from "../turmas/contagem-presencial";
 import { lerRegimesDasSemanas } from "../turmas/regimes-das-semanas";
+import { lerDiasBloqueadosAFrente } from "../turmas/dias-bloqueados";
 import { AvisoDoRegimeNaoLido } from "../turmas/AvisoDoRegimeNaoLido";
 import { COLUNAS_DA_ABRANGENCIA, linhasComAbrangencia } from "@/lib/calendario/abrangencia";
 import { idsArquivados } from "@/lib/dominio/arquivamento-da-turma";
@@ -148,6 +149,7 @@ export default async function Inicio({
     publicadosRes,
     presenciais,
     semanasDasTurmas,
+    diasBloqueados,
   ] = await Promise.all([
     consultaDeCursos,
     supabase
@@ -216,6 +218,8 @@ export default async function Inicio({
     lerContagemPresencial(supabase, hoje),
     /* Spec 029 (`FR-005`): o regime das semanas do DSA — o saldo soma o TA/dia da semana de cada dia útil. */
     lerRegimesDasSemanas(supabase, { hoje }),
+    /* Bloco 17 (`RN-SALDO-01`): os dias bloqueados no DSA não contam como dia útil do saldo. */
+    lerDiasBloqueadosAFrente(supabase, hoje),
   ]);
 
   /*
@@ -270,6 +274,7 @@ export default async function Inicio({
     ),
     presenciais,
     semanasDasTurmas.porTurma,
+    diasBloqueados,
   ).map((t) => ({ ...t, arquivada: arquivadas.has(t.turmaId) }));
   /*
    * RD-8 (Bloco 11) com a RT-8 (spec 029): os cartões contam as turmas do ano por situação — a população do panorama,
