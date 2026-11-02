@@ -43,6 +43,7 @@ _Decisão de Bernardo Villas Boas, 19/10/2026._ Todo pedido de correção ou mud
 | **14** | DSA (TFM sem teto, EI sem «O que é», Salvar alteração), Início em nova ordem e as pendências dos Blocos 10 e 11 — ✅ **concluído em 29/10/2026** | uma migration, que só acrescenta | 029 |
 | **15** | Início (tela cheia, setas), ano no cabeçalho e ajustes do DSA (EI só lançado, abas de versão, barra única, cabeçalho numa linha) e a `PEND-029-1` — ✅ **concluído em 30/10/2026** | não | 030 |
 | **16** | Lançamento no DSA (ícones, *Início*, avaliação sem técnica, EI sem instrutor), mais de um instrutor por aula (RD-9), papel (Apoio, ORIGINAL/ALT, instrutor e local na mesma linha) e abas de acompanhamento; e os ajustes de 31/10 (EI, papel sem os tempos finais vazios, cartão adaptável, Editar nas avaliações) — ✅ **concluído em 01/11/2026** | duas migrations, que só acrescentam (a recriação da view de carga com efeito zero medido) | 031 |
+| **17** | Página da turma (cartões compactos, situação num cartão, CH restante, dias úteis, CH disponível), saldo de CH em três níveis (`RN-SALDO-01`), abas APOINST e Palestras, e Atividades (aba Palestras, Estudo Individual fora da lista) — ✅ **concluído em 01/11/2026** | não | 032 |
 
 ---
 
@@ -51,7 +52,7 @@ _Decisão de Bernardo Villas Boas, 19/10/2026._ Todo pedido de correção ou mud
 | # | Decisão |
 |---|---|
 | **D-COR-1** | **A semana do DSA é a semana do CURSO, corrida.** A semana 1 é a semana (seg–sex) que contém o início da turma; dali em diante conta toda semana, **com ou sem aula** (feriadão, semana de outras atividades). A tela **e o papel** mostram **"Semana N de T"**, onde T é a duração do curso em semanas (`cursos.duracao_semanas`; sem ela, as semanas entre o início e o término da turma). Ex.: curso de 35 semanas → "Semana 1 de 35", "Semana 2 de 35"… **Substitui a convenção CRONOS** de `lib/dominio/dsa/numero-do-dsa.ts` (semana sem aula não consumia número), que fazia alguns cursos saírem com a numeração errada. |
-| **D-COR-2** | **O saldo de capacidade conta só até hoje.** Executada = CHD lançada com data ≤ hoje; dias úteis restantes de **amanhã** até o término; o lançado no futuro não entra em lado nenhum. Se for preciso mudar a view, a migration está **autorizada em princípio**, com o desenho mostrado a Bernardo antes do remoto (regra 9.4). |
+| **D-COR-2** | **O saldo de capacidade conta só até hoje.** Executada = CHD lançada com data ≤ hoje; dias úteis restantes de **amanhã** até o término; o lançado no futuro não entra em lado nenhum. Se for preciso mudar a view, a migration está **autorizada em princípio**, com o desenho mostrado a Bernardo antes do remoto (regra 9.4). ⚠️ **A situação que o saldo decide foi SUBSTITUÍDA pela `RN-SALDO-01`** *(Bernardo Villas Boas, 01/11/2026, Bloco 17)*: saldo = CH disponível − CH restante; **Adiantada** acima de uma semana de aula, **Dentro do previsto** de 0 a uma semana, **Atrasada** abaixo de 0. O «até hoje» e o «de amanhã» desta decisão continuam valendo. |
 | **D-COR-3** | **TA fora do DSA, com observação.** A turma pode registrar tempos de aula que **não** estão em DSA (atividade fora dos tempos convencionais, aula que virou EAD, histórico de curso antigo), com quantidade, disciplina, instrutor quando houver e **observação obrigatória**. Esses TA **somam** na CH executada e no saldo, e a tela mostra os dois separados: *"45 TA executados · 40 no DSA · 5 fora do DSA"*. Só o Encarregado da Divisão, os ajudantes e o Admin registram. → Bloco 2. |
 | **D-COR-4** | **O status da turma é editável** pelo Admin e por quem pode editar turma (planejada, ativa, concluída, cancelada), e **toda troca de status aceita uma observação** (por que foi cancelada, como foi concluída, por que foi arquivada), que fica visível na ficha. Hoje Bernardo relata que **não consegue** trocar o status: medir no Bloco 1 e corrigir no Bloco 2. |
 | **D-COR-5** | **Arquivar turma em QUALQUER estado**, com aviso quando a turma não estiver concluída. Arquivar **não é um quinto status**: são colunas próprias (`arquivada_em`, `arquivada_por`, observação), o status fica como está. A turma arquivada some das listas (filtro "mostrar arquivadas"), trava DSA, instrutor e edição; o Admin pode desarquivar. **Reabre nominalmente a TURMA-1** (28/08/2026), que dizia "Arquivada é VIEW, não valor novo" — continua não sendo valor novo de status. |
@@ -765,6 +766,70 @@ não muda a CH; a ficha mostra a mesma situação) — **uma migration que só a
 | **PEND-031-1** | **As 25 aulas com «Demais instrutores» em texto livre não contam na carga** *(medido no remoto, só leitura, 30/10/2026)*: o texto (`outros_instrutores`, spec 014 FR-046) guarda o código do 2º instrutor; trazê-las para os adicionais daria **+72 TA** ao instrutor de código 162 e **+34 TA** ao 40 em 2026, e **1** código não casa com instrutor nenhum. É migration que muda resultado de tela: portão 9.4, decisão de Bernardo | Nada |
 | **PEND-031-2** | **O conflito de instrutor (`RN-CONF-01`) não olha os adicionais** *(spec 031, D-12)*: um adicional em duas turmas no mesmo tempo não acusa conflito. Recriar `vw_ocupacao_ta` | Nada |
 | ~~**PEND-031-3**~~ | ✅ **FECHADA em 31/10/2026** *(decisão de Bernardo Villas Boas na conferência do Bloco 16: "Tipo de avaliação e Instrumento ficam os DOIS")*. **O motivo, medido no remoto em 30/10/2026 (só leitura):** os dois guardam informação diferente — *Prova Escrita* aparece com os instrumentos PE, PM, PO e TI; *Prova Prática* com PP e PM; *Trabalho* com TG, TI e PM —, e os dois são lidos: o **tipo** pelo título da prova no papel, pela planilha e pelo casamento com o planejado (`RN-AVAL-01`); o **instrumento** pela vista obrigatória (`RN-AV-13`). | — |
+
+---
+
+## Bloco 17 — Página da turma (saldo e cartões), abas e Atividades (spec própria, sem banco) — ✅ CONCLUÍDO em 01/11/2026
+
+> ✅ **Concluído em 01/11/2026** — spec `032-bloco-17-turma-saldo-e-atividades`, pelo fluxo `/corrigir`, num PR só:
+> **#111**, **APROVADO** por Bernardo Villas Boas na conferência de 01/11/2026 (D-1 a D-10 como estão) e mesclado por
+> squash na `main` em **`d102b34`**. **Sem banco** e sem mudança no papel do DSA (o merge não esperou a virada). CI da `main` sobre `d102b34` verde nos três blocos (run `41368177634`: 3.090 de unidade · 1.183 pgTAP · 497 RLS + 1 pulado · 620 de ponta a ponta, nenhum instável, e 7 pulados), e o deploy de Production de `d102b34` em `success`. O
+> ramo foi apagado, local e remoto.
+
+_Pedido de Bernardo Villas Boas, 01/11/2026, pelo `/corrigir`._ Regra nova **`RN-SALDO-01`** no documento 04 (só no
+`.md`, autorização nominal no pedido), que **substitui a situação do saldo da D-COR-2**.
+
+1. **Cartões compactos** na ficha da turma (RT-7) e a **situação da turma num cartão** na cor dela (saiu da lista de dados).
+2. **Cartões novos:** *CH restante* (prevista − executada), *Dias úteis até o término* (de amanhã; sem feriado, licença,
+   dia parado nem dia bloqueado no DSA de dia inteiro) e *CH disponível até o término* (Σ do TA/dia do regime em vigor em
+   cada dia útil).
+3. **Saldo de CH (`RN-SALDO-01`)** = CH disponível − CH restante: **Adiantada** acima de uma semana de aula (TA/dia em vigor
+   × 5), **Dentro do previsto** de 0 a uma semana, **Atrasada** abaixo de 0 — só na turma ativa; a mesma decisão, por
+   `andamentoDaTurma`, na ficha, em `/turmas`, no Início e nos Avisos.
+4. **Abas APOINST e Palestras** na turma, com «Em breve».
+5. **Atividades · Calendário · Palestras** (Palestras com «Em breve»).
+6. **Estudo Individual fora da lista de Atividades**, da contagem e do filtro; nada apagado, o DSA e a CH não mudam.
+
+**A medição** (cópia `remoto-20261101-120620.sql`, 01/11/2026, pelas funções da tela; spec 032 §6): nenhum saldo mudou
+naquele dia (os 6 dias parados futuros são de parte do dia); mudou o veredito — `CAHO 2026` **Adiantada** (+62 TA),
+`C-Ap-HN 2026` e `C-Espc-HN 2026` **Dentro do previsto** (+37, +25), e `C-Ap-FR 2026`, `C-Espc-FR 2026` e
+`C-ApA-AuxNav-PR-SP T2 2026` **Atrasada** (−9, −80, −228), as três que já estavam *em atraso*. ⚠️ **O primeiro CI do PR
+reprovou em 7 casos**: seis eram testes que ainda liam a situação no cabeçalho ou contavam 8 cartões, e um era defeito
+real — a turma EAD ficava sem o cartão da situação —, corrigido no mesmo PR.
+
+**Pendências novas:** nenhuma.
+
+---
+
+## Rodada de correções — encerrada até o Bloco 17 (01/11/2026)
+
+_Encerramento pedido por Bernardo Villas Boas na aprovação do Bloco 17, 01/11/2026._ Os **Blocos 1 a 17** (specs 016 a
+032) estão na `main`. O que segue aberto neste plano, lido nas tabelas de pendência dos blocos acima (as fechadas estão
+riscadas lá):
+
+**Técnicas** — pedem código, teste ou decisão de desenho:
+
+- **Suíte:** `PEND-014-7`, `PEND-021-2`, `PEND-021-3` e `PEND-022-1` (ponta a ponta instável ou dependente de outra
+  amostra); `PEND-016-2` (teste que confere o valor que digitou); `PEND-016-4` (prévias fora do `tsc`); `PEND-019-2`
+  (servidor órfão na 3100); `PEND-020-1` e `PEND-021-1` (pgTAP escrito para a base do ETL).
+- **Regra e cálculo:** `PEND-016-1` (CHD em três lugares); `PEND-017-1` (três critérios de «disciplina concluída»);
+  `PEND-029-3` (o «do curso» do saldo × o do DSA, com o D20 residual); `PEND-029-4` (turma sem período invisível ao
+  alerta); `PEND-029-5` (`TipoTeto` do documento 04); `PEND-031-1` (as 25 aulas com «Demais instrutores» em texto —
+  portão 9.4); `PEND-031-2` (conflito de instrutor sem os adicionais); `PEND-024-3` e `PEND-024-4` (publicação do DSA:
+  quadro de CH acumulada e vista de prova em rascunho).
+- **Telas e cadastros do sistema:** `PEND-017-2` (comentário vencido sobre o código da turma); `PEND-017-3` (cartão de
+  1 TA na planilha); `PEND-018-1` (troca de regime por semana); `PEND-018-2` (catálogo de horários sem tela);
+  `PEND-019-1` (submenu só se atualiza com as próprias ações); `PEND-020-2` (remover o PDF, que segue a `STORAGE-1`);
+  `PEND-022-2` (tempo da página Avisos); `PEND-025-1` a `PEND-025-4` (curso nunca excluível, lateral sem `?ano=`, três
+  componentes de exclusão, turma com evento do DSA); `PEND-027-1` (exclusão física do feriado sem consumidor);
+  `PEND-029-2` (habilitado inativo na ficha da turma).
+
+**De cadastro de Bernardo** — corrigem-se pela tela, sem código:
+
+- `PEND-014-4` (`C-Exp-MetocOf V` marcada sem UE e com 50 TA de UE); `PEND-014-5` (`TDI-000042` sem par ativo);
+  `PEND-017-4` (*Nome no DSA* das disciplinas acima de 19 caracteres); `PEND-023-1` (as 33 linhas antigas do calendário
+  sem tipo); `PEND-023-2` (o 12/11/2026, `FER-000023`); `PEND-024-1` (marcar as disciplinas *Presencial* das
+  semipresenciais); `PEND-024-2` (a etapa presencial das 4 semipresenciais sem ela).
 
 ---
 
