@@ -572,19 +572,21 @@ select results_eq($$
 $$, $$values ('Prova Escrita')$$,
   'F-4 · `PE` e de `Prova Escrita`, e de nenhum outro valor — 67 usos na origem, decisao de 05/10/2026');
 
+-- REGRA DOS VALORES ESPERADOS: (a), 03/11/2026 — o número novo é o correto. O Bloco 18 (spec 033, decisão 3 da
+-- conferência do passo 0) acrescentou Desportiva (AEC), DeCAT (TR), Reforço (TR) e Outra (AEC): 15 + 4 = 19.
 select is(
   (select count(*)::int from public.config_listas
     where lista = 'tipos_atividade' and metadados ? 'categoria'),
-  15,
-  'H2 · QUINZE subtipos com categoria normativa (os dez da semente + os cinco da D-2 da spec 014) — e por ela que o seletor filtra'
+  19,
+  'H2 · DEZENOVE subtipos com categoria normativa (os dez da semente + os cinco da D-2 da spec 014 + os quatro do Bloco 18) — e por ela que o seletor filtra'
 );
 
 select results_eq($$
   select metadados ->> 'categoria', count(*)::int from public.config_listas
    where lista = 'tipos_atividade' and metadados ? 'categoria'
    group by 1 order by 1
-$$, $$values ('AEC', 5), ('Apoio_Individualizado', 4), ('Estudo_Individual', 1), ('TAD', 3), ('TR', 2)$$,
-  'H2 · a reparticao e 5 AEC, 3 TAD, 2 TR, 1 Estudo Individual e 4 Apoio Individualizado — Monitoria saiu do EI para o Apoio (spec 014, D-2)');
+$$, $$values ('AEC', 7), ('Apoio_Individualizado', 4), ('Estudo_Individual', 1), ('TAD', 3), ('TR', 4)$$,
+  'H2 · a reparticao e 7 AEC, 3 TAD, 4 TR, 1 Estudo Individual e 4 Apoio Individualizado — Monitoria saiu do EI para o Apoio (spec 014, D-2); Desportiva e Outra (AEC), DeCAT e Reforço (TR) entraram no Bloco 18');
 
 -- ⚠️ `Licença de Pagamento` fica SEM categoria: ela vem do calendario (Q-16), como o feriado.
 select is_empty($$
