@@ -208,6 +208,18 @@ const MENSAGEM_DA_RESTRICAO: Readonly<Record<string, string>> = {
   ativ_bloqueio_so_tr:
     "Só o Tempo Reserva com o tipo de parada informado pode bloquear os tempos de aula.",
   ativ_alunos_so_apoio: "A quantidade de alunos só se informa no Apoio Individualizado.",
+  // ── Bloco 18 (spec 033) — os CHECKs da M1 (`20261103140231`) e o ampliado da M2 ─────────────────────
+  ativ_conta_como_valido: "Escolha como a atividade conta: TA da disciplina, AEC, TAD ou TR.",
+  ativ_conta_como_chd_com_disciplina: "«TA da disciplina» exige a disciplina da turma.",
+  ativ_conta_como_sem_bloqueio: "A parada do dia (bloqueio) não troca a classificação.",
+  ativ_conta_como_com_tipo: "Escolha o tipo da atividade antes de dizer como ela conta.",
+  ativ_um_vinculo: "A atividade cumpre uma AEC prevista OU uma APOINST, não as duas.",
+  ativ_vinculo_so_de_turma: "A atividade de todas as turmas não cumpre AEC prevista nem APOINST de uma turma.",
+  ativ_om_so_do_externo: "A OM é do responsável de fora (escreva o nome junto, até 120 letras na OM).",
+  ativ_disciplina_so_aec_da_turma: "Só a AEC e o «TA da disciplina» levam disciplina, e a disciplina da turma.",
+  apoinst_periodo_valido: "O fim previsto da APOINST tem de ser no início previsto ou depois.",
+  apoinst_disciplina_da_turma: "A disciplina da APOINST tem de ser desta turma.",
+  marcacoes_de_atividade_um_alvo: "Marque uma AEC prevista OU uma APOINST.",
   ativ_quantidade_alunos_positiva: "A quantidade de alunos tem de ser maior que zero.",
   // ── Spec 029 (Bloco 14, item 2) — migration `20261028182926`. A ação recusa antes, com a frase de
   //    `recusaPelaCategoria`; esta é a da chamada direta, e a do tipo de Estudo Individual recategorizado
@@ -375,6 +387,27 @@ function porChave(
       return "Um ajuste gravado não se altera. Para corrigir, grave um ajuste novo — ele vai para o histórico.";
     case "ajuste_fora_da_turma":
       return "Esta avaliação não é desta turma.";
+    /* Bloco 18 (spec 033): o «Conta como», as AEC previstas, a APOINST planejada, a marcação à mão e o vínculo. */
+    case "conta_como_fora_da_cht":
+      return "Este tipo não conta como AEC, TAD, TR nem como TA da disciplina: a classificação dele não se troca.";
+    case "aec_prevista_de_outro_curriculo":
+      return "A AEC prevista não muda de currículo: desative-a e cadastre outra no currículo certo.";
+    case "aec_prevista_tipo_sem_aec":
+      return "A AEC prevista tem de ser de um tipo de atividade de classificação AEC.";
+    case "apoinst_de_outra_turma":
+      return "A APOINST não muda de turma: desative-a e cadastre outra na turma certa.";
+    case "apoinst_antes_do_ano_inicial":
+      return "A APOINST planejada vale só para as turmas do ano inicial em diante; as anteriores ficam como estão.";
+    case "apoinst_instrutor_nao_designado":
+      return "O instrutor responsável tem de ser designado na disciplina desta turma.";
+    case "marcacao_de_atividade_imutavel":
+      return "Uma marcação gravada não se altera. Para corrigir, grave uma marcação nova — ela vai para o histórico.";
+    case "marcacao_fora_da_turma":
+      return "Esta AEC prevista ou APOINST não é desta turma.";
+    case "vinculo_fora_do_curriculo_da_turma":
+      return "A AEC prevista escolhida não é do currículo desta turma (ou está desativada).";
+    case "vinculo_fora_da_turma":
+      return "A APOINST escolhida não é desta turma (ou está desativada).";
     /* Bloco 16 (RD-9): os instrutores adicionais da aula, conferidos pelo gatilho. */
     case "instrutor_adicional_inexistente":
       return "Um dos instrutores adicionais não existe no cadastro. Escolha-os pela lista.";
