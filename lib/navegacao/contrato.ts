@@ -156,6 +156,28 @@ export const CATEGORIAS_DA_LISTA_DE_ATIVIDADES = CATEGORIAS_DE_ATIVIDADE.filter(
 );
 
 /**
+ * Bloco 18 (spec 033, RA-4): a CLASSIFICAÇÃO do filtro de Atividades é COMO a linha conta — as categorias da lista
+ * mais a «CHD» (o «Conta como TA da disciplina», que não é valor do enum: mora em `conta_como`).
+ */
+export const CLASSIFICACOES_DA_LISTA_DE_ATIVIDADES = [...CATEGORIAS_DA_LISTA_DE_ATIVIDADES, "CHD"] as const;
+
+/** Bloco 18 (RA-3): o vínculo do lançamento — com uma AEC prevista do currículo (ou APOINST), ou avulso. */
+export const VINCULOS_DE_ATIVIDADE = ["do_curriculo", "avulsa"] as const;
+
+/**
+ * Bloco 18 (RA-5, RA-6): a SITUAÇÃO das abas Palestras (a cumprir, em andamento, cumprida) e APOINST (planejada, em
+ * andamento, concluída, atrasada) — um parâmetro só, e cada aba lê as dela. A situação é DERIVADA, nunca coluna.
+ */
+export const SITUACOES_DE_ATIVIDADE_PLANEJADA = [
+  "a_cumprir",
+  "em_andamento",
+  "cumprida",
+  "planejada",
+  "concluida",
+  "atrasada",
+] as const;
+
+/**
  * As quatro situações de execução de uma disciplina numa turma (`FR-053`).
  *
  * ⚠️ **ELA NÃO VEM DE UM ENUM DO BANCO, porque NÃO HÁ enum: a situação é DERIVADA** da CH prevista,
@@ -651,7 +673,8 @@ export const CONTRATO = {
         nome: "categoria",
         tipo: "escolha",
         padrao: "",
-        opcoes: CATEGORIAS_DA_LISTA_DE_ATIVIDADES,
+        // Bloco 18 (RA-4): a classificação é COMO conta — a lista mais «CHD» (TA da disciplina).
+        opcoes: CLASSIFICACOES_DA_LISTA_DE_ATIVIDADES,
         historico: "substitui",
         avisaServidor: true,
       },
@@ -666,6 +689,37 @@ export const CONTRATO = {
       de: { nome: "de", tipo: "texto", padrao: "", historico: "substitui", avisaServidor: true },
       ate: { nome: "ate", tipo: "texto", padrao: "", historico: "substitui", avisaServidor: true },
       /*
+       * Bloco 18 (spec 033, FR-006.2): os filtros novos do módulo — o curso (pela sigla), a disciplina (pelo código), o
+       * vínculo (do currículo / avulsa), o responsável (texto contido no nome) e a situação das abas Palestras e APOINST.
+       * O curso e a disciplina são texto: as opções vêm do servidor, que valida (como a turma).
+       */
+      curso: { nome: "curso", tipo: "texto", padrao: "", historico: "substitui", avisaServidor: true },
+      disciplina: { nome: "disciplina", tipo: "texto", padrao: "", historico: "substitui", avisaServidor: true },
+      vinculo: {
+        nome: "vinculo",
+        tipo: "escolha",
+        padrao: "",
+        opcoes: VINCULOS_DE_ATIVIDADE,
+        historico: "substitui",
+        avisaServidor: true,
+      },
+      responsavel: {
+        nome: "responsavel",
+        tipo: "texto",
+        padrao: "",
+        historico: "substitui",
+        avisaServidor: true,
+        limiteDeFrequenciaMs: LIMITE_DE_FREQUENCIA_MS,
+      },
+      situacao: {
+        nome: "situacao",
+        tipo: "escolha",
+        padrao: "",
+        opcoes: SITUACOES_DE_ATIVIDADE_PLANEJADA,
+        historico: "substitui",
+        avisaServidor: true,
+      },
+      /*
        * Spec 023 (Bloco 8, D-6): as abas «Atividades» e «Calendário». Trocar de aba é navegação — empilha, como as
        * abas da turma e do curso. A aba Calendário só existe para quem tem permissão de calendário; para os demais,
        * `?aba=calendario` cai na lista.
@@ -674,8 +728,8 @@ export const CONTRATO = {
         nome: "aba",
         tipo: "escolha",
         padrao: "atividades",
-        /* Bloco 17 (item 5): a aba Palestras, em branco com «Em breve». */
-        opcoes: ["atividades", "calendario", "palestras"],
+        /* Bloco 17 (item 5): a aba Palestras. Bloco 18 (spec 033, D-14): a ordem do pedido, com a aba APOINST. */
+        opcoes: ["atividades", "palestras", "apoinst", "calendario"],
         historico: "empilha",
         avisaServidor: true,
       },
@@ -721,8 +775,8 @@ export const CONTRATO = {
         nome: "aba",
         tipo: "escolha",
         padrao: "ficha",
-        /* Bloco 17 (item 4): APOINST e Palestras, em branco com «Em breve». */
-        opcoes: ["ficha", "avaliacoes", "apoinst", "palestras"],
+        /* Bloco 17 (item 4): APOINST e Palestras. Bloco 18 (spec 033, D-9): a aba Atividades, com filtros e estatísticas. */
+        opcoes: ["ficha", "avaliacoes", "atividades", "apoinst", "palestras"],
         historico: "empilha",
         avisaServidor: true,
       },
@@ -732,6 +786,44 @@ export const CONTRATO = {
         padrao: "",
         historico: "substitui",
         avisaServidor: false,
+      },
+      /*
+       * Bloco 18 (spec 033, FR-007.1): os filtros da aba Atividades da turma — os mesmos do módulo, sem turma nem curso.
+       */
+      categoria: {
+        nome: "categoria",
+        tipo: "escolha",
+        padrao: "",
+        opcoes: CLASSIFICACOES_DA_LISTA_DE_ATIVIDADES,
+        historico: "substitui",
+        avisaServidor: true,
+      },
+      tipo: {
+        nome: "tipo",
+        tipo: "texto",
+        padrao: "",
+        historico: "substitui",
+        avisaServidor: true,
+        limiteDeFrequenciaMs: LIMITE_DE_FREQUENCIA_MS,
+      },
+      de: { nome: "de", tipo: "texto", padrao: "", historico: "substitui", avisaServidor: true },
+      ate: { nome: "ate", tipo: "texto", padrao: "", historico: "substitui", avisaServidor: true },
+      disciplina: { nome: "disciplina", tipo: "texto", padrao: "", historico: "substitui", avisaServidor: true },
+      vinculo: {
+        nome: "vinculo",
+        tipo: "escolha",
+        padrao: "",
+        opcoes: VINCULOS_DE_ATIVIDADE,
+        historico: "substitui",
+        avisaServidor: true,
+      },
+      responsavel: {
+        nome: "responsavel",
+        tipo: "texto",
+        padrao: "",
+        historico: "substitui",
+        avisaServidor: true,
+        limiteDeFrequenciaMs: LIMITE_DE_FREQUENCIA_MS,
       },
       /*
        * ⚠️ **A CONFIRMAÇÃO DA GRAVAÇÃO MORA NA URL** (spec 016, FR-015.2; 17/10/2026), como o aviso de
@@ -752,6 +844,12 @@ export const CONTRATO = {
           "desarquivada",
           "ta-fora",
           "ta-fora-desfeito",
+          // Bloco 18 (RA-5, RA-6): a marcação à mão (registrada e desfeita) e a APOINST planejada.
+          "marcacao",
+          "marcacao-desfeita",
+          "apoinst",
+          "apoinst-desativada",
+          "apoinst-reativada",
         ],
         historico: "substitui",
         avisaServidor: true,
@@ -862,6 +960,12 @@ export const CONTRATO = {
   "/admin/salas": {
     rota: "/admin/salas",
     origem: "RF-CRUD-01",
+    parametros: {},
+  },
+  /* Bloco 18 (spec 033, RA-1, FR-001.3): o catálogo de tipos de atividade, editado pelo Admin. */
+  "/admin/tipos-de-atividade": {
+    rota: "/admin/tipos-de-atividade",
+    origem: "RF-EXTRA-01",
     parametros: {},
   },
   /*

@@ -14,9 +14,10 @@ import { useParametro } from "@/lib/navegacao/usar-parametro";
 
 const ABAS = [
   { valor: "atividades", rotulo: "Atividades" },
-  { valor: "calendario", rotulo: "Calendário" },
-  /* Bloco 17 (item 5): em branco, com «Em breve». */
+  /* Bloco 17 (item 5); Bloco 18 (spec 033, D-14): a ordem do pedido — Atividades · Palestras · APOINST · Calendário. */
   { valor: "palestras", rotulo: "Palestras" },
+  { valor: "apoinst", rotulo: "APOINST" },
+  { valor: "calendario", rotulo: "Calendário" },
 ] as const;
 
 export function AbasDeAtividades({

@@ -135,7 +135,12 @@ select set_eq(
            ('turma_regime_vigencia'),
            -- Spec 031 (Bloco 16, ajuste D), 31/10/2026. REGRA DOS VALORES ESPERADOS: (a). Entrou no BRIEF §2.1 (emenda
            -- de 31/10/2026) antes de entrar aqui: o ajuste manual da situacao e das datas de uma avaliacao.
-           ('ajustes_de_avaliacao')$$,
+           ('ajustes_de_avaliacao'),
+           -- Spec 033 (Bloco 18, M1), 03/11/2026. REGRA DOS VALORES ESPERADOS: (a). Entraram no BRIEF §2.1 (emenda de
+           -- 03/11/2026) antes de entrar aqui: as AEC previstas do curriculo, a APOINST planejada e a marcacao a mao.
+           ('aec_previstas_curriculo'),
+           ('apoinst_planejadas'),
+           ('marcacoes_de_atividade')$$,
   'FR-001: o conjunto de tabelas de public E o conjunto declarado no BRIEF §2.1 — nem mais, nem menos'
 );
 

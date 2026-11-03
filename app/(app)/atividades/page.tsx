@@ -16,7 +16,6 @@
  *    (as datas *De* e *Até* recortam dentro dele), e o filtro de turma oferece só as turmas do ano. O seletor é o mesmo de
  *    todo módulo, no canto superior direito, e o *Filtros* da lista é um ícone ao lado dele (RT-4).
  */
-import { EmBreve } from "@/components/ciaara/em-breve";
 import { CATEGORIA_FORA_DA_LISTA_DE_ATIVIDADES } from "@/lib/navegacao/contrato";
 import { BarraDeAcoes } from "@/components/ciaara/barra-de-acoes";
 import { EstadoVazio } from "@/components/ciaara/EstadoVazio";
@@ -49,7 +48,10 @@ import {
   paraLinhas,
   ROTULO_DA_CATEGORIA,
 } from "./consulta";
+import { AbaDeApoinst } from "./AbaDeApoinst";
+import { AbaDePalestras } from "./AbaDePalestras";
 import { AbasDeAtividades } from "./AbasDeAtividades";
+import type { ContextoDoModulo } from "./contexto";
 import { lerCalendario } from "./calendario";
 import { predicadoDoAno } from "./predicado-do-ano";
 import { FiltrosDeAtividades } from "./FiltrosDeAtividades";
@@ -78,8 +80,8 @@ export default async function Atividades({
   const podeEditarCalendario = pode(permissoes, "calendario", "editar");
   const temCalendario = podeCriarNoCalendario || podeEditarCalendario;
   const aba =
-    valores.aba === "palestras"
-      ? "palestras"
+    valores.aba === "palestras" || valores.aba === "apoinst"
+      ? valores.aba
       : temCalendario && valores.aba === "calendario"
         ? "calendario"
         : "atividades";
@@ -88,19 +90,10 @@ export default async function Atividades({
   const escolha = await anoEscolhido(String(valores.ano ?? ""), hoje);
   const ano = escolha.ano;
 
-  /* Bloco 17 (item 5): a aba Palestras, em branco com «Em breve», para todos. */
-  if (aba === "palestras") {
-    return (
-      <div className="flex flex-col gap-4" data-slot="lista-de-atividades">
-        <header className="flex flex-col gap-1">
-          <h1 className="text-texto text-xl font-semibold">Atividades</h1>
-        </header>
-        <AbasDeAtividades comCalendario={temCalendario}>
-          <EmBreve slot="aba-palestras-em-breve" />
-        </AbasDeAtividades>
-      </div>
-    );
-  }
+  /* Bloco 18 (spec 033, FR-006.5 e FR-006.6): as abas Palestras e APOINST, para todos os que leem atividades. */
+  const contexto: ContextoDoModulo = { ano, hoje, permissoes, temCalendario, valores };
+  if (aba === "palestras") return <AbaDePalestras contexto={contexto} />;
+  if (aba === "apoinst") return <AbaDeApoinst contexto={contexto} />;
 
   if (aba === "calendario") {
     const dados = await lerCalendario(supabase, ano);

@@ -17,7 +17,6 @@
  * acontece quando o aviso vai junto está medido: *"VERIFICAR Nº DE TA"* saiu **impresso** em 10 das
  * 15 planilhas (`D-2`).
  */
-import { EmBreve } from "@/components/ciaara/em-breve";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 
@@ -112,6 +111,9 @@ import { NotasDaPublicacao } from "./NotasDaPublicacao";
 import { PapelDaVersao } from "./PapelDaVersao";
 import { lerPublicacaoDaSemana } from "./publicacao";
 import { PainelDeSituacao } from "./PainelDeSituacao";
+import { AcompanhamentoDeApoinst } from "./AcompanhamentoDeApoinst";
+import { AcompanhamentoDePalestras } from "./AcompanhamentoDePalestras";
+import type { ContextoDaTurmaNasAbas } from "../contexto-das-abas";
 import { AbasDeAcompanhamento, type AbaDeAcompanhamento } from "./AbasDeAcompanhamento";
 import { AcompanhamentoDeAvaliacoes } from "./AcompanhamentoDeAvaliacoes";
 import { lerAvaliacoesDaTurma } from "../consulta-de-avaliacoes";
@@ -457,6 +459,21 @@ export default async function SemanaDoDsa({
       ),
     };
   }
+  /* Bloco 18 (spec 033, FR-008.1): Palestras e APOINST no DSA — o acompanhamento da turma, SÓ LEITURA. */
+  const contextoDoAcompanhamento: ContextoDaTurmaNasAbas = {
+    turmaId,
+    turmaCodigo: codigo,
+    cursoId,
+    curriculoId: (turma.curriculo_id as string | null) ?? null,
+    anoLetivo: Number(turma.ano_letivo),
+    dataTermino: (turma.data_termino as string | null) ?? null,
+    hoje: ultimoDia,
+    arquivada,
+    ead: false,
+    permissoes,
+    somenteLeitura: true,
+    valores,
+  };
   const quadros = quadrosDaSemana({
     execucao: extras.execucao,
     ocupacao: lida.ocupacaoAcumulada,
@@ -807,8 +824,10 @@ export default async function SemanaDoDsa({
                   aviso={acompanhamentoDeAvaliacoes.aviso}
                   rotuloDaSemana={rotuloDaSemana(lida.dias)}
                 />
-              ) : abaDoAcompanhamento === "apoinst" || abaDoAcompanhamento === "palestras" ? (
-                <EmBreve slot="acompanhamento-em-breve" />
+              ) : abaDoAcompanhamento === "apoinst" ? (
+                <AcompanhamentoDeApoinst contexto={contextoDoAcompanhamento} />
+              ) : abaDoAcompanhamento === "palestras" ? (
+                <AcompanhamentoDePalestras contexto={contextoDoAcompanhamento} />
               ) : (
                 <PainelDeSituacao
                   quadros={quadros}

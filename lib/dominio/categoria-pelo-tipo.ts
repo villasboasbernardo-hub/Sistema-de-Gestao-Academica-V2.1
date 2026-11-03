@@ -38,6 +38,61 @@ export function categoriaPeloTipo(tipo: TipoDeAtividade): CategoriaDeAtividade |
     : null;
 }
 
+/**
+ * RA-1 e RA-4 (Bloco 18, spec 033) — o «Conta como» que o operador escolhe no lançamento.
+ *
+ * > *"Cada tipo tem classificação PADRÃO (AEC/TAD/TR), que o operador pode trocar no lançamento."* (RA-1)
+ * > *"'Conta como' (TA da disciplina escolhida / AEC / TAD / TR) (…) 'Conta como TA da disciplina' soma na CH da
+ * > disciplina e do instrutor, como aula."* (RA-4) — Bernardo Villas Boas, 03/11/2026
+ *
+ * ⚠️ **É O ESPELHO DO GATILHO** `app.categoria_pelo_tipo` (M2, `20261103140512`): AEC/TAD/TR escolhidos viram a
+ *    categoria da linha; **CHD** («TA da disciplina») e nulo ficam com a do tipo — o CHD sai da AEC/TAD/TR e entra na CHD
+ *    pelas views, pela coluna `conta_como`. Tipo de Estudo Individual ou de Apoio Individualizado não troca (decisão 2:
+ *    Monitoria continua Apoio Individualizado).
+ */
+export const CONTA_COMO = ["CHD", "AEC", "TAD", "TR"] as const;
+export type ContaComo = (typeof CONTA_COMO)[number];
+
+export const ROTULO_DO_CONTA_COMO: Readonly<Record<ContaComo, string>> = {
+  CHD: "TA da disciplina",
+  AEC: "AEC",
+  TAD: "TAD",
+  TR: "TR",
+};
+
+/** A classificação do tipo aceita o «Conta como»? Só os componentes da CHT (AEC, TAD, TR). */
+export function aceitaContaComo(categoriaDoTipo: CategoriaDeAtividade | null): boolean {
+  return categoriaDoTipo === "AEC" || categoriaDoTipo === "TAD" || categoriaDoTipo === "TR";
+}
+
+/** O que fica gravado em `categoria_normativa` — a mesma decisão do gatilho. */
+export function categoriaEfetiva(
+  categoriaDoTipo: CategoriaDeAtividade,
+  contaComo: ContaComo | null,
+): CategoriaDeAtividade {
+  if (contaComo !== null && contaComo !== "CHD" && aceitaContaComo(categoriaDoTipo)) return contaComo;
+  return categoriaDoTipo;
+}
+
+/** Como a linha CONTA nas somas: o «TA da disciplina» é CHD; o resto, a categoria gravada. */
+export type ComoConta = ContaComo | "Estudo_Individual" | "Apoio_Individualizado";
+
+export function comoConta(categoria: CategoriaDeAtividade, contaComo: ContaComo | null): ComoConta {
+  return contaComo === "CHD" ? "CHD" : categoria;
+}
+
+/** O rótulo de como a linha conta («TA da disciplina», «AEC», …, «Estudo Individual»). */
+export function rotuloDeComoConta(como: ComoConta): string {
+  return como === "Estudo_Individual" || como === "Apoio_Individualizado"
+    ? ROTULO_DA_CATEGORIA_DE_ATIVIDADE[como]
+    : ROTULO_DO_CONTA_COMO[como];
+}
+
+/** O valor lido do banco, ou `null` quando não é um «Conta como» conhecido. */
+export function contaComoDoBanco(valor: string | null | undefined): ContaComo | null {
+  return (CONTA_COMO as readonly string[]).includes(valor ?? "") ? (valor as ContaComo) : null;
+}
+
 /** Os tipos que o formulário oferece: ativos e com categoria de atividade. */
 export function tiposOferecidos(tipos: readonly TipoDeAtividade[]): TipoDeAtividade[] {
   return tipos.filter((t) => t.ativo && categoriaPeloTipo(t) !== null);
@@ -105,7 +160,9 @@ export function recusaDaDescricaoNaEdicao(entrada: {
  *
  * - o «O que é» só falta no Estudo Individual (spec 029, FR-002; `ativ_descricao_fora_do_estudo_individual`). ⚠️ Até
  *   ali quem recusava a descrição vazia era o Zod, para TODA categoria — e o EI sem descrição nunca chegava à ação;
- * - só a AEC leva disciplina (`ativ_disciplina_so_aec_da_turma`, item 1b de 08/10/2026);
+ * - só a AEC leva disciplina (`ativ_disciplina_so_aec_da_turma`, item 1b de 08/10/2026) — e, desde o Bloco 18, o
+ *   «TA da disciplina» (RA-4), que a EXIGE;
+ * - o «Conta como» só nos tipos de AEC, TAD ou TR (RA-1; o gatilho recusa com `conta_como_fora_da_cht`);
  * - o Estudo Individual é sempre de uma turma (`V-5`, `ativ_estudo_individual_de_turma`);
  * - a quantidade de alunos é só do Apoio Individualizado (FR-020).
  *
@@ -113,26 +170,42 @@ export function recusaDaDescricaoNaEdicao(entrada: {
  *    primeiro continua a mesma de antes da spec 029.
  */
 export function recusaPelaCategoria(entrada: {
+  /** A categoria do TIPO (a classificação padrão), antes do «Conta como». */
   readonly categoria: CategoriaDeAtividade;
   readonly turmaId: string | null;
   readonly disciplinaId: string | null;
   readonly quantidadeAlunos: number | null;
   /** Já aparada pelo esquema: vazia chega `null` (`textoOuNulo`). */
   readonly descricao: string | null;
+  /** RA-4 (Bloco 18): a classificação escolhida pelo operador; ausente = a do tipo. */
+  readonly contaComo?: ContaComo | null;
 }): { readonly campo: string; readonly mensagem: string } | null {
-  if (
-    descricaoObrigatoria(entrada.categoria) &&
-    (entrada.descricao === null || entrada.descricao.trim() === "")
-  ) {
+  const contaComo = entrada.contaComo ?? null;
+  if (contaComo !== null && !aceitaContaComo(entrada.categoria)) {
+    return {
+      campo: "contaComo",
+      mensagem: "Este tipo não conta como AEC, TAD, TR nem como TA da disciplina: a classificação dele não se troca.",
+    };
+  }
+  const efetiva = categoriaEfetiva(entrada.categoria, contaComo);
+  if (descricaoObrigatoria(efetiva) && (entrada.descricao === null || entrada.descricao.trim() === "")) {
     return { campo: "descricao", mensagem: FRASE_DA_DESCRICAO_OBRIGATORIA };
   }
-  if (entrada.disciplinaId !== null && entrada.categoria !== "AEC") {
-    return { campo: "disciplinaId", mensagem: "Só a AEC leva disciplina." };
+  if (contaComo === "CHD" && (entrada.disciplinaId === null || entrada.turmaId === null)) {
+    return { campo: "disciplinaId", mensagem: "«TA da disciplina» exige a disciplina da turma." };
   }
-  if (entrada.categoria === "Estudo_Individual" && entrada.turmaId === null) {
+  if (entrada.disciplinaId !== null && efetiva !== "AEC" && contaComo !== "CHD") {
+    return {
+      campo: "disciplinaId",
+      mensagem:
+        contaComo === null ? "Só a AEC leva disciplina." : "Só a AEC e o «TA da disciplina» levam disciplina.",
+    };
+  }
+  const categoria = efetiva;
+  if (categoria === "Estudo_Individual" && entrada.turmaId === null) {
     return { campo: "turmaId", mensagem: "Estudo Individual é sempre de uma turma." };
   }
-  if (entrada.quantidadeAlunos !== null && entrada.categoria !== "Apoio_Individualizado") {
+  if (entrada.quantidadeAlunos !== null && categoria !== "Apoio_Individualizado") {
     return {
       campo: "quantidadeAlunos",
       mensagem: "A quantidade de alunos é só do Apoio Individualizado.",
