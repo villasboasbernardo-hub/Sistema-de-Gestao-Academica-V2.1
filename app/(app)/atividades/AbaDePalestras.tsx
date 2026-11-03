@@ -77,7 +77,11 @@ export async function AbaDePalestras({ contexto }: { readonly contexto: Contexto
       detalhe="Quem nega o acesso é o banco, e a lista chegaria vazia por isso — não por falta de palestra."
     />
   ) : erro ? (
-    <EstadoVazio motivo="sem-permissao" titulo="Não foi possível ler as palestras agora" detalhe={erro} />
+    <EstadoVazio
+      motivo="sem-permissao"
+      titulo="Não foi possível ler as palestras agora"
+      detalhe={erro}
+    />
   ) : comDsa.length === 0 ? (
     <EstadoVazio
       motivo="sem-dado"
@@ -103,7 +107,8 @@ export async function AbaDePalestras({ contexto }: { readonly contexto: Contexto
             <h1 className="text-texto text-xl font-semibold">Atividades</h1>
             <p className="text-texto-suave text-sm" data-slot="contagem-de-palestras">
               {numeros.cumpridas} de {numeros.previstas} AEC previstas do currículo cumpridas e{" "}
-              {numeros.avulsas} palestra{numeros.avulsas === 1 ? "" : "s"} fora do currículo em {ano}
+              {numeros.avulsas} palestra{numeros.avulsas === 1 ? "" : "s"} fora do currículo em{" "}
+              {ano}
               {haFiltro ? " neste recorte" : ""}
               {semDsa > 0
                 ? ` (${semDsa} turma${semDsa === 1 ? "" : "s"} EAD sem DSA fora da conta)`

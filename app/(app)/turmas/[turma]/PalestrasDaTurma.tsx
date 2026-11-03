@@ -10,6 +10,10 @@ import { PalestrasDeUmaTurma } from "../../atividades/PlanejadoDaTurma";
 
 import type { ContextoDaTurmaNasAbas } from "./contexto-das-abas";
 
-export async function PalestrasDaTurma({ contexto }: { readonly contexto: ContextoDaTurmaNasAbas }) {
+export async function PalestrasDaTurma({
+  contexto,
+}: {
+  readonly contexto: ContextoDaTurmaNasAbas;
+}) {
   return <PalestrasDeUmaTurma contexto={contexto} />;
 }

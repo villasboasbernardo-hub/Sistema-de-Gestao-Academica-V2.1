@@ -1376,6 +1376,8 @@ export function montarSemanaDoDsa(
     subtipo: string | null;
     descricao: string | null;
     responsavel_externo: string | null;
+    /* Nulo = a atividade de TODAS as turmas (`escopo = 'global'`): sem disciplina, «TA da disciplina» nem vínculo. */
+    turma_id: string | null;
     disciplina_id: string | null;
     bloqueia_aula: boolean | null;
     outros_instrutores?: string[] | null;

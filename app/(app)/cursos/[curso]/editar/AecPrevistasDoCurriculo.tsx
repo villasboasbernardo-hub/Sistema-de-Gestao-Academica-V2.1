@@ -22,6 +22,7 @@
 import * as React from "react";
 import { useRouter } from "next/navigation";
 
+import { BadgeStatus } from "@/components/ciaara/badge-status";
 import { BotaoDeIcone } from "@/components/ciaara/botao-de-icone";
 import { DialogoConfirmacao } from "@/components/ciaara/dialogo-confirmacao";
 import { DialogoDeFormulario } from "@/components/ciaara/dialogo-de-formulario";
@@ -226,7 +227,7 @@ export function AecPrevistasDoCurriculo({
                     {textoDaFonte(p.fonteArquivo, p.fontePagina) ?? "—"}
                   </td>
                   <td className="text-texto py-1 pr-3" data-slot="situacao-da-aec-prevista">
-                    {p.ativa ? "Ativa" : "Inativa"}
+                    {p.ativa ? "Ativa" : <BadgeStatus tom="inativo" rotulo="Desativada" />}
                   </td>
                   {podeEditar ? (
                     <td className="py-1">
@@ -438,7 +439,7 @@ function FormularioDaAecPrevista({
           <option value="">Nenhuma</option>
           {opcoesDaDisciplina.map((d) => (
             <option key={d.id} value={d.id}>
-              {d.ativa === false ? `${textoDaDisciplina(d)} (inativa)` : textoDaDisciplina(d)}
+              {d.ativa === false ? `${textoDaDisciplina(d)} (desativada)` : textoDaDisciplina(d)}
             </option>
           ))}
         </select>

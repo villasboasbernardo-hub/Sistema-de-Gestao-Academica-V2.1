@@ -62,30 +62,33 @@ export default async function TiposDeAtividade() {
   ]);
 
   const tipos = tiposDoCatalogo(
-    ((catalogoRes.data ?? []) as {
-      id: string;
-      valor: string;
-      rotulo_exibicao: string | null;
-      ativo: boolean | null;
-      ordem: number | null;
-      metadados: unknown;
-    }[]).map(
-      (l): LinhaDoCatalogo => ({
-        id: l.id,
-        valor: l.valor,
-        rotulo: l.rotulo_exibicao,
-        ativo: l.ativo !== false,
-        ordem: Number(l.ordem ?? 0),
-        metadados: l.metadados as TipoDeAtividade["metadados"],
-      }),
-    ),
+    (
+      (catalogoRes.data ?? []) as {
+        id: string;
+        valor: string;
+        rotulo_exibicao: string | null;
+        ativo: boolean | null;
+        ordem: number | null;
+        metadados: unknown;
+      }[]
+    ).map((l): LinhaDoCatalogo => ({
+      id: l.id,
+      valor: l.valor,
+      rotulo: l.rotulo_exibicao,
+      ativo: l.ativo !== false,
+      ordem: Number(l.ordem ?? 0),
+      metadados: l.metadados as TipoDeAtividade["metadados"],
+    })),
   );
   const contagens = lancamentosRes.error
     ? null
     : contagemPorTipo(
-        ((lancamentosRes.data ?? []) as { tipo_atividade_id: string | null; conta_como: string | null }[]).map(
-          (l) => ({ tipoId: l.tipo_atividade_id, contaComo: l.conta_como }),
-        ),
+        (
+          (lancamentosRes.data ?? []) as {
+            tipo_atividade_id: string | null;
+            conta_como: string | null;
+          }[]
+        ).map((l) => ({ tipoId: l.tipo_atividade_id, contaComo: l.conta_como })),
       );
 
   const podeEditar = pode(permissoes, "parametros", "editar");
@@ -103,9 +106,10 @@ export default async function TiposDeAtividade() {
               : `${tipos.length} tipos, ${ativos} ativos. `}
             {catalogoRes.error ? null : (
               <>
-                Cada tipo tem uma classificação <strong>padrão</strong> — AEC (Atividade Extraclasse), TAD ou TR
-                —, que o lançamento pode trocar no «Conta como». O nome gravado não muda: o que se edita é o rótulo.
-                Tipo errado se <strong>desativa</strong>.
+                Cada tipo tem uma classificação <strong>padrão</strong> — AEC (Atividade
+                Extraclasse), TAD ou TR —, que o lançamento pode trocar no «Conta como». O nome
+                gravado não muda: o que se edita é o rótulo. Tipo errado se{" "}
+                <strong>desativa</strong>.
               </>
             )}
           </p>
@@ -117,8 +121,8 @@ export default async function TiposDeAtividade() {
 
       {catalogoRes.error ? (
         <p role="alert" className="text-atrasado-tinta text-sm" data-slot="catalogo-nao-lido">
-          Não foi possível ler o catálogo de tipos de atividade agora — não quer dizer que ele esteja vazio. Recarregue a
-          página.
+          Não foi possível ler o catálogo de tipos de atividade agora — não quer dizer que ele
+          esteja vazio. Recarregue a página.
         </p>
       ) : tipos.length === 0 ? (
         <EstadoVazio
@@ -130,12 +134,15 @@ export default async function TiposDeAtividade() {
         <>
           {contagens === null ? (
             <p role="alert" className="text-atrasado-tinta text-sm" data-slot="contagem-nao-lida">
-              Não foi possível contar os lançamentos de cada tipo agora: a coluna fica sem número, e o diálogo de
-              Editar não diz quantos mudam de categoria.
+              Não foi possível contar os lançamentos de cada tipo agora: a coluna fica sem número, e
+              o diálogo de Editar não diz quantos mudam de categoria.
             </p>
           ) : null}
           <div className="mt-2 overflow-x-auto">
-            <table className="w-full border-collapse text-sm" data-slot="tabela-de-tipos-de-atividade">
+            <table
+              className="w-full border-collapse text-sm"
+              data-slot="tabela-de-tipos-de-atividade"
+            >
               <thead>
                 <tr>
                   {/* veste: os títulos das colunas; o que está abaixo deles é dado */}
@@ -195,8 +202,8 @@ export default async function TiposDeAtividade() {
                             />
                           ) : (
                             <span className="text-texto-suave text-xs" data-slot="tipo-so-leitura">
-                              só leitura: a classificação de Estudo Individual e de Apoio Individualizado não se
-                              edita no catálogo
+                              só leitura: a classificação de Estudo Individual e de Apoio
+                              Individualizado não se edita no catálogo
                             </span>
                           )}
                         </td>

@@ -65,7 +65,9 @@ export function disciplinaNaAtividade(entrada: {
 }): "obrigatoria" | "opcional" | "nenhuma" {
   if (entrada.global) return "nenhuma";
   if (entrada.contaComo === "CHD") return "obrigatoria";
-  return categoriaEfetiva(entrada.categoriaDoTipo, entrada.contaComo) === "AEC" ? "opcional" : "nenhuma";
+  return categoriaEfetiva(entrada.categoriaDoTipo, entrada.contaComo) === "AEC"
+    ? "opcional"
+    : "nenhuma";
 }
 
 /** O vínculo «Cumpre» cabe? Na atividade DE TURMA de AEC, TAD ou TR (FR-003.3). */
@@ -76,7 +78,8 @@ export function aceitaVinculo(entrada: {
   return !entrada.global && aceitaContaComo(entrada.categoriaDoTipo);
 }
 
-export const FRASE_DO_VINCULO_DUPLO = "A atividade cumpre uma AEC prevista OU uma APOINST, não as duas.";
+export const FRASE_DO_VINCULO_DUPLO =
+  "A atividade cumpre uma AEC prevista OU uma APOINST, não as duas.";
 export const FRASE_DO_VINCULO_GLOBAL =
   "A atividade de todas as turmas não cumpre AEC prevista nem APOINST de uma turma.";
 export const FRASE_DO_VINCULO_FORA_DA_CHT =
@@ -95,7 +98,8 @@ export function recusaDoVinculo(entrada: {
     return { campo: "apoinstId", mensagem: FRASE_DO_VINCULO_DUPLO };
   }
   if (entrada.turmaId === null) return { campo, mensagem: FRASE_DO_VINCULO_GLOBAL };
-  if (!aceitaContaComo(entrada.categoriaDoTipo)) return { campo, mensagem: FRASE_DO_VINCULO_FORA_DA_CHT };
+  if (!aceitaContaComo(entrada.categoriaDoTipo))
+    return { campo, mensagem: FRASE_DO_VINCULO_FORA_DA_CHT };
   return null;
 }
 
@@ -137,14 +141,16 @@ export function opcoesDeVinculo(
 ): readonly { readonly valor: string; readonly rotulo: string }[] {
   const daPrevista = previstas.map((p) => {
     const ta = p.taPrevistos === null ? "" : ` — ${p.taPrevistos} TA`;
-    const andamento =
-      p.cumprida
-        ? " (já cumprida)"
-        : p.taLancados > 0 && p.taPrevistos !== null
-          ? ` (${p.taLancados} de ${p.taPrevistos} TA lançados)`
-          : "";
+    const andamento = p.cumprida
+      ? " (já cumprida)"
+      : p.taLancados > 0 && p.taPrevistos !== null
+        ? ` (${p.taLancados} de ${p.taPrevistos} TA lançados)`
+        : "";
     const tipo = p.tipoRotulo === "" ? "" : ` · ${p.tipoRotulo}`;
-    return { valor: `${PREFIXO_DA_PREVISTA}${p.id}`, rotulo: `AEC prevista: ${p.nome}${tipo}${ta}${andamento}` };
+    return {
+      valor: `${PREFIXO_DA_PREVISTA}${p.id}`,
+      rotulo: `AEC prevista: ${p.nome}${tipo}${ta}${andamento}`,
+    };
   });
   const daApoinst = apoinst.map((a) => {
     const disciplina = a.disciplinaCodigo === "" ? "" : ` — ${a.disciplinaCodigo}`;
@@ -162,7 +168,10 @@ export function vinculoDaOpcao(valor: string): {
   readonly apoinstId: string | null;
 } {
   if (valor.startsWith(PREFIXO_DA_PREVISTA)) {
-    return { atividadePrevistaId: valor.slice(PREFIXO_DA_PREVISTA.length) || null, apoinstId: null };
+    return {
+      atividadePrevistaId: valor.slice(PREFIXO_DA_PREVISTA.length) || null,
+      apoinstId: null,
+    };
   }
   if (valor.startsWith(PREFIXO_DA_APOINST)) {
     return { atividadePrevistaId: null, apoinstId: valor.slice(PREFIXO_DA_APOINST.length) || null };
@@ -171,7 +180,10 @@ export function vinculoDaOpcao(valor: string): {
 }
 
 /** As duas colunas → o valor da opção (o inverso de `vinculoDaOpcao`). */
-export function opcaoDoVinculo(atividadePrevistaId: string | null, apoinstId: string | null): string {
+export function opcaoDoVinculo(
+  atividadePrevistaId: string | null,
+  apoinstId: string | null,
+): string {
   if (atividadePrevistaId !== null) return `${PREFIXO_DA_PREVISTA}${atividadePrevistaId}`;
   if (apoinstId !== null) return `${PREFIXO_DA_APOINST}${apoinstId}`;
   return "";
@@ -221,8 +233,16 @@ export function classificacaoNaEdicao(entrada: {
 
   const mexeNaClassificacao = entrada.contaComo !== undefined || entrada.disciplinaId !== undefined;
   if (mexeNaClassificacao && base !== null) {
-    if (entrada.contaComo !== undefined && entrada.contaComo !== null && entrada.categoriaDoTipo === null) {
-      return { ok: false, campo: "contaComo", mensagem: "Escolha o tipo da atividade antes de dizer como ela conta." };
+    if (
+      entrada.contaComo !== undefined &&
+      entrada.contaComo !== null &&
+      entrada.categoriaDoTipo === null
+    ) {
+      return {
+        ok: false,
+        campo: "contaComo",
+        mensagem: "Escolha o tipo da atividade antes de dizer como ela conta.",
+      };
     }
     const contaComo =
       entrada.contaComo === undefined
@@ -245,7 +265,9 @@ export function classificacaoNaEdicao(entrada: {
 
   if (entrada.atividadePrevistaId !== undefined || entrada.apoinstId !== undefined) {
     let prevista =
-      entrada.atividadePrevistaId === undefined ? entrada.gravado.atividadePrevistaId : entrada.atividadePrevistaId;
+      entrada.atividadePrevistaId === undefined
+        ? entrada.gravado.atividadePrevistaId
+        : entrada.atividadePrevistaId;
     let apoinst = entrada.apoinstId === undefined ? entrada.gravado.apoinstId : entrada.apoinstId;
     /* O novo apaga o outro: só um vínculo, sem contradição com o gravado. */
     if (entrada.atividadePrevistaId != null && entrada.apoinstId === undefined) apoinst = null;
@@ -257,10 +279,14 @@ export function classificacaoNaEdicao(entrada: {
       apoinstId: apoinst,
     });
     if (recusa !== null) return { ok: false, ...recusa };
-    if (prevista !== entrada.gravado.atividadePrevistaId || entrada.atividadePrevistaId !== undefined) {
+    if (
+      prevista !== entrada.gravado.atividadePrevistaId ||
+      entrada.atividadePrevistaId !== undefined
+    ) {
       colunas["atividade_prevista_id"] = prevista;
     }
-    if (apoinst !== entrada.gravado.apoinstId || entrada.apoinstId !== undefined) colunas["apoinst_id"] = apoinst;
+    if (apoinst !== entrada.gravado.apoinstId || entrada.apoinstId !== undefined)
+      colunas["apoinst_id"] = apoinst;
   }
   return { ok: true, colunas };
 }

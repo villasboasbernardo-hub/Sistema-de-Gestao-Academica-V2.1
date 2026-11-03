@@ -20,7 +20,10 @@ import { ehCumprida } from "@/lib/dominio/atividades/previstas";
 import { naturezaDaSala, salasParaEscolher, type Sala } from "@/lib/dominio/salas";
 import type { criarClienteDeServidor } from "@/lib/supabase/server";
 
-import { lerApoinstDasTurmas, lerPalestrasDasTurmas } from "../../../atividades/leitura-do-planejado";
+import {
+  lerApoinstDasTurmas,
+  lerPalestrasDasTurmas,
+} from "../../../atividades/leitura-do-planejado";
 
 type ClienteDeServidor = Awaited<ReturnType<typeof criarClienteDeServidor>>;
 
@@ -41,7 +44,11 @@ export async function lerOpcoesDaAtividade(
     readonly podeLerPrevistas: boolean;
   },
 ): Promise<OpcoesDaAtividade> {
-  const turma = { id: entrada.turmaId, codigo: entrada.turmaCodigo, curriculoId: entrada.curriculoId };
+  const turma = {
+    id: entrada.turmaId,
+    codigo: entrada.turmaCodigo,
+    curriculoId: entrada.curriculoId,
+  };
   const [salasRes, palestras, apoinst] = await Promise.all([
     supabase
       .from("config_listas")
@@ -85,7 +92,6 @@ export async function lerOpcoesDaAtividade(
     avisoDasSalas: salasRes.error ? FRASE_DAS_SALAS : null,
     previstas,
     apoinst: planejadas,
-    avisoDoVinculo:
-      falhas[0] ?? (entrada.podeLerPrevistas ? null : FRASE_DO_PERFIL_SEM_PREVISTAS),
+    avisoDoVinculo: falhas[0] ?? (entrada.podeLerPrevistas ? null : FRASE_DO_PERFIL_SEM_PREVISTAS),
   };
 }

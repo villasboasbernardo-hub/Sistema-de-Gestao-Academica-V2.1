@@ -24,10 +24,7 @@ import { useRouter } from "next/navigation";
 
 import { BadgeStatus } from "@/components/ciaara/badge-status";
 import { TabelaDensa, type Coluna } from "@/components/ciaara/tabela-densa";
-import {
-  ROTULO_DA_SITUACAO_DA_PREVISTA,
-  ehCumprida,
-} from "@/lib/dominio/atividades/previstas";
+import { ROTULO_DA_SITUACAO_DA_PREVISTA, ehCumprida } from "@/lib/dominio/atividades/previstas";
 import type {
   AvulsaDaAba,
   LinhaDePalestra,
@@ -121,8 +118,9 @@ export function QuadroDePalestras({
                   {h.situacao === "cumprida" ? "Marcada cumprida" : "Marcação desfeita"} em{" "}
                   {instanteComHoraParaLeitura(h.em)}
                   {h.autor ? ` por ${h.autor}` : ""}
-                  {h.dataRealizada ? ` (realizada em ${dataParaLeitura(h.dataRealizada)})` : ""}:{" "}
-                  {h.justificativa}
+                  {h.dataRealizada
+                    ? ` (realizada em ${dataParaLeitura(h.dataRealizada)})`
+                    : ""}: {h.justificativa}
                 </li>
               ))}
             </ul>
@@ -197,7 +195,11 @@ export function QuadroDePalestras({
   return (
     <div className="flex flex-col gap-4" data-slot="quadro-de-palestras">
       {resposta ? (
-        <p role="status" className="text-executado-tinta text-sm" data-slot="resposta-das-palestras">
+        <p
+          role="status"
+          className="text-executado-tinta text-sm"
+          data-slot="resposta-das-palestras"
+        >
           {resposta}
         </p>
       ) : null}
@@ -217,11 +219,16 @@ export function QuadroDePalestras({
           />
         )}
       </section>
-      <section aria-label="Palestras fora do currículo" className="flex flex-col gap-2" data-slot="palestras-avulsas">
+      <section
+        aria-label="Palestras fora do currículo"
+        className="flex flex-col gap-2"
+        data-slot="palestras-avulsas"
+      >
         <header className="flex flex-col">
           <h2 className="text-texto text-sm font-semibold">Fora do currículo</h2>
           <p className="text-texto-suave text-xs">
-            Palestras lançadas sem vínculo com uma AEC prevista — contam no limite de AEC do currículo.
+            Palestras lançadas sem vínculo com uma AEC prevista — contam no limite de AEC do
+            currículo.
           </p>
         </header>
         {avulsas.length === 0 ? (

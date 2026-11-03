@@ -162,6 +162,42 @@ describe("a chave de um lançamento do sistema", () => {
       item: "—",
     });
   });
+
+  /*
+   * RA-4 (Bloco 18, spec 033): a atividade que CONTA COMO TA DA DISCIPLINA entra na CH da disciplina — a chave é a da
+   * aula sem UE, e não a da categoria. ⚠️ O caso que discrimina: a mesma TR, sem o «Conta como», cai no COD «TR».
+   */
+  it("RA-4 · o «TA da disciplina» vai ao SEM UE da disciplina; sem ele, a categoria decide como antes", () => {
+    const base = { codigo: null, unidadeNumero: null, tipoAvaliacao: null };
+    expect(
+      chaveDoLancamento({
+        ...base,
+        origem: "atividade_nao_letiva",
+        disciplinaCodigo: "II",
+        categoria: "TR",
+        contaComo: "CHD",
+      }),
+    ).toEqual({ cod: "II", item: "SEM UE" });
+    expect(
+      chaveDoLancamento({
+        ...base,
+        origem: "atividade_nao_letiva",
+        disciplinaCodigo: null,
+        categoria: "TR",
+        contaComo: null,
+      }),
+    ).toEqual({ cod: "TR", item: "—" });
+    /* A AEC trocada para TAD (a categoria gravada é TAD) e sem disciplina: o COD é o da TAD. */
+    expect(
+      chaveDoLancamento({
+        ...base,
+        origem: "atividade_nao_letiva",
+        disciplinaCodigo: null,
+        categoria: "TAD",
+        contaComo: "TAD",
+      }),
+    ).toEqual({ cod: "TAD", item: "—" });
+  });
 });
 
 describe("`FR-019`, `FR-029` · as listas de escolha", () => {

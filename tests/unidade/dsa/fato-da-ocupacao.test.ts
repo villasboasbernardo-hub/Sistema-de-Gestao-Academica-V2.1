@@ -167,6 +167,56 @@ describe("o responsável de fora do cadastro aparece na coluna do instrutor", ()
     expect(responsavelDoFato("1ºTen FULANA", "DOEP")).toBe("1ºTen FULANA");
     expect(responsavelDoFato(null, "  ")).toBeNull();
   });
+
+  /*
+   * RA-4 (Bloco 18, FR-003.4): o palestrante de fora sai «Nome (OM)» na grade e no papel — e sem OM, só o nome, como
+   * antes (o caso que garante que nenhuma semana já publicada muda: a OM nasce nula em todo lançamento anterior).
+   */
+  it("RA-4 · o externo com OM sai «Nome (OM)»; sem OM, só o nome; OM sem nome não aparece", () => {
+    expect(responsavelDoFato(null, "Palestrante convidado", "DHN")).toBe(
+      "Palestrante convidado (DHN)",
+    );
+    expect(responsavelDoFato(null, "DOEP", null)).toBe("DOEP");
+    expect(responsavelDoFato(null, "DOEP", "  ")).toBe("DOEP");
+    expect(responsavelDoFato(null, null, "DHN")).toBeNull();
+    expect(responsavelDoFato("1ºTen FULANA", "DOEP", "DHN")).toBe("1ºTen FULANA");
+  });
+
+  it("RA-4 · a grade compõe «Nome (OM)» pela leitura, e o cartão reabre com os dois separados", () => {
+    const fato = fatoDaOcupacao(
+      linha({
+        origem: "atividade_nao_letiva",
+        fato_id: "ativ-om",
+        instrutor_id: null,
+        disciplina_id: null,
+      }),
+      {
+        ...NOMES,
+        conteudos: new Map([
+          [
+            "ativ-om",
+            {
+              conteudo: "Segurança da navegação",
+              tecnica: "Palestra",
+              externo: "Palestrante convidado",
+              externoOm: "DHN",
+              contaComo: "TAD",
+              categoriaDoTipo: "AEC",
+              global: false,
+            },
+          ],
+        ]),
+      },
+    );
+    expect(fato.instrutor).toBe("Palestrante convidado (DHN)");
+    expect(fato.gravado).toMatchObject({
+      responsavelExterno: "Palestrante convidado",
+      responsavelExternoOm: "DHN",
+      contaComo: "TAD",
+      categoriaDoTipo: "AEC",
+      global: false,
+    });
+  });
 });
 
 describe("a CH cumprida do rodapé é a ACUMULADA ATÉ A SEMANA — `RN-CRONOS-03`", () => {

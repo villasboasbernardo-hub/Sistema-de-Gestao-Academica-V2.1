@@ -91,7 +91,11 @@ export function NovaApoinst({
   return (
     <span className="inline-flex items-center gap-2" data-slot="nova-apoinst">
       {resposta ? (
-        <span role="status" className="text-executado-tinta text-sm" data-slot="resposta-da-nova-apoinst">
+        <span
+          role="status"
+          className="text-executado-tinta text-sm"
+          data-slot="resposta-da-nova-apoinst"
+        >
           {resposta}
         </span>
       ) : null}
@@ -109,7 +113,8 @@ export function NovaApoinst({
             editando={null}
             fechar={fechar}
             aoGravar={(codigo) => {
-              if (naFicha) router.replace(enderecoDaAbaDaTurmaGravada(codigo, "apoinst", "apoinst"));
+              if (naFicha)
+                router.replace(enderecoDaAbaDaTurmaGravada(codigo, "apoinst", "apoinst"));
               else definirResposta(`APOINST cadastrada em ${codigo}.`);
             }}
           />
@@ -227,22 +232,25 @@ function FormularioDeApoinst({
     });
   }
 
-  const vazioDosDesignados =
-    !opcoes.podeLerInstrutores
-      ? ({ motivo: "sem-permissao" } as const)
-      : ({
-          motivo: "sem-dado",
-          detalhe:
-            opcoes.erro ??
-            (disciplinaId === ""
-              ? "Escolha a disciplina: o responsável é um instrutor designado nela."
-              : "Nenhum instrutor designado nesta disciplina da turma. Designe na ficha da turma, em Disciplinas."),
-        } as const);
+  const vazioDosDesignados = !opcoes.podeLerInstrutores
+    ? ({ motivo: "sem-permissao" } as const)
+    : ({
+        motivo: "sem-dado",
+        detalhe:
+          opcoes.erro ??
+          (disciplinaId === ""
+            ? "Escolha a disciplina: o responsável é um instrutor designado nela."
+            : "Nenhum instrutor designado nesta disciplina da turma. Designe na ficha da turma, em Disciplinas."),
+      } as const);
 
   return (
     <form onSubmit={gravar} className="flex flex-col gap-3" data-slot="formulario-da-apoinst">
       {opcoes.erro ? (
-        <p role="alert" className="text-conflito-tinta text-sm" data-slot="opcoes-da-apoinst-nao-lidas">
+        <p
+          role="alert"
+          className="text-conflito-tinta text-sm"
+          data-slot="opcoes-da-apoinst-nao-lidas"
+        >
           {opcoes.erro}
         </p>
       ) : null}
@@ -292,7 +300,9 @@ function FormularioDeApoinst({
         />
       )}
       <div className="flex flex-col gap-1">
-        <span className="text-texto text-sm font-medium">Instrutor responsável (designado na disciplina)</span>
+        <span className="text-texto text-sm font-medium">
+          Instrutor responsável (designado na disciplina)
+        </span>
         <SeletorInstrutor
           instrutores={designados}
           escala={opcoes.escala}

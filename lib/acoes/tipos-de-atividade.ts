@@ -31,6 +31,7 @@ import {
 } from "@/lib/dominio/atividades/catalogo-de-tipos";
 import { categoriaPeloTipo, type TipoDeAtividade } from "@/lib/dominio/categoria-pelo-tipo";
 import { criarClienteDeServidor } from "@/lib/supabase/server";
+import type { Json, TablesUpdate } from "@/lib/tipos/database";
 import {
   esquemaDaEdicaoDoTipo,
   esquemaDaSituacaoDoTipo,
@@ -40,8 +41,7 @@ import {
 const LISTA = "tipos_atividade";
 
 export type ResultadoDoTipo =
-  | { readonly ok: true; readonly id: string }
-  | { readonly ok: false; readonly erro: string };
+  { readonly ok: true; readonly id: string } | { readonly ok: false; readonly erro: string };
 
 const falha = (erro: string): ResultadoDoTipo => ({ ok: false, erro });
 
@@ -55,7 +55,9 @@ const SEM_PERMISSAO = "O seu perfil não edita o catálogo de tipos de atividade
 function recusa(error: ErroDoBanco, nome?: string): ResultadoDoTipo {
   if (error.code === "42501" && !error.hint) return falha(SEM_PERMISSAO);
   if (error.code === "23505" && nome) {
-    return falha(`Já existe um tipo chamado «${nome}» no catálogo — se ele estiver desativado, reative-o.`);
+    return falha(
+      `Já existe um tipo chamado «${nome}» no catálogo — se ele estiver desativado, reative-o.`,
+    );
   }
   return falha(traduzirRecusa(error));
 }
@@ -91,7 +93,8 @@ async function lerCatalogo(
   return { linhas: (data ?? []) as unknown as LinhaLida[], erro: null };
 }
 
-const FRASE_DA_LEITURA = "Não foi possível ler o catálogo agora. Nada foi alterado. Recarregue a página.";
+const FRASE_DA_LEITURA =
+  "Não foi possível ler o catálogo agora. Nada foi alterado. Recarregue a página.";
 const FRASE_SO_LEITURA =
   "Este tipo é de Estudo Individual ou de Apoio Individualizado: a classificação dele fica fora da CHT e não se edita no catálogo.";
 
@@ -102,8 +105,16 @@ function tipoEditavel(
 ): { readonly linha: LinhaLida } | { readonly erro: string } {
   const linha = linhas.find((l) => l.id === id);
   if (!linha) return { erro: "O tipo não existe mais no catálogo. Recarregue a página." };
-  const categoria = categoriaPeloTipo({ id, valor: linha.valor, ativo: linha.ativo, metadados: linha.metadados });
-  if (categoria === null) return { erro: "Este item da lista não é tipo de atividade: aula, avaliação e vista não se editam aqui." };
+  const categoria = categoriaPeloTipo({
+    id,
+    valor: linha.valor,
+    ativo: linha.ativo,
+    metadados: linha.metadados,
+  });
+  if (categoria === null)
+    return {
+      erro: "Este item da lista não é tipo de atividade: aula, avaliação e vista não se editam aqui.",
+    };
   if (!ehClassificacaoDoCatalogo(categoria)) return { erro: FRASE_SO_LEITURA };
   return { linha };
 }
@@ -172,16 +183,21 @@ export async function editarTipo(entrada: unknown): Promise<ResultadoDoTipo> {
       .filter((l) => l.id !== id)
       .map((l) => ({ valor: l.valor, rotulo: l.rotulo_exibicao })),
   );
-  if (repetido) return falha(`Já existe o tipo «${repetido.rotulo ?? repetido.valor}» no catálogo: escolha outro nome.`);
+  if (repetido)
+    return falha(
+      `Já existe o tipo «${repetido.rotulo ?? repetido.valor}» no catálogo: escolha outro nome.`,
+    );
 
   const classificacaoMuda = (linha.metadados?.categoria ?? null) !== classificacao;
-  const mudancas = {
+  const mudancas: TablesUpdate<"config_listas"> = {
     rotulo_exibicao: rotulo,
-    ...(classificacaoMuda ? { metadados: { ...(linha.metadados ?? {}), categoria: classificacao } } : {}),
+    ...(classificacaoMuda
+      ? { metadados: { ...(linha.metadados ?? {}), categoria: classificacao } as Json }
+      : {}),
   };
   const { data, error } = await supabase
     .from("config_listas")
-    .update(mudancas as never)
+    .update(mudancas)
     .eq("id", id)
     .eq("lista", LISTA)
     .select("id");

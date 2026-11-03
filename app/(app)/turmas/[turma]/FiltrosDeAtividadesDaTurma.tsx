@@ -56,7 +56,15 @@ export function FiltrosDeAtividadesDaTurma({
     if (escolha("ate") !== ate) void definirAte(escolha("ate") || null);
   };
 
-  const ativos = filtrosForaDoPadrao(ROTA, { categoria, tipo, disciplina, vinculo, responsavel, de, ate });
+  const ativos = filtrosForaDoPadrao(ROTA, {
+    categoria,
+    tipo,
+    disciplina,
+    vinculo,
+    responsavel,
+    de,
+    ate,
+  });
 
   const limpar = () => {
     void definirCategoria(null);

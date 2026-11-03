@@ -361,14 +361,20 @@ export function FormularioDeLancamento({
   const categoriaDoGrupo = naoLetivo ? (tipo as CategoriaDeAtividade) : null;
   const global = podeAtividadeGlobal && todasAsTurmas && tipo !== "Estudo_Individual";
   const contaComoGravado =
-    categoriaDoGrupo === null ? null : contaComoParaGravar(categoriaDoGrupo, contaComoDoBanco(contaComo));
+    categoriaDoGrupo === null
+      ? null
+      : contaComoParaGravar(categoriaDoGrupo, contaComoDoBanco(contaComo));
   const categoriaQueVale =
     categoriaDoGrupo === null ? null : categoriaEfetiva(categoriaDoGrupo, contaComoGravado);
   const opcoesDaClassificacao = opcoesDeContaComo({ categoriaDoTipo: categoriaDoGrupo, global });
   const disciplinaDaAtividade =
     categoriaDoGrupo === null
       ? "obrigatoria"
-      : disciplinaNaAtividade({ categoriaDoTipo: categoriaDoGrupo, contaComo: contaComoGravado, global });
+      : disciplinaNaAtividade({
+          categoriaDoTipo: categoriaDoGrupo,
+          contaComo: contaComoGravado,
+          global,
+        });
   const temVinculo =
     opcoesDaAtividade !== undefined && aceitaVinculo({ categoriaDoTipo: categoriaDoGrupo, global });
   const opcoesDoVinculo = opcoesDeVinculo(
@@ -414,7 +420,8 @@ export function FormularioDeLancamento({
      * lançamento da semana em um clique usa, nunca escrito aqui. Só enquanto ninguém editou o local.
      */
     if (!localEditado) {
-      const novoLocal = novo === "Estudo_Individual" ? LOCAL_DO_ESTUDO_INDIVIDUAL : (salaDaTurma ?? "");
+      const novoLocal =
+        novo === "Estudo_Individual" ? LOCAL_DO_ESTUDO_INDIVIDUAL : (salaDaTurma ?? "");
       definirLocal(novoLocal);
       definirLocalLivre(!ehSalaDaLista(novoLocal));
     }
@@ -448,7 +455,11 @@ export function FormularioDeLancamento({
     const prevista = opcoesDaAtividade?.previstas.find((p) => p.id === atividadePrevistaId);
     if (prevista === undefined) return;
     if (descricao.trim() === "") definirDescricao(prevista.nome);
-    if (prevista.disciplinaId !== null && disciplinaDaAtividade !== "nenhuma" && disciplinaId === "") {
+    if (
+      prevista.disciplinaId !== null &&
+      disciplinaDaAtividade !== "nenhuma" &&
+      disciplinaId === ""
+    ) {
       definirDisciplina(prevista.disciplinaId);
     }
   }
@@ -599,7 +610,9 @@ export function FormularioDeLancamento({
         conduzNomeExterno: quemConduz === "" ? texto(conduzExterno) : null,
       };
     }
-    const doVinculo = temVinculo ? vinculoDaOpcao(vinculo) : { atividadePrevistaId: null, apoinstId: null };
+    const doVinculo = temVinculo
+      ? vinculoDaOpcao(vinculo)
+      : { atividadePrevistaId: null, apoinstId: null };
     const nomeDeFora =
       tipo === "Estudo_Individual" || quemMinistra !== "" ? null : texto(responsavelExterno);
     return {
@@ -768,7 +781,9 @@ export function FormularioDeLancamento({
           id="dsa-disciplina"
           rotulo={disciplinaDaAtividade === "opcional" ? "Disciplina (opcional)" : "Disciplina"}
           obrigatorio={disciplinaDaAtividade === "obrigatoria"}
-          textoVazio={disciplinaDaAtividade === "opcional" ? "Sem disciplina" : "Escolha a disciplina…"}
+          textoVazio={
+            disciplinaDaAtividade === "opcional" ? "Sem disciplina" : "Escolha a disciplina…"
+          }
           valor={disciplinaId}
           aoMudar={escolherDisciplina}
           opcoes={disciplinas.map((d) => ({ valor: d.id, rotulo: `${d.codigo} — ${d.nome}` }))}

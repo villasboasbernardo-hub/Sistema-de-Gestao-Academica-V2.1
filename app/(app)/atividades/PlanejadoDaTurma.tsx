@@ -44,7 +44,13 @@ const CONFIRMACAO: Readonly<Record<string, { readonly frase: string; readonly sl
 
 const DA_PALESTRA = new Set(["marcacao", "marcacao-desfeita"]);
 
-function Confirmacao({ contexto, aceitas }: { readonly contexto: ContextoDaTurmaNasAbas; readonly aceitas: ReadonlySet<string> }) {
+function Confirmacao({
+  contexto,
+  aceitas,
+}: {
+  readonly contexto: ContextoDaTurmaNasAbas;
+  readonly aceitas: ReadonlySet<string>;
+}) {
   const gravada = String(contexto.valores.gravada ?? "");
   const c = contexto.somenteLeitura || !aceitas.has(gravada) ? undefined : CONFIRMACAO[gravada];
   if (!c) return null;
@@ -79,7 +85,9 @@ function TurmaEad({ slot }: { readonly slot: string }) {
   );
 }
 
-function turmaDaAba(contexto: ContextoDaTurmaNasAbas): TurmaDaAba & { readonly curriculoId: string | null } {
+function turmaDaAba(
+  contexto: ContextoDaTurmaNasAbas,
+): TurmaDaAba & { readonly curriculoId: string | null } {
   return {
     id: contexto.turmaId,
     codigo: contexto.turmaCodigo,
@@ -90,7 +98,11 @@ function turmaDaAba(contexto: ContextoDaTurmaNasAbas): TurmaDaAba & { readonly c
 }
 
 /** As AEC previstas do currículo da turma e as palestras avulsas dela. */
-export async function PalestrasDeUmaTurma({ contexto }: { readonly contexto: ContextoDaTurmaNasAbas }) {
+export async function PalestrasDeUmaTurma({
+  contexto,
+}: {
+  readonly contexto: ContextoDaTurmaNasAbas;
+}) {
   if (contexto.ead) return <TurmaEad slot="palestras-turma-ead" />;
   if (!pode(contexto.permissoes, "atividades_nao_letivas", "ler")) return <SemPermissao />;
 
@@ -118,7 +130,9 @@ export async function PalestrasDeUmaTurma({ contexto }: { readonly contexto: Con
           {n.previstas === 0
             ? "O currículo da turma não traz AEC prevista."
             : `${n.cumpridas} de ${n.previstas} AEC previstas do currículo cumpridas`}
-          {n.obrigatoriasPendentes > 0 ? ` · ${n.obrigatoriasPendentes} obrigatória(s) a cumprir` : ""}
+          {n.obrigatoriasPendentes > 0
+            ? ` · ${n.obrigatoriasPendentes} obrigatória(s) a cumprir`
+            : ""}
           {` · ${n.avulsas} fora do currículo`}
           {contexto.somenteLeitura ? ` · situação em ${dataParaLeitura(contexto.hoje)}` : ""}.
         </p>
@@ -146,7 +160,11 @@ export async function PalestrasDeUmaTurma({ contexto }: { readonly contexto: Con
 }
 
 /** A APOINST planejada da turma (do ano inicial em diante). */
-export async function ApoinstDeUmaTurma({ contexto }: { readonly contexto: ContextoDaTurmaNasAbas }) {
+export async function ApoinstDeUmaTurma({
+  contexto,
+}: {
+  readonly contexto: ContextoDaTurmaNasAbas;
+}) {
   if (contexto.ead) return <TurmaEad slot="apoinst-turma-ead" />;
   if (!pode(contexto.permissoes, "atividades_nao_letivas", "ler")) return <SemPermissao />;
 
@@ -197,8 +215,8 @@ export async function ApoinstDeUmaTurma({ contexto }: { readonly contexto: Conte
               ? "Nenhuma APOINST planejada."
               : `${n.ativas} planejada(s): ${n.porSituacao.concluida} concluída(s), ${n.porSituacao.em_andamento} em andamento, ${n.porSituacao.atrasada} atrasada(s), ${n.porSituacao.planejada} sem lançamento`}
             {n.desativadas > 0 ? ` · ${n.desativadas} desativada(s)` : ""}
-            {contexto.somenteLeitura ? ` · situação em ${dataParaLeitura(contexto.hoje)}` : ""}.
-            {" "}A execução são os lançamentos do DSA vinculados a cada uma.
+            {contexto.somenteLeitura ? ` · situação em ${dataParaLeitura(contexto.hoje)}` : ""}. A
+            execução são os lançamentos do DSA vinculados a cada uma.
           </p>
           {!anoInicial.lido ? (
             <p className="text-atrasado-tinta text-xs" data-slot="ano-inicial-nao-lido">

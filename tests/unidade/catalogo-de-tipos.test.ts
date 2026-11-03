@@ -25,7 +25,9 @@ import {
   type LinhaDoCatalogo,
 } from "@/lib/dominio/atividades/catalogo-de-tipos";
 
-const linha = (parcial: Partial<LinhaDoCatalogo> & Pick<LinhaDoCatalogo, "id" | "valor">): LinhaDoCatalogo => ({
+const linha = (
+  parcial: Partial<LinhaDoCatalogo> & Pick<LinhaDoCatalogo, "id" | "valor">,
+): LinhaDoCatalogo => ({
   rotulo: parcial.valor,
   ativo: true,
   ordem: 0,
@@ -44,9 +46,25 @@ describe("RA-1 · o que o catálogo mostra", () => {
       rotulo: "Atividade Extraclasse",
       ordem: 6,
     }),
-    linha({ id: "e", valor: "Monitoria", ordem: 920, metadados: { categoria: "Apoio_Individualizado" } }),
-    linha({ id: "f", valor: "Estudo Individual", ordem: 919, metadados: { categoria: "Estudo_Individual" } }),
-    linha({ id: "g", valor: "Tempo Reserva", ordem: 10, metadados: { categoria: "TR" }, ativo: false }),
+    linha({
+      id: "e",
+      valor: "Monitoria",
+      ordem: 920,
+      metadados: { categoria: "Apoio_Individualizado" },
+    }),
+    linha({
+      id: "f",
+      valor: "Estudo Individual",
+      ordem: 919,
+      metadados: { categoria: "Estudo_Individual" },
+    }),
+    linha({
+      id: "g",
+      valor: "Tempo Reserva",
+      ordem: 10,
+      metadados: { categoria: "TR" },
+      ativo: false,
+    }),
   ];
 
   it("só os tipos DE ATIVIDADE: os de aula e os sem categoria ficam fora", () => {
@@ -119,15 +137,21 @@ describe("FR-001.3 · quantos lançamentos mudam quando a classificação padrã
 
   it("sem troca de classificação, nada muda (o gatilho não roda)", () => {
     expect(efeitoDaTroca("AEC", "AEC", contagemDoTipo(contagens, "p"))).toBeNull();
-    expect(fraseDoEfeito("AEC", "AEC", contagemDoTipo(contagens, "p"))).toContain("nenhum lançamento é tocado");
+    expect(fraseDoEfeito("AEC", "AEC", contagemDoTipo(contagens, "p"))).toContain(
+      "nenhum lançamento é tocado",
+    );
   });
 
   it("a frase do diálogo diz os números, antes de gravar", () => {
     const frase = fraseDoEfeito("AEC", "TAD", contagemDoTipo(contagens, "p"));
     expect(frase).toContain("2 lançamentos passam de AEC para TAD.");
     expect(frase).toContain("1 lançamento com «Conta como» TA da disciplina continua na CHD.");
-    expect(frase).toContain("1 lançamento com «Conta como» escolhido no lançamento fica como está.");
-    expect(fraseDoEfeito("TR", "AEC", contagemDoTipo(contagens, "q"))).toBe("1 lançamento passa de TR para AEC.");
+    expect(frase).toContain(
+      "1 lançamento com «Conta como» escolhido no lançamento fica como está.",
+    );
+    expect(fraseDoEfeito("TR", "AEC", contagemDoTipo(contagens, "q"))).toBe(
+      "1 lançamento passa de TR para AEC.",
+    );
   });
 
   it("tipo sem lançamento: a frase diz que nada muda", () => {
@@ -173,7 +197,9 @@ describe("Novo tipo · a ordem e o nome repetido", () => {
       { valor: "Reforço", rotulo: null },
     ];
     expect(tipoComOMesmoNome("  palestra ", tipos)?.valor).toBe("Palestra");
-    expect(tipoComOMesmoNome("atividade  extraclasse", tipos)?.valor).toBe("Atividade Extracurricular");
+    expect(tipoComOMesmoNome("atividade  extraclasse", tipos)?.valor).toBe(
+      "Atividade Extracurricular",
+    );
     expect(tipoComOMesmoNome("REFORCO", tipos)?.valor).toBe("Reforço");
     expect(tipoComOMesmoNome("Visita de estudo", tipos)).toBeNull();
   });

@@ -29,6 +29,7 @@ import {
   type ComoConta,
   type ContaComo,
 } from "@/lib/dominio/categoria-pelo-tipo";
+import { compararCodigoNatural } from "@/lib/dominio/ordem-natural";
 import type { TetosDaTurma } from "@/lib/dominio/tetos-da-turma";
 
 import type { AtividadeParaEstatistica } from "./estatisticas";
@@ -57,6 +58,8 @@ export type AtividadeDaLista = {
   readonly local: string | null;
   /** `disciplinas.codigo` (único) — é o valor do filtro. */
   readonly disciplinaCodigo: string | null;
+  /** `disciplinas.cod_disciplina` («IX») — a ordem das opções do filtro (ordem natural, romano pelo valor). */
+  readonly disciplinaCod: string | null;
   /** `«I — Navegação»` — o que a tela mostra. */
   readonly disciplinaRotulo: string | null;
   readonly atividadePrevistaId: string | null;
@@ -132,12 +135,16 @@ export function haFiltro(filtro: FiltroDaLista): boolean {
 }
 
 /** Como a linha conta — a classificação da coluna, do filtro e das estatísticas. */
-export function classificacaoDaLinha(linha: Pick<AtividadeDaLista, "categoria" | "contaComo">): ComoConta {
+export function classificacaoDaLinha(
+  linha: Pick<AtividadeDaLista, "categoria" | "contaComo">,
+): ComoConta {
   return comoConta(linha.categoria, linha.contaComo);
 }
 
 /** A linha cumpre algo planejado (a AEC prevista ou a APOINST)? */
-export function vinculoDaLinha(linha: Pick<AtividadeDaLista, "atividadePrevistaId" | "apoinstId">): Vinculo {
+export function vinculoDaLinha(
+  linha: Pick<AtividadeDaLista, "atividadePrevistaId" | "apoinstId">,
+): Vinculo {
   return linha.atividadePrevistaId !== null || linha.apoinstId !== null ? "do_curriculo" : "avulsa";
 }
 
@@ -184,20 +191,32 @@ export function filtrarAtividades(
   return linhas.filter((l) => passaNoFiltro(l, filtro));
 }
 
-/** As opções de disciplina do filtro: as que aparecem nas linhas, sem repetir, pelo rótulo. */
+/**
+ * As opções de disciplina do filtro: as que aparecem nas linhas, sem repetir — pelo curso e, dentro dele, pelo código
+ * da disciplina em ordem natural, com o romano pelo valor (*"nos seletores de disciplina (…) sempre por ordem
+ * alfabética do código, em ordem natural"* — Bernardo Villas Boas, 08/10/2026, `ordem-natural.ts`).
+ */
 export function disciplinasDasLinhas(
   linhas: readonly AtividadeDaLista[],
   comCurso: boolean,
 ): { readonly valor: string; readonly rotulo: string }[] {
-  const vistas = new Map<string, string>();
+  const vistas = new Map<string, { rotulo: string; curso: string; cod: string }>();
   for (const l of linhas) {
     if (l.disciplinaCodigo === null || vistas.has(l.disciplinaCodigo)) continue;
     const rotulo = l.disciplinaRotulo ?? l.disciplinaCodigo;
-    vistas.set(l.disciplinaCodigo, comCurso && l.cursoCodigo ? `${l.cursoCodigo} · ${rotulo}` : rotulo);
+    vistas.set(l.disciplinaCodigo, {
+      rotulo: comCurso && l.cursoCodigo ? `${l.cursoCodigo} · ${rotulo}` : rotulo,
+      curso: comCurso ? (l.cursoCodigo ?? "") : "",
+      cod: l.disciplinaCod ?? l.disciplinaCodigo,
+    });
   }
   return [...vistas.entries()]
-    .map(([valor, rotulo]) => ({ valor, rotulo }))
-    .sort((a, b) => a.rotulo.localeCompare(b.rotulo, "pt-BR", { numeric: true }));
+    .sort(
+      ([, a], [, b]) =>
+        a.curso.localeCompare(b.curso, "pt-BR", { numeric: true }) ||
+        compararCodigoNatural(a.cod, b.cod),
+    )
+    .map(([valor, v]) => ({ valor, rotulo: v.rotulo }));
 }
 
 /**
@@ -219,7 +238,12 @@ export function semanaParaEditar(
  */
 export function acimaDoMaximo(
   tetos: ReadonlyArray<{ readonly turmaCodigo: string; readonly tetos: TetosDaTurma }>,
-): { readonly turmaCodigo: string; readonly categoria: "aec" | "tad" | "tr"; readonly cumprido: number; readonly maximo: number }[] {
+): {
+  readonly turmaCodigo: string;
+  readonly categoria: "aec" | "tad" | "tr";
+  readonly cumprido: number;
+  readonly maximo: number;
+}[] {
   const saida: {
     turmaCodigo: string;
     categoria: "aec" | "tad" | "tr";

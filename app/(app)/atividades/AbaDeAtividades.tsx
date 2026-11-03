@@ -41,9 +41,9 @@ import { CATEGORIA_FORA_DA_LISTA_DE_ATIVIDADES } from "@/lib/navegacao/contrato"
 import { filtrosForaDoPadrao } from "@/lib/navegacao/filtros-fora-do-padrao";
 import { criarClienteDeServidor } from "@/lib/supabase/server";
 
+import { AvisoDaLista } from "../admin/usuarios/AvisoDaLista";
 import { alcanceDoPerfil } from "../cursos/consulta";
 import { AbasDeAtividades } from "./AbasDeAtividades";
-import { RespostaDasAcoesDaLista } from "./AcoesDaListaDeAtividades";
 import {
   lerAtividades,
   lerLimitesDasTurmas,
@@ -90,9 +90,7 @@ export async function AbaDeAtividades({ contexto }: { readonly contexto: Context
   const turmasDoAno: TurmaDoAno[] = emOrdemDeTurma(
     ((turmasRes.data ?? []) as unknown as Record<string, unknown>[]).map((t) => {
       const curso = (Array.isArray(t.curso) ? t.curso[0] : t.curso) as
-        | { codigo: string; classificacao: string | null }
-        | null
-        | undefined;
+        { codigo: string; classificacao: string | null } | null | undefined;
       return {
         id: t.id as string,
         codigo: t.codigo as string,
@@ -114,12 +112,22 @@ export async function AbaDeAtividades({ contexto }: { readonly contexto: Context
       (filtro.turma === "" || t.codigo === filtro.turma) &&
       (filtro.curso === "" || t.cursoCodigo === filtro.curso),
   );
-  const planejado = turmasDoRecorte.map((t) => ({ id: t.id, codigo: t.codigo, curriculoId: t.curriculoId }));
+  const planejado = turmasDoRecorte.map((t) => ({
+    id: t.id,
+    codigo: t.codigo,
+    curriculoId: t.curriculoId,
+  }));
 
   const [leitura, universo, limites, palestras, apoinst] = await Promise.all([
     lerAtividades(
       supabase,
-      { tipo: "ano", predicado: predicadoDoAno(ano, turmasDoAno.map((t) => t.id)) },
+      {
+        tipo: "ano",
+        predicado: predicadoDoAno(
+          ano,
+          turmasDoAno.map((t) => t.id),
+        ),
+      },
       turmasPorId,
     ),
     /*
@@ -155,18 +163,29 @@ export async function AbaDeAtividades({ contexto }: { readonly contexto: Context
   });
 
   const podeLer = pode(permissoes, "atividades_nao_letivas", "ler");
-  const podeEditar = pode(permissoes, "atividades_nao_letivas", "editar");
+  /*
+   * `FR-006.4`: *"Só para quem lança o DSA"* — editar a atividade (a RLS de `atividades_nao_letivas` decide a exclusão,
+   * que é a do cartão do DSA, por `gravar_rascunho_do_dsa`, de invocador) E lançar no DSA (`registros_aula.criar`, o
+   * mesmo recurso que a página do DSA usa para o lançamento). Medido em 03/11/2026 em `perfil_permissao` no banco local
+   * (cópia do remoto): os dois recursos têm os mesmos quatro perfis (Admin, Encarregado, Ajudante e Operador).
+   */
+  const podeEditar =
+    pode(permissoes, "atividades_nao_letivas", "editar") &&
+    pode(permissoes, "registros_aula", "criar");
   const alcance = alcanceDoPerfil(usuario?.perfil, usuario?.escopoCurso);
   const erroDaLeitura = leitura.erro !== null || turmasRes.error !== null;
 
   const opcoesDeTurma = semAsArquivadas(turmasDoAno, arquivadas, (t) => t.id).map((t) => t.codigo);
-  const opcoesDeCurso = emOrdemDeCurso(
-    [...new Map(
+  const opcoesDeCurso = emOrdemDeCurso([
+    ...new Map(
       turmasDoAno
         .filter((t) => t.cursoCodigo !== null)
-        .map((t) => [t.cursoCodigo as string, { codigo: t.cursoCodigo as string, classificacao: t.cursoClassificacao }]),
-    ).values()],
-  ).map((c) => c.codigo);
+        .map((t) => [
+          t.cursoCodigo as string,
+          { codigo: t.cursoCodigo as string, classificacao: t.cursoClassificacao },
+        ]),
+    ).values(),
+  ]).map((c) => c.codigo);
 
   const corpo = erroDaLeitura ? (
     <EstadoVazio
@@ -175,13 +194,17 @@ export async function AbaDeAtividades({ contexto }: { readonly contexto: Context
       detalhe="A leitura falhou. Tente de novo; se persistir, procure o suporte."
     />
   ) : linhas.length > 0 ? (
-    <RespostaDasAcoesDaLista>
+    <AvisoDaLista>
       <TabelaDeAtividades
         linhas={linhas}
         mostrarTurma
-        acoes={podeEditar ? { excluir, arquivadas, desativacaoPendente: leitura.desativacaoPendente } : null}
+        acoes={
+          podeEditar
+            ? { excluir, arquivadas, desativacaoPendente: leitura.desativacaoPendente }
+            : null
+        }
       />
-    </RespostaDasAcoesDaLista>
+    </AvisoDaLista>
   ) : !podeLer ? (
     <EstadoVazio
       motivo="sem-permissao"

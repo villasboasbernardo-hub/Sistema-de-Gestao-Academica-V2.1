@@ -15,7 +15,10 @@ import { FiltroAvancado, type EstadoDeFiltro } from "@/components/ciaara/filtro-
 import { filtrosForaDoPadrao } from "@/lib/navegacao/filtros-fora-do-padrao";
 import { useParametro } from "@/lib/navegacao/usar-parametro";
 
-import { camposDosFiltrosDeAtividades, type OpcoesDosFiltrosDeAtividades } from "./campos-dos-filtros";
+import {
+  camposDosFiltrosDeAtividades,
+  type OpcoesDosFiltrosDeAtividades,
+} from "./campos-dos-filtros";
 
 const ROTA = "/atividades" as const;
 

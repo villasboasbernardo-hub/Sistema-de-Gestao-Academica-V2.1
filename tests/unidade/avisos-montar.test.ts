@@ -189,7 +189,13 @@ describe("Bloco 18 (RA-8, FR-009.1) · Atividades — a AEC obrigatória e a APO
     const [aviso] = um({
       atividades: {
         aecPendentes: [
-          { turmaCodigo: "T1 2027", codigo: "AEP-000002", nome: "Visita", termino: "2027-06-30", dias: -3 },
+          {
+            turmaCodigo: "T1 2027",
+            codigo: "AEP-000002",
+            nome: "Visita",
+            termino: "2027-06-30",
+            dias: -3,
+          },
         ],
         apoinstAtrasadas: [],
       },
@@ -221,7 +227,13 @@ describe("Bloco 18 (RA-8, FR-009.1) · Atividades — a AEC obrigatória e a APO
   it("⚠️ o aviso de teto de AEC/TAD/TR continua em Turmas, com a mesma chave (D-12): não se repete em Atividades", () => {
     const avisos = um({
       tetos: [
-        { turmaCodigo: "CAHO 2027", categoria: "aec", alerta: "acima_do_maximo", cumprido: 40, referencia: 30 },
+        {
+          turmaCodigo: "CAHO 2027",
+          categoria: "aec",
+          alerta: "acima_do_maximo",
+          cumprido: 40,
+          referencia: 30,
+        },
       ],
       atividades: { aecPendentes: [], apoinstAtrasadas: [] },
     });

@@ -27,7 +27,6 @@ import {
   abrirAbaDoCurso,
   abrirParteDaEdicao,
   irAEdicaoDoCurso,
-  irAoCursoPorClique,
   justificarCorrecao,
 } from "./navegar-curso";
 
@@ -64,7 +63,10 @@ async function limpar(): Promise<void> {
   );
   const { data: turmas } = await banco.from("turmas").select("id").eq("curso_id", CURSO_ID);
   for (const t of (turmas ?? []) as { id: string }[]) {
-    conferir("dias parados", (await banco.from("dias_parados").delete().eq("turma_id", t.id)).error);
+    conferir(
+      "dias parados",
+      (await banco.from("dias_parados").delete().eq("turma_id", t.id)).error,
+    );
     await apagarLinhasDaTurma(t.id);
     conferir("turma", (await banco.from("turmas").delete().eq("id", t.id)).error);
   }
@@ -298,9 +300,7 @@ test.describe("Bloco 18 · RA-2 · as AEC previstas do currículo em uso, por cl
     await form.getByLabel("Tipo", { exact: true }).selectOption({ label: "Palestra" });
     await form.getByLabel("TA previstos").fill("2");
     await form.getByLabel("Obrigatória").selectOption("sim");
-    await form
-      .getByLabel("Disciplina (opcional)")
-      .selectOption({ label: "I — Disciplina da AEC" });
+    await form.getByLabel("Disciplina (opcional)").selectOption({ label: "I — Disciplina da AEC" });
     await form.getByLabel("Arquivo do currículo (opcional)").fill("Curriculo da amostra.pdf");
     await form.getByLabel("Página (opcional)").fill("A-74 (Anexo B)");
     await form.locator('[data-slot="gravar-aec-prevista"]').click();
@@ -347,6 +347,7 @@ test.describe("Bloco 18 · RA-2 · as AEC previstas do currículo em uso, por cl
     await form.locator('[data-slot="gravar-aec-prevista"]').click();
     await justificarCorrecao(page, MOTIVO_ALTERAR);
     await expect(resposta).toHaveText("AEC prevista gravada.");
+    await expect(form).toHaveCount(0);
     expect((await linhaNoBanco(NOME_NOVA)).ta_previstos).toBe(3);
     const aposAlterar = await trilhaDe(nova.id);
     expect(aposAlterar.map((t) => t.acao)).toEqual(["incluir", "alterar"]);
@@ -356,11 +357,21 @@ test.describe("Bloco 18 · RA-2 · as AEC previstas do currículo em uso, por cl
     const linhaSemeada = secao.locator('[data-slot="aec-prevista"]', { hasText: NOME_SEMEADA });
     await expect(linhaSemeada.locator('[data-slot="ta-previstos"]')).toHaveText("não definido");
     await linhaSemeada.locator('[data-slot="editar-aec-prevista"]').click();
+    await expect(form.getByLabel("TA previstos")).toHaveValue("");
     await form.getByLabel("TA previstos").fill("4");
     await form.locator('[data-slot="gravar-aec-prevista"]').click();
-    await expect(resposta).toHaveText("AEC prevista gravada.");
+    /*
+     * ⚠️ A RESPOSTA DO PASSO 2 JÁ DIZ «gravada»: esperar por ela passaria antes desta gravação. O que só a gravação
+     *    livre produz é o formulário FECHAR sem o pedido ter aberto — com o pedido, ele ficaria aberto atrás dele.
+     */
+    await expect(
+      form,
+      "o formulário não fechou: o banco pediu justificativa para COMPLETAR o TA vazio?",
+    ).toHaveCount(0);
     await expect(page.locator('[data-slot="pedido-de-justificativa"]')).toHaveCount(0);
-    expect((await linhaNoBanco(NOME_SEMEADA)).ta_previstos).toBe(4);
+    await expect(resposta).toHaveText("AEC prevista gravada.");
+    await expect.poll(async () => (await linhaNoBanco(NOME_SEMEADA)).ta_previstos).toBe(4);
+    await expect(linhaSemeada.locator('[data-slot="ta-previstos"]')).toHaveText("4 TA");
     expect(await trilhaDe(SEMEADA_ID)).toEqual([]);
 
     /* ── 4. Desativar (confirmação, justificativa e trilha) e reativar ── */
@@ -372,7 +383,9 @@ test.describe("Bloco 18 · RA-2 · as AEC previstas do currículo em uso, por cl
     await justificarCorrecao(page, MOTIVO_DESATIVAR);
     await expect(resposta).toHaveText("AEC prevista desativada.");
     expect((await linhaNoBanco(NOME_NOVA)).status).toBe("inativo");
-    await expect(linhaNova.locator('[data-slot="situacao-da-aec-prevista"]')).toHaveText("Inativa");
+    await expect(linhaNova.locator('[data-slot="situacao-da-aec-prevista"]')).toHaveText(
+      "Desativada",
+    );
 
     await linhaNova.locator('[data-slot="reativar-aec-prevista"]').click();
     await page
@@ -390,10 +403,21 @@ test.describe("Bloco 18 · RA-2 · as AEC previstas do currículo em uso, por cl
     ]);
 
     /* ── 5. A página do curso, aba Atividades: as AEC previstas, só para ler (FR-002.3) ── */
-    await page.locator('[data-slot="curriculo-na-edicao"]').waitFor();
-    await irAoCursoPorClique(page, EMAIL, SIGLA);
+    /* Por clique, sem entrar de novo: o menu *Cursos* → o cartão do curso → a aba *Atividades*. */
+    await page
+      .getByRole("navigation", { name: "Navegação principal" })
+      .getByRole("link", { name: "Cursos" })
+      .click();
+    const cartao = page.locator(
+      `[data-slot="cartao-de-curso"][href="/cursos/${encodeURIComponent(SIGLA)}"]`,
+    );
+    await cartao.scrollIntoViewIfNeeded();
+    await cartao.click();
+    await expect(page.locator('[data-slot="abas-do-curso"]')).toBeVisible();
     await abrirAbaDoCurso(page, "atividades");
-    const leitura = page.locator('[data-slot="aba-atividades"] [data-slot="aec-previstas-do-curso"]');
+    const leitura = page.locator(
+      '[data-slot="aba-atividades"] [data-slot="aec-previstas-do-curso"]',
+    );
     await expect(leitura.locator('[data-slot="aec-prevista-do-curso"]')).toHaveCount(2);
     await expect(leitura).toContainText(NOME_NOVA);
     await expect(leitura).toContainText("3 TA");
@@ -417,7 +441,9 @@ test.describe("Bloco 18 · RA-2 · quem não edita o curso vê as AEC previstas 
     page,
   }) => {
     const secao = await irAsAecPrevistas(page, EMAIL_OPERADOR);
-    await expect(secao.locator('[data-slot="aec-prevista"]', { hasText: NOME_SEMEADA })).toBeVisible();
+    await expect(
+      secao.locator('[data-slot="aec-prevista"]', { hasText: NOME_SEMEADA }),
+    ).toBeVisible();
     for (const acao of [
       "nova-aec-prevista",
       "editar-aec-prevista",

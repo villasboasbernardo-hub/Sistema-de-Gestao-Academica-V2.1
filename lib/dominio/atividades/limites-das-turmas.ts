@@ -108,7 +108,11 @@ export function tetosDasTurmas(
     turmaId: t.id,
     turmaCodigo: t.codigo,
     tetos: tetosDaTurma(
-      entradaDosTetosDaConformidade(linhasPorTurma.get(t.id) ?? [], previstosPorTurma.get(t.id) ?? [], t.ead),
+      entradaDosTetosDaConformidade(
+        linhasPorTurma.get(t.id) ?? [],
+        previstosPorTurma.get(t.id) ?? [],
+        t.ead,
+      ),
     ),
   }));
 }

@@ -56,7 +56,8 @@ export type PalestraAvulsa = {
   readonly descricao: string | null;
 };
 
-const FRASE_DA_FALHA = "Não foi possível ler as atividades previstas agora. Recarregue a página; se persistir, procure o suporte.";
+const FRASE_DA_FALHA =
+  "Não foi possível ler as atividades previstas agora. Recarregue a página; se persistir, procure o suporte.";
 
 const COLUNAS_DO_LANCAMENTO =
   "codigo, turma_id, data, tempos_consumidos, atividade_prevista_id, apoinst_id, instrutor_id, responsavel_externo, responsavel_externo_om, local, descricao, subtipo";
@@ -90,7 +91,10 @@ async function nomesDosInstrutores(
 function responsavelDaLinha(l: Linha, nomes: ReadonlyMap<string, string>): string | null {
   const instrutor = l.instrutor_id as string | null;
   if (instrutor !== null) return nomes.get(instrutor) ?? null;
-  return externoComOm(l.responsavel_externo as string | null, l.responsavel_externo_om as string | null);
+  return externoComOm(
+    l.responsavel_externo as string | null,
+    l.responsavel_externo_om as string | null,
+  );
 }
 
 function marcacaoDaLinha(m: Linha): MarcacaoDeAtividade {
@@ -123,7 +127,9 @@ export async function lerPalestrasDasTurmas(
   if (turmas.length === 0) return vazio;
   const supabase = cliente ?? (await criarClienteDeServidor());
   const turmaIds = turmas.map((t) => t.id);
-  const curriculos =[...new Set(turmas.map((t) => t.curriculoId).filter((c): c is string => c !== null))];
+  const curriculos = [
+    ...new Set(turmas.map((t) => t.curriculoId).filter((c): c is string => c !== null)),
+  ];
 
   const [previstas, vinculados, avulsas, marcacoes] = await Promise.all([
     curriculos.length === 0
@@ -163,7 +169,9 @@ export async function lerPalestrasDasTurmas(
     ),
     supabase
       .from("marcacoes_de_atividade")
-      .select("turma_id, atividade_prevista_id, apoinst_id, situacao, data_realizada, justificativa, autor_nome, criado_em")
+      .select(
+        "turma_id, atividade_prevista_id, apoinst_id, situacao, data_realizada, justificativa, autor_nome, criado_em",
+      )
       .in("turma_id", turmaIds)
       .eq("status", "ativo")
       .not("atividade_prevista_id", "is", null),
@@ -176,9 +184,11 @@ export async function lerPalestrasDasTurmas(
   const linhasAvulsas = (avulsas.data ?? []) as Linha[];
   const nomes = await nomesDosInstrutores(
     supabase,
-    [...new Set([...linhasVinculadas, ...linhasAvulsas].map((l) => l.instrutor_id as string | null))].filter(
-      (i): i is string => i !== null,
-    ),
+    [
+      ...new Set(
+        [...linhasVinculadas, ...linhasAvulsas].map((l) => l.instrutor_id as string | null),
+      ),
+    ].filter((i): i is string => i !== null),
   );
 
   const previstasPorCurriculo = new Map<string, AecPrevista[]>();
@@ -199,7 +209,11 @@ export async function lerPalestrasDasTurmas(
       tipoRotulo: tipo ? rotuloDoTipo({ valor: tipo.valor, rotulo: tipo.rotulo_exibicao }) : "",
       taPrevistos: p.ta_previstos === null ? null : Number(p.ta_previstos),
       disciplina: disciplina
-        ? { id: disciplina.id, codigo: disciplina.cod_disciplina ?? disciplina.codigo, nome: disciplina.nome_disciplina }
+        ? {
+            id: disciplina.id,
+            codigo: disciplina.cod_disciplina ?? disciplina.codigo,
+            nome: disciplina.nome_disciplina,
+          }
         : null,
       obrigatoria: Boolean(p.obrigatoria),
       ordem: Number(p.ordem ?? 0),
@@ -284,7 +298,9 @@ export async function lerApoinstDasTurmas(
     ),
     supabase
       .from("marcacoes_de_atividade")
-      .select("turma_id, atividade_prevista_id, apoinst_id, situacao, data_realizada, justificativa, autor_nome, criado_em")
+      .select(
+        "turma_id, atividade_prevista_id, apoinst_id, situacao, data_realizada, justificativa, autor_nome, criado_em",
+      )
       .in("turma_id", turmaIds)
       .eq("status", "ativo")
       .not("apoinst_id", "is", null),
@@ -299,7 +315,12 @@ export async function lerApoinstDasTurmas(
   );
   const codigoDaTurma = new Map(turmas.map((t) => [t.id, t.codigo]));
   const planejadasLidas: ApoinstPlanejada[] = linhas.map((a) => {
-    const d = a.disciplina as { id: string; codigo: string; cod_disciplina: string | null; nome_disciplina: string } | null;
+    const d = a.disciplina as {
+      id: string;
+      codigo: string;
+      cod_disciplina: string | null;
+      nome_disciplina: string;
+    } | null;
     return {
       id: a.id as string,
       codigo: a.codigo as string,

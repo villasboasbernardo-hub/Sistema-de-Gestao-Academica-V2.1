@@ -1153,7 +1153,9 @@ export async function lancar(entrada: unknown): Promise<ResultadoDoLancamento> {
 
   /* A categoria que vale: a do tipo, ou a AEC/TAD/TR escolhida no «Conta como» (o «TA da disciplina» fica com a do tipo). */
   const categoriaGravada =
-    categoriaDaAtividade === null ? null : categoriaEfetiva(categoriaDaAtividade, contaComoDaAtividade);
+    categoriaDaAtividade === null
+      ? null
+      : categoriaEfetiva(categoriaDaAtividade, contaComoDaAtividade);
   const erro = await gravarBloco("atividades_nao_letivas", {
     id,
     codigo: `${marca}-N`,
@@ -1672,7 +1674,9 @@ async function lerFato(
       ? ((
           await supabase
             .from("atividades_nao_letivas")
-            .select("categoria_normativa, conta_como, disciplina_id, atividade_prevista_id, apoinst_id")
+            .select(
+              "categoria_normativa, conta_como, disciplina_id, atividade_prevista_id, apoinst_id",
+            )
             .eq("rascunho_de", fatoId)
             .eq("status", "ativo")
             .maybeSingle()

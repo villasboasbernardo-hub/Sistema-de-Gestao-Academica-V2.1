@@ -294,11 +294,23 @@ test("FR-009 · as abas de acompanhamento: Disciplinas (igual), Avaliações, AP
     ).toBeVisible();
   }
 
+  /*
+   * Bloco 18 (spec 033, FR-008.1): APOINST e Palestras saem do «Em breve» — o acompanhamento da turma, SÓ LEITURA. A
+   * turma da semente pode ser anterior ao ano inicial da APOINST (parâmetro): aí a aba diz por que não tem.
+   */
   await abas.locator('[data-acompanhamento="apoinst"]').click();
-  await expect(page.locator('[data-slot="acompanhamento-em-breve"]')).toHaveText("Em breve");
+  await expect.poll(() => new URL(page.url()).searchParams.get("acompanhamento")).toBe("apoinst");
+  await expect(
+    page.locator('[data-slot="acompanhamento-de-apoinst"], [data-slot="apoinst-nao-se-aplica"]'),
+  ).toBeVisible();
+  await expect(page.locator('[data-slot="acompanhamento-em-breve"]')).toHaveCount(0);
+  await expect(page.locator('[data-slot="abrir-nova-apoinst"]')).toHaveCount(0);
   await abas.locator('[data-acompanhamento="palestras"]').click();
   await expect.poll(() => new URL(page.url()).searchParams.get("acompanhamento")).toBe("palestras");
-  await expect(page.locator('[data-slot="acompanhamento-em-breve"]')).toHaveText("Em breve");
+  await expect(page.locator('[data-slot="acompanhamento-de-palestras"]')).toBeVisible();
+  await expect(page.locator('[data-slot="acompanhamento-em-breve"]')).toHaveCount(0);
+  /* Só leitura: nenhuma marcação à mão no DSA (as ações ficam na ficha da turma e no módulo). */
+  await expect(page.locator('[data-slot="registrar-marcacao"]')).toHaveCount(0);
 
   await abas.locator('[data-acompanhamento="disciplinas"]').click();
   await expect.poll(() => new URL(page.url()).searchParams.get("acompanhamento")).toBeNull();

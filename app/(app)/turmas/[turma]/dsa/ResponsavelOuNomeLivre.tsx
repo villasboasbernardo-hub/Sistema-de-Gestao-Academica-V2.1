@@ -47,7 +47,11 @@ export type ResponsavelOuNomeLivreProps = {
   readonly aoMudarNomeLivre: (texto: string) => void;
   readonly slot: string;
   /** RA-4 (Bloco 18): a OM do responsável de fora — só na atividade; ausente, o campo não existe. */
-  readonly om?: { readonly id: string; readonly valor: string; readonly aoMudar: (texto: string) => void };
+  readonly om?: {
+    readonly id: string;
+    readonly valor: string;
+    readonly aoMudar: (texto: string) => void;
+  };
 };
 
 export function ResponsavelOuNomeLivre({

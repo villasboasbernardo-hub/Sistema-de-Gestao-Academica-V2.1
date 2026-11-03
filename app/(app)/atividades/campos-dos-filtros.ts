@@ -28,7 +28,9 @@ export type OpcoesDosFiltrosDeAtividades = {
   readonly disciplinas: readonly OpcaoDeFiltro[];
 };
 
-export function camposDosFiltrosDeAtividades(opcoes: OpcoesDosFiltrosDeAtividades): CampoDeFiltro[] {
+export function camposDosFiltrosDeAtividades(
+  opcoes: OpcoesDosFiltrosDeAtividades,
+): CampoDeFiltro[] {
   const daTurma: CampoDeFiltro[] =
     opcoes.turmas === undefined
       ? []
@@ -69,7 +71,10 @@ export function camposDosFiltrosDeAtividades(opcoes: OpcoesDosFiltrosDeAtividade
       chave: "vinculo",
       rotulo: "Vínculo",
       tipo: "escolha",
-      opcoes: VINCULOS_DE_ATIVIDADE.map((v) => ({ valor: v, rotulo: ROTULO_DO_VINCULO[v as Vinculo] })),
+      opcoes: VINCULOS_DE_ATIVIDADE.map((v) => ({
+        valor: v,
+        rotulo: ROTULO_DO_VINCULO[v as Vinculo],
+      })),
     },
     { chave: "responsavel", rotulo: "Responsável/Palestrante", tipo: "texto" },
     /* Spec 016, FR-005.2: a data se escolhe no calendário; a URL continua em ISO (FR-005.3). */

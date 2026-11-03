@@ -20,6 +20,7 @@ import { DialogFooter } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { acrescentarTipo } from "@/lib/acoes/tipos-de-atividade";
 import { CLASSIFICACOES_DO_CATALOGO } from "@/lib/dominio/atividades/catalogo-de-tipos";
+import { TAMANHO_MAXIMO_DO_NOME_DO_TIPO } from "@/lib/validacao/tipo-de-atividade";
 
 export function NovoTipoDeAtividade() {
   return (
@@ -63,9 +64,17 @@ function CadastroDoTipo({ fechar }: { readonly fechar: () => void }) {
   }
 
   return (
-    <form onSubmit={gravar} className="flex flex-col gap-3" data-slot="formulario-do-tipo-de-atividade">
+    <form
+      onSubmit={gravar}
+      className="flex flex-col gap-3"
+      data-slot="formulario-do-tipo-de-atividade"
+    >
       {erro ? (
-        <p role="alert" className="text-atrasado-tinta text-sm" data-slot="erro-do-tipo-de-atividade">
+        <p
+          role="alert"
+          className="text-atrasado-tinta text-sm"
+          data-slot="erro-do-tipo-de-atividade"
+        >
           {erro}
         </p>
       ) : null}
@@ -76,13 +85,17 @@ function CadastroDoTipo({ fechar }: { readonly fechar: () => void }) {
           {...propsDoControle("tipo-novo-nome", true)}
           name="rotulo"
           value={rotulo}
-          maxLength={80}
+          maxLength={TAMANHO_MAXIMO_DO_NOME_DO_TIPO}
           onChange={(e) => definirRotulo(e.target.value)}
         />
       </div>
 
       <div className="flex flex-col gap-1">
-        <CampoObrigatorio para="tipo-novo-classificacao" rotulo="Classificação padrão" obrigatorio />
+        <CampoObrigatorio
+          para="tipo-novo-classificacao"
+          rotulo="Classificação padrão"
+          obrigatorio
+        />
         <select
           {...propsDoControle("tipo-novo-classificacao", true)}
           name="classificacao"

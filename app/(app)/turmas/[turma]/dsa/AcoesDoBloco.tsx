@@ -255,7 +255,9 @@ export function AcoesDoBloco({
 
   /* RA-4: o que a atividade pede agora — pela mesma regra pura do lançamento. */
   const contaComoParaMandar =
-    categoriaDoTipo === null ? null : contaComoParaGravar(categoriaDoTipo, contaComoDoBanco(contaComo));
+    categoriaDoTipo === null
+      ? null
+      : contaComoParaGravar(categoriaDoTipo, contaComoDoBanco(contaComo));
   const opcoesDaClassificacao = ehAtividade
     ? opcoesDeContaComo({ categoriaDoTipo, global: atividadeGlobal })
     : [];
@@ -272,7 +274,10 @@ export function AcoesDoBloco({
     opcoesDaAtividade !== undefined &&
     aceitaVinculo({ categoriaDoTipo, global: atividadeGlobal });
   const opcoesDoVinculo = (() => {
-    const lista = opcoesDeVinculo(opcoesDaAtividade?.previstas ?? [], opcoesDaAtividade?.apoinst ?? []);
+    const lista = opcoesDeVinculo(
+      opcoesDaAtividade?.previstas ?? [],
+      opcoesDaAtividade?.apoinst ?? [],
+    );
     /* O vínculo gravado que saiu da lista (desativado) continua escolhível — sem ele o campo reabriria trocado. */
     return vinculoGravado !== "" && !lista.some((o) => o.valor === vinculoGravado)
       ? [{ valor: vinculoGravado, rotulo: "O vínculo gravado (fora da lista ativa)" }, ...lista]
@@ -539,7 +544,9 @@ export function AcoesDoBloco({
           id="dsa-editar-disciplina"
           rotulo={disciplinaDaAtividade === "opcional" ? "Disciplina (opcional)" : "Disciplina"}
           obrigatorio={disciplinaDaAtividade === "obrigatoria"}
-          textoVazio={disciplinaDaAtividade === "opcional" ? "Sem disciplina" : "Escolha a disciplina…"}
+          textoVazio={
+            disciplinaDaAtividade === "opcional" ? "Sem disciplina" : "Escolha a disciplina…"
+          }
           valor={disciplinaId}
           aoMudar={definirDisciplina}
           opcoes={disciplinas.map((d) => ({ valor: d.id, rotulo: `${d.codigo} — ${d.nome}` }))}
@@ -552,7 +559,9 @@ export function AcoesDoBloco({
           textoVazio="Não cumpre atividade prevista (avulsa)"
           valor={vinculo}
           aoMudar={definirVinculo}
-          {...(opcoesDaAtividade?.avisoDoVinculo ? { ajuda: opcoesDaAtividade.avisoDoVinculo } : {})}
+          {...(opcoesDaAtividade?.avisoDoVinculo
+            ? { ajuda: opcoesDaAtividade.avisoDoVinculo }
+            : {})}
           opcoes={opcoesDoVinculo}
         />
       ) : null}
@@ -604,7 +613,13 @@ export function AcoesDoBloco({
           slot="responsavel-do-lancamento"
           /* RA-4 (Bloco 18): na atividade, a OM do responsável de fora. */
           {...(ehAtividade
-            ? { om: { id: "dsa-editar-responsavel-om", valor: omDoExterno, aoMudar: definirOmDoExterno } }
+            ? {
+                om: {
+                  id: "dsa-editar-responsavel-om",
+                  valor: omDoExterno,
+                  aoMudar: definirOmDoExterno,
+                },
+              }
             : {})}
         />
       ) : null}

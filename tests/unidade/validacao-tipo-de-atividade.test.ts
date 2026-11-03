@@ -17,14 +17,19 @@ const ID = "2d1f258f-9cb7-44d1-8525-a14f09f1bd84";
 
 describe("Novo tipo · nome e classificação", () => {
   it("o tipo completo passa, com o nome aparado e sem espaço repetido", () => {
-    const r = esquemaDoTipoNovo.safeParse({ rotulo: "  Visita   de estudo ", classificacao: "AEC" });
+    const r = esquemaDoTipoNovo.safeParse({
+      rotulo: "  Visita   de estudo ",
+      classificacao: "AEC",
+    });
     expect(r.success).toBe(true);
     if (r.success) expect(r.data.rotulo).toBe("Visita de estudo");
   });
 
   it("nome vazio, só espaços ou longo demais é recusado", () => {
     expect(esquemaDoTipoNovo.safeParse({ rotulo: "", classificacao: "AEC" }).success).toBe(false);
-    expect(esquemaDoTipoNovo.safeParse({ rotulo: "   ", classificacao: "AEC" }).success).toBe(false);
+    expect(esquemaDoTipoNovo.safeParse({ rotulo: "   ", classificacao: "AEC" }).success).toBe(
+      false,
+    );
     expect(
       esquemaDoTipoNovo.safeParse({
         rotulo: "x".repeat(TAMANHO_MAXIMO_DO_NOME_DO_TIPO + 1),
@@ -51,7 +56,9 @@ describe("Novo tipo · nome e classificação", () => {
 
 describe("Editar · o rótulo e a classificação, nunca a chave", () => {
   it("a edição completa passa", () => {
-    expect(esquemaDaEdicaoDoTipo.safeParse({ id: ID, rotulo: "Palestra", classificacao: "TAD" }).success).toBe(true);
+    expect(
+      esquemaDaEdicaoDoTipo.safeParse({ id: ID, rotulo: "Palestra", classificacao: "TAD" }).success,
+    ).toBe(true);
   });
 
   it("⚠️ o esquema não tem campo de chave, e descarta o que vier", () => {
@@ -66,7 +73,10 @@ describe("Editar · o rótulo e a classificação, nunca a chave", () => {
   });
 
   it("id que não é uuid é recusado", () => {
-    expect(esquemaDaEdicaoDoTipo.safeParse({ id: "x", rotulo: "Palestra", classificacao: "AEC" }).success).toBe(false);
+    expect(
+      esquemaDaEdicaoDoTipo.safeParse({ id: "x", rotulo: "Palestra", classificacao: "AEC" })
+        .success,
+    ).toBe(false);
   });
 
   it("desativar e reativar mandam só o id", () => {

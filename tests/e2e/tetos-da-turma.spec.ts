@@ -193,7 +193,8 @@ test("SC-003 · lançar PELA TELA acima do máximo grava a linha e só alerta (o
   await expect(page.locator('[data-slot="formulario-de-lancamento"]')).toBeVisible();
   await page.locator('[data-tipo="TAD"]').click();
   await page.locator("#dsa-subtipo").selectOption({ label: "Recepção aos alunos" });
-  await expect(page.locator('[data-slot="categoria-do-tipo"]')).toHaveText("Conta como: TAD");
+  /* Bloco 18 (RA-4): o «Conta como» virou campo, com o padrão do tipo — TAD. */
+  await expect(page.locator("#dsa-conta-como")).toHaveValue("TAD");
   await page.locator("#dsa-responsavel-externo").fill("DOEP");
   await page.locator("#dsa-descricao").fill(descricao);
   await page.locator("#dsa-tempos").fill("1");

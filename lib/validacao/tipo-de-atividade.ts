@@ -18,7 +18,10 @@ const nome = z
   .string({ error: "O nome do tipo é obrigatório." })
   .trim()
   .min(1, "O nome do tipo é obrigatório.")
-  .max(TAMANHO_MAXIMO_DO_NOME_DO_TIPO, `O nome do tipo tem no máximo ${TAMANHO_MAXIMO_DO_NOME_DO_TIPO} caracteres.`)
+  .max(
+    TAMANHO_MAXIMO_DO_NOME_DO_TIPO,
+    `O nome do tipo tem no máximo ${TAMANHO_MAXIMO_DO_NOME_DO_TIPO} caracteres.`,
+  )
   .transform((t) => t.replace(/\s+/g, " "));
 
 const classificacao = z.enum(CLASSIFICACOES_DO_CATALOGO, {

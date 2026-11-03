@@ -16,6 +16,7 @@ import { describe, expect, it } from "vitest";
 
 import { CATEGORIAS_DE_ATIVIDADE } from "@/lib/dominio/categoria-pelo-tipo";
 import {
+  FRASE_DA_OM_SEM_EXTERNO,
   FRASE_SEM_APLICADOR_NA_SESSAO,
   responsavelNaEdicao,
 } from "@/lib/dominio/dsa/responsavel-na-edicao";
@@ -131,6 +132,67 @@ describe("RN-RESP-1 · as colunas de quem responde na edição", () => {
         responsavelExterno: "Fulano de fora",
       }),
     ).toEqual({ ok: false, mensagem: FRASE_SEM_NOME_LIVRE, campo: "responsavelExterno" });
+  });
+
+  /*
+   * RA-4 (Bloco 18, spec 033): a OM do responsável de fora anda com o NOME — `CHECK ativ_om_so_do_externo`. Tudo que
+   * apaga o nome apaga a OM junto, e a OM sozinha é recusada com a frase, antes do banco.
+   */
+  it("RA-4 · nome e OM juntos gravam as duas colunas e zeram o instrutor", () => {
+    expect(
+      responsavelNaEdicao({
+        origem: "atividade_nao_letiva",
+        categoria: "AEC",
+        responsavelExterno: "Palestrante convidado",
+        responsavelExternoOm: "DHN",
+      }),
+    ).toEqual({
+      ok: true,
+      colunas: {
+        responsavel_externo: "Palestrante convidado",
+        instrutor_id: null,
+        responsavel_externo_om: "DHN",
+      },
+    });
+  });
+
+  it("RA-4 · apagar o nome apaga a OM; só a OM, com o nome já gravado, grava só a OM", () => {
+    expect(
+      responsavelNaEdicao({
+        origem: "atividade_nao_letiva",
+        categoria: "AEC",
+        responsavelExterno: null,
+      }),
+    ).toEqual({ ok: true, colunas: { responsavel_externo: null, responsavel_externo_om: null } });
+    expect(
+      responsavelNaEdicao({
+        origem: "atividade_nao_letiva",
+        categoria: "AEC",
+        responsavelExternoOm: "DHN",
+      }),
+    ).toEqual({ ok: true, colunas: { responsavel_externo_om: "DHN" } });
+  });
+
+  it("RA-4 · a OM com o nome apagado, ou com o instrutor no lugar, é recusada; e fora da atividade não existe", () => {
+    expect(
+      responsavelNaEdicao({
+        origem: "atividade_nao_letiva",
+        categoria: "AEC",
+        responsavelExterno: null,
+        responsavelExternoOm: "DHN",
+      }),
+    ).toEqual({ ok: false, mensagem: FRASE_DA_OM_SEM_EXTERNO, campo: "responsavelExternoOm" });
+    expect(
+      responsavelNaEdicao({
+        origem: "atividade_nao_letiva",
+        categoria: "AEC",
+        instrutorId: ID,
+        responsavelExternoOm: "DHN",
+      }),
+    ).toEqual({ ok: false, mensagem: FRASE_DA_OM_SEM_EXTERNO, campo: "responsavelExternoOm" });
+    expect(
+      responsavelNaEdicao({ origem: "aula", categoria: null, responsavelExternoOm: "DHN" }).ok,
+    ).toBe(false);
   });
 
   it("toda categoria de atividade aceita o nome livre hoje (o comportamento não muda)", () => {

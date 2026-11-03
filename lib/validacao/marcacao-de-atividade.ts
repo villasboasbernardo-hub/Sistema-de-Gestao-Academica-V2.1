@@ -39,7 +39,10 @@ export function esquemaDaMarcacao(hoje: string) {
           z
             .string()
             .regex(DATA_ISO, "Data inválida.")
-            .refine((d) => d <= hoje, "A data não pode estar no futuro: o que se marca já aconteceu.")
+            .refine(
+              (d) => d <= hoje,
+              "A data não pode estar no futuro: o que se marca já aconteceu.",
+            )
             .nullable(),
         ),
       justificativa: z

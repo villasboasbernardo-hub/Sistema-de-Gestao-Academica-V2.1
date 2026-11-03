@@ -43,7 +43,11 @@ function emTa(valor: number): string {
   return valor.toLocaleString("pt-BR", { maximumFractionDigits: 2 });
 }
 
-function serie(chave: string, rotulo: string, pontos: readonly { nome: string; valor: number }[]): Serie {
+function serie(
+  chave: string,
+  rotulo: string,
+  pontos: readonly { nome: string; valor: number }[],
+): Serie {
   return { chave, rotulo, forma: "circulo", pontos: pontos.filter((p) => p.valor > 0) };
 }
 
@@ -80,7 +84,11 @@ function UsoDoLimiteDaTurma({ tetos }: { readonly tetos: TetosDaTurma }) {
             <CardKpi
               compacto
               rotulo={`${SIGLA[c]} — uso do limite`}
-              valor={maximo === null ? `${emTa(card.cumprido)} TA` : `${emTa(card.cumprido)} de ${emTa(maximo)}`}
+              valor={
+                maximo === null
+                  ? `${emTa(card.cumprido)} TA`
+                  : `${emTa(card.cumprido)} de ${emTa(maximo)}`
+              }
               {...(maximo === null ? {} : { unidade: "TA" })}
               detalhe={detalheDoLimite(card)}
               {...(card.alertas.includes("acima_do_maximo") ? { tom: "atrasado" as const } : {})}
@@ -93,7 +101,13 @@ function UsoDoLimiteDaTurma({ tetos }: { readonly tetos: TetosDaTurma }) {
 }
 
 /** As barras do uso do limite POR TURMA (o módulo): uma por categoria, usado × limite, a turma no eixo. */
-function UsoDoLimitePorTurma({ estatisticas, lidos }: { readonly estatisticas: Estatisticas; readonly lidos: TetosLidos }) {
+function UsoDoLimitePorTurma({
+  estatisticas,
+  lidos,
+}: {
+  readonly estatisticas: Estatisticas;
+  readonly lidos: TetosLidos;
+}) {
   if (lidos.erro) return <SemDado texto={lidos.erro} />;
   const acima = acimaDoMaximo(lidos.tetos);
   return (
@@ -127,7 +141,9 @@ function UsoDoLimitePorTurma({ estatisticas, lidos }: { readonly estatisticas: E
           >
             {comLimite.length === 0 ? (
               <>
-                <p className="text-texto text-sm font-medium">{SIGLA[c]}: usado × limite por turma</p>
+                <p className="text-texto text-sm font-medium">
+                  {SIGLA[c]}: usado × limite por turma
+                </p>
                 <SemDado texto="Nenhuma turma do recorte com limite calculável." />
               </>
             ) : (
@@ -140,14 +156,21 @@ function UsoDoLimitePorTurma({ estatisticas, lidos }: { readonly estatisticas: E
               />
             )}
             {acimaDaCategoria.length > 0 ? (
-              <p role="status" className="text-atrasado-tinta text-xs font-medium" data-slot="acima-do-maximo">
+              <p
+                role="status"
+                className="text-atrasado-tinta text-xs font-medium"
+                data-slot="acima-do-maximo"
+              >
                 Acima do máximo:{" "}
-                {acimaDaCategoria.map((a) => `${a.turmaCodigo} (${emTa(a.cumprido)} de ${emTa(a.maximo)})`).join(" · ")}
+                {acimaDaCategoria
+                  .map((a) => `${a.turmaCodigo} (${emTa(a.cumprido)} de ${emTa(a.maximo)})`)
+                  .join(" · ")}
               </p>
             ) : null}
             {semLimite.length > 0 ? (
               <p className="text-texto-suave text-xs" data-slot="sem-limite-calculavel">
-                Sem limite calculável (sem CH curricular ou sem o parâmetro da norma): {semLimite.join(", ")}.
+                Sem limite calculável (sem CH curricular ou sem o parâmetro da norma):{" "}
+                {semLimite.join(", ")}.
               </p>
             ) : null}
           </div>
@@ -176,17 +199,36 @@ export function EstatisticasDeAtividades({
 }) {
   const porComo = new Map(estatisticas.taPorComoConta.map((f) => [f.nome, f.valor]));
   const { cumpridas, previstas } = estatisticas.palestras;
-  const apoinstAtivas = SITUACOES_DA_APOINST.reduce((s, k) => s + estatisticas.apoinstPorSituacao[k], 0);
-  const visitasComLocal = estatisticas.visitasComLocal.filter((v) => v.local !== null && v.local.trim() !== "");
+  const apoinstAtivas = SITUACOES_DA_APOINST.reduce(
+    (s, k) => s + estatisticas.apoinstPorSituacao[k],
+    0,
+  );
+  const visitasComLocal = estatisticas.visitasComLocal.filter(
+    (v) => v.local !== null && v.local.trim() !== "",
+  );
 
   const porTipo = serie("por-tipo", "TA por tipo", estatisticas.porTipo);
-  const porClassificacao = serie("por-classificacao", "TA por classificação", estatisticas.taPorComoConta);
-  const porCurso: Serie = { ...serie("por-curso", "TA por curso", estatisticas.porCurso), forma: "quadrado" };
-  const porTurma: Serie = { ...serie("por-turma", "TA por turma", estatisticas.porTurma), forma: "quadrado" };
+  const porClassificacao = serie(
+    "por-classificacao",
+    "TA por classificação",
+    estatisticas.taPorComoConta,
+  );
+  const porCurso: Serie = {
+    ...serie("por-curso", "TA por curso", estatisticas.porCurso),
+    forma: "quadrado",
+  };
+  const porTurma: Serie = {
+    ...serie("por-turma", "TA por turma", estatisticas.porTurma),
+    forma: "quadrado",
+  };
   const tetosDaTurma = daTurma ? (limites.tetos[0]?.tetos ?? null) : null;
 
   return (
-    <section aria-label="Estatísticas das atividades" className="flex flex-col gap-4" data-slot="estatisticas-de-atividades">
+    <section
+      aria-label="Estatísticas das atividades"
+      className="flex flex-col gap-4"
+      data-slot="estatisticas-de-atividades"
+    >
       <div
         className="grid auto-rows-fr gap-3 sm:grid-cols-2 md:grid-cols-4 xl:grid-cols-6"
         data-slot="indicadores-de-atividades"
@@ -234,7 +276,8 @@ export function EstatisticasDeAtividades({
               erroDaApoinst
                 ? "não foi possível ler as APOINST"
                 : SITUACOES_DA_APOINST.map(
-                    (s) => `${estatisticas.apoinstPorSituacao[s]} ${ROTULO_DA_SITUACAO_DA_APOINST[s].toLowerCase()}`,
+                    (s) =>
+                      `${estatisticas.apoinstPorSituacao[s]} ${ROTULO_DA_SITUACAO_DA_APOINST[s].toLowerCase()}`,
                   ).join(" · ")
             }
           />
@@ -250,8 +293,14 @@ export function EstatisticasDeAtividades({
 
       {daTurma && tetosDaTurma ? (
         <section aria-label="Uso do limite do currículo" className="flex flex-col gap-2">
-          <h3 className="text-texto text-sm font-semibold">Uso do limite de AEC, TAD e TR do currículo</h3>
-          {limites.erro ? <SemDado texto={limites.erro} /> : <UsoDoLimiteDaTurma tetos={tetosDaTurma} />}
+          <h3 className="text-texto text-sm font-semibold">
+            Uso do limite de AEC, TAD e TR do currículo
+          </h3>
+          {limites.erro ? (
+            <SemDado texto={limites.erro} />
+          ) : (
+            <UsoDoLimiteDaTurma tetos={tetosDaTurma} />
+          )}
         </section>
       ) : null}
 
@@ -260,7 +309,11 @@ export function EstatisticasDeAtividades({
           <GraficoPizza serie={porTipo} rotulo="TA por tipo de atividade" altura={260} />
         </div>
         <div className={CARTAO} data-slot="grafico-de-atividades" data-chave="por-classificacao">
-          <GraficoPizza serie={porClassificacao} rotulo="TA por classificação (como conta)" altura={260} />
+          <GraficoPizza
+            serie={porClassificacao}
+            rotulo="TA por classificação (como conta)"
+            altura={260}
+          />
         </div>
         {daTurma ? null : (
           <>
@@ -308,7 +361,11 @@ export function EstatisticasDeAtividades({
       </div>
 
       {visitasComLocal.length > 0 ? (
-        <section aria-label="Visitas com local" className="flex flex-col gap-1" data-slot="visitas-com-local">
+        <section
+          aria-label="Visitas com local"
+          className="flex flex-col gap-1"
+          data-slot="visitas-com-local"
+        >
           <h3 className="text-texto text-sm font-semibold">Visitas com local</h3>
           <ul className="text-texto flex flex-col gap-0.5 text-sm">
             {visitasComLocal.map((v, i) => (

@@ -165,10 +165,20 @@ test("as páginas de leitura não têm campo aberto", async ({ page }) => {
     "/turmas",
     `/turmas/${turma}`,
     `/turmas/${turma}?aba=avaliacoes`,
+    // Bloco 18 (spec 033): as abas novas da ficha, do DSA e do módulo — sem isto a guarda fica cega para elas.
+    `/turmas/${turma}?aba=atividades`,
+    `/turmas/${turma}?aba=palestras`,
+    `/turmas/${turma}?aba=apoinst`,
+    `/turmas/${turma}/dsa?acompanhamento=palestras`,
+    `/turmas/${turma}/dsa?acompanhamento=apoinst`,
+    "/atividades",
+    "/atividades?aba=palestras",
+    "/atividades?aba=apoinst",
     `/turmas/${turma}/dsa`,
     "/instrutores",
     "/perfil",
     "/admin/salas",
+    "/admin/tipos-de-atividade",
     "/admin/usuarios",
   ]) {
     await conferir(page, caminho);

@@ -127,7 +127,10 @@ export function FiltrosDeApoinst({ turmas, cursos }: PropsDosFiltros) {
       chave: "situacao",
       rotulo: "Situação",
       tipo: "escolha",
-      opcoes: SITUACOES_DA_APOINST.map((s) => ({ valor: s, rotulo: ROTULO_DA_SITUACAO_DA_APOINST[s] })),
+      opcoes: SITUACOES_DA_APOINST.map((s) => ({
+        valor: s,
+        rotulo: ROTULO_DA_SITUACAO_DA_APOINST[s],
+      })),
     },
   ];
 

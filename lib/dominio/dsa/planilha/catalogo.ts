@@ -79,7 +79,8 @@ export function chaveDoLancamento(fato: FatoDoInsumo): {
        *    sem UE (`SEM UE`, que conta na CH), a mesma soma que o papel faz pela disciplina que `vw_ocupacao_ta` lhe dá.
        *    Sem disciplina (o banco não deixa: `ativ_conta_como_chd_com_disciplina`), cai na categoria, como antes.
        */
-      if (fato.contaComo === "CHD" && disciplina !== "") return { cod: disciplina, item: ITEM.semUe };
+      if (fato.contaComo === "CHD" && disciplina !== "")
+        return { cod: disciplina, item: ITEM.semUe };
       const categoria = fato.categoria ?? "AEC";
       if (categoria === "AEC" && disciplina !== "") return { cod: disciplina, item: ITEM.aec };
       return { cod: CATEGORIA_NO_COD[categoria], item: ITEM.nenhum };

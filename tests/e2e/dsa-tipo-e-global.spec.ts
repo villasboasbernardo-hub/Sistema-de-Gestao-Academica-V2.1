@@ -145,7 +145,17 @@ test("US2 · Recepção aos alunos conta como TAD; o externo é o «Outro respon
   await abrirCelula(page, "2:4");
   await page.locator('[data-tipo="TAD"]').click();
   await page.locator("#dsa-subtipo").selectOption({ label: "Recepção aos alunos" });
-  await expect(page.locator('[data-slot="categoria-do-tipo"]')).toHaveText("Conta como: TAD");
+  /*
+   * Bloco 18 (RA-4, FR-003.2): o «Conta como» virou campo, com o padrão do tipo (TAD) e as quatro opções — e o texto
+   * só leitura (`categoria-do-tipo`) ficou para o Estudo Individual e o Apoio, que não trocam (caso acima).
+   */
+  await expect(page.locator("#dsa-conta-como")).toHaveValue("TAD");
+  await expect(page.locator("#dsa-conta-como option")).toHaveText([
+    "TA da disciplina",
+    "AEC",
+    "TAD",
+    "TR",
+  ]);
   await expect(page.locator('label[for="dsa-responsavel-externo"]')).toHaveText(ROTULO_NOME_LIVRE);
   await page.locator("#dsa-responsavel-externo").fill("DOEP");
   await page.locator("#dsa-descricao").fill(descricao);

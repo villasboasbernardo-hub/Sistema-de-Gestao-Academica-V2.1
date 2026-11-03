@@ -48,9 +48,22 @@ function rotas(): { readonly nome: string; readonly caminho: string }[] {
     { nome: "curso · aba Horários", caminho: `/cursos/${sigla}?aba=horarios` },
     { nome: "novo curso", caminho: "/cursos/novo" },
     { nome: "editar curso e regime", caminho: `/cursos/${sigla}/editar` },
+    // Bloco 18 (spec 033, RA-2): as AEC previstas do currículo, na parte Atividades e limites.
+    {
+      nome: "editar curso · currículo · atividades e limites",
+      caminho: `/cursos/${sigla}/editar?aba=curriculo&parte=atividades`,
+    },
     { nome: "nova turma", caminho: `/cursos/${sigla}/turmas/nova` },
     { nome: "ficha da turma", caminho: `/turmas/${turma}` },
+    // Bloco 18 (spec 033): as abas novas da ficha e do módulo.
+    { nome: "ficha da turma · aba Atividades", caminho: `/turmas/${turma}?aba=atividades` },
+    { nome: "ficha da turma · aba Palestras", caminho: `/turmas/${turma}?aba=palestras` },
+    { nome: "ficha da turma · aba APOINST", caminho: `/turmas/${turma}?aba=apoinst` },
+    { nome: "atividades · aba Atividades", caminho: "/atividades" },
+    { nome: "Atividades · aba Palestras", caminho: "/atividades?aba=palestras" },
+    { nome: "Atividades · aba APOINST", caminho: "/atividades?aba=apoinst" },
     { nome: "salas", caminho: "/admin/salas" },
+    { nome: "tipos de atividade", caminho: "/admin/tipos-de-atividade" },
   ];
 }
 

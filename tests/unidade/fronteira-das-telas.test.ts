@@ -89,6 +89,20 @@ const FOLHAS_DE_CLIENTE: Readonly<Record<string, string>> = {
   "app/(app)/turmas/[turma]/EdicaoDoPrevisto.tsx":
     "editar o previsto do PROENS de um card: abrir, digitar e gravar é interação; a ação chega por propriedade",
   "app/(app)/atividades/FiltrosDeAtividades.tsx": "os filtros de /atividades, na URL",
+  /* Bloco 18 (spec 033, RA-5 e RA-6): as Palestras e a APOINST — a ficha da turma, o DSA (só leitura) e o módulo. */
+  "app/(app)/atividades/QuadroDePalestras.tsx":
+    "spec 033: as AEC previstas e as avulsas (TabelaDensa) e a resposta da marcação à mão",
+  "app/(app)/atividades/QuadroDeApoinst.tsx":
+    "spec 033: a APOINST planejada (TabelaDensa), Desativar/Reativar com confirmação e a resposta",
+  "app/(app)/atividades/FormularioDeApoinst.tsx":
+    "spec 033: Nova APOINST e Editar, em diálogo, com os seletores únicos de turma e de instrutor",
+  "app/(app)/atividades/MarcacaoAMao.tsx":
+    "spec 033: Registrar cumprimento / Desfazer, em diálogo, com a justificativa",
+  "app/(app)/atividades/FiltrosDoPlanejado.tsx":
+    "spec 033: os filtros das abas Palestras e APOINST, na URL",
+  /* Bloco 18 (spec 033, FR-006.4): Editar · Desativar · Excluir da linha da lista — a confirmação e o pedido são interação. */
+  "app/(app)/atividades/AcoesDaListaDeAtividades.tsx":
+    "spec 033: as ações da linha da lista de atividades; a exclusão (a do cartão do DSA) chega por propriedade",
   "app/(app)/atividades/AbasDeAtividades.tsx": "spec 023: as abas Atividades e Calendário, na URL",
   "app/(app)/atividades/PainelDoCalendario.tsx":
     "spec 023: a lista do calendário, com as ações por linha e a resposta acima dela",
@@ -188,6 +202,9 @@ const FOLHAS_DE_CLIENTE: Readonly<Record<string, string>> = {
     "editar o currículo, com o pedido de justificativa da correção",
   "app/(app)/cursos/[curso]/editar/LimitesDoCurriculo.tsx":
     "declarar, editar e retirar os limites de AEC, TAD e TR, com a justificativa da correção",
+  // Bloco 18 (spec 033, RA-2, FR-002.2): as AEC previstas do currículo, com o pedido de justificativa da RC-6.
+  "app/(app)/cursos/[curso]/editar/AecPrevistasDoCurriculo.tsx":
+    "incluir, editar, desativar e reativar as AEC previstas do currículo em diálogo, com a justificativa da correção",
   "app/(app)/cursos/[curso]/editar/PartesDoCurriculo.tsx": "trocar de parte escrevendo na URL",
   // Spec 025 (Bloco 10, D-28): as abas Cadastro e Currículo de *Editar curso*, na URL.
   "app/(app)/cursos/[curso]/editar/AbasDaEdicaoDoCurso.tsx": "trocar de aba escrevendo na URL",
@@ -215,6 +232,14 @@ const FOLHAS_DE_CLIENTE: Readonly<Record<string, string>> = {
   "app/(app)/perfil/senha/FormularioDeSenhaNova.tsx":
     "trocar a própria senha, com a recusa em português",
   "app/(app)/admin/salas/AcoesDeSala.tsx": "desativar e reativar sala, com o diálogo das turmas",
+  // Bloco 18 (spec 033, RA-1, FR-001.3): o catálogo de tipos de atividade, em diálogo.
+  "app/(app)/admin/tipos-de-atividade/NovoTipoDeAtividade.tsx":
+    "Novo tipo de atividade, em diálogo (nome e classificação padrão)",
+  "app/(app)/admin/tipos-de-atividade/AcoesDoTipoDeAtividade.tsx":
+    "editar o rótulo e a classificação dizendo quantos lançamentos mudam, desativar e reativar o tipo",
+  // Bloco 18 (spec 033, FR-007.1): os filtros da aba Atividades da turma, na URL da ficha.
+  "app/(app)/turmas/[turma]/FiltrosDeAtividadesDaTurma.tsx":
+    "os filtros da aba Atividades da turma, na URL da ficha (os do módulo, sem turma nem curso)",
   // Conferência do PR #67 (17/10/2026): a aba ativa da Administração pelo caminho do navegador — o
   // layout não é redesenhado ao trocar de aba, e o caminho que ele lia ficava preso.
   "app/(app)/admin/AbasDaAdministracao.tsx":

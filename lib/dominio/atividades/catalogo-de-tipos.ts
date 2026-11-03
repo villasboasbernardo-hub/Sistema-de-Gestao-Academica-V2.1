@@ -61,7 +61,9 @@ export type TipoDoCatalogo = {
 };
 
 /** A classificação é uma das que o catálogo escolhe? */
-export function ehClassificacaoDoCatalogo(valor: string | null | undefined): valor is ClassificacaoDoCatalogo {
+export function ehClassificacaoDoCatalogo(
+  valor: string | null | undefined,
+): valor is ClassificacaoDoCatalogo {
   return (CLASSIFICACOES_DO_CATALOGO as readonly string[]).includes(valor ?? "");
 }
 
@@ -74,7 +76,12 @@ export function rotuloDaClassificacao(categoria: CategoriaDeAtividade): string {
 export function tiposDoCatalogo(linhas: readonly LinhaDoCatalogo[]): TipoDoCatalogo[] {
   return linhas
     .flatMap((l): TipoDoCatalogo[] => {
-      const categoria = categoriaPeloTipo({ id: l.id, valor: l.valor, ativo: l.ativo, metadados: l.metadados });
+      const categoria = categoriaPeloTipo({
+        id: l.id,
+        valor: l.valor,
+        ativo: l.ativo,
+        metadados: l.metadados,
+      });
       if (categoria === null) return [];
       const rotulo = rotuloDoTipo({ valor: l.valor, rotulo: l.rotulo });
       return [
@@ -232,10 +239,13 @@ function comparavel(texto: string): string {
  * O tipo que já existe com o mesmo nome (pela chave ou pelo rótulo), ou `null`. A `UNIQUE (lista, valor)` do banco só
  * pega a grafia idêntica; «palestra» ao lado de «Palestra» seria um segundo tipo com a mesma cara.
  */
-export function tipoComOMesmoNome<T extends { readonly valor: string; readonly rotulo: string | null }>(
-  nome: string,
-  tipos: readonly T[],
-): T | null {
+export function tipoComOMesmoNome<
+  T extends { readonly valor: string; readonly rotulo: string | null },
+>(nome: string, tipos: readonly T[]): T | null {
   const alvo = comparavel(nome);
-  return tipos.find((t) => comparavel(t.valor) === alvo || (t.rotulo !== null && comparavel(t.rotulo) === alvo)) ?? null;
+  return (
+    tipos.find(
+      (t) => comparavel(t.valor) === alvo || (t.rotulo !== null && comparavel(t.rotulo) === alvo),
+    ) ?? null
+  );
 }

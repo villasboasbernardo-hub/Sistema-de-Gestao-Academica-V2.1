@@ -14,7 +14,11 @@
  */
 import "server-only";
 
-import { contaComoDoBanco, categoriaPeloTipo, type CategoriaDeAtividade } from "@/lib/dominio/categoria-pelo-tipo";
+import {
+  contaComoDoBanco,
+  categoriaPeloTipo,
+  type CategoriaDeAtividade,
+} from "@/lib/dominio/categoria-pelo-tipo";
 import { rotuloDoTipo } from "@/lib/dominio/atividades/grupos";
 import {
   tetosDasTurmas,
@@ -97,14 +101,18 @@ function paraAtividade(
 ): AtividadeDaLista {
   const tipo = um(b.tipo as Embutido<{ valor: string; rotulo_exibicao: string | null }>);
   const disciplina = um(
-    b.disciplina as Embutido<{ codigo: string; cod_disciplina: string | null; nome_disciplina: string }>,
+    b.disciplina as Embutido<{
+      codigo: string;
+      cod_disciplina: string | null;
+      nome_disciplina: string;
+    }>,
   );
   const prevista = um(b.prevista as Embutido<{ nome: string }>);
   const apoinst = um(b.apoinst as Embutido<{ nome: string }>);
   const turmaId = b.escopo === "global" ? null : ((b.turma_id as string | null) ?? null);
   const turma = turmaId === null ? null : (turmas.get(turmaId) ?? null);
   const instrutor = (b.instrutor_id as string | null) ?? null;
-  const valor = tipo?.valor ?? ((b.subtipo as string | null) ?? null);
+  const valor = tipo?.valor ?? (b.subtipo as string | null) ?? null;
   return {
     id: b.id as string,
     codigo: b.codigo as string,
@@ -123,9 +131,13 @@ function paraAtividade(
     responsavel:
       instrutor !== null
         ? (nomes.get(instrutor) ?? null)
-        : externoComOm(b.responsavel_externo as string | null, b.responsavel_externo_om as string | null),
+        : externoComOm(
+            b.responsavel_externo as string | null,
+            b.responsavel_externo_om as string | null,
+          ),
     local: (b.local as string | null) ?? null,
     disciplinaCodigo: disciplina?.codigo ?? null,
+    disciplinaCod: disciplina?.cod_disciplina ?? null,
     disciplinaRotulo: disciplina
       ? `${disciplina.cod_disciplina ?? disciplina.codigo} — ${disciplina.nome_disciplina}`
       : null,
@@ -149,7 +161,10 @@ export async function lerAtividades(
     .select("rascunho_de")
     .eq("salvo", false)
     .eq("rascunho_exclui", true);
-  pendentes = recorte.tipo === "turma" ? pendentes.eq("turma_id", recorte.turmaId) : pendentes.or(recorte.predicado);
+  pendentes =
+    recorte.tipo === "turma"
+      ? pendentes.eq("turma_id", recorte.turmaId)
+      : pendentes.or(recorte.predicado);
 
   const [lidas, pedidas] = await Promise.all([
     lerTodasAsPaginas((f) => {
@@ -161,7 +176,10 @@ export async function lerAtividades(
         .eq("salvo", true)
         /* Bloco 17 (item 6): o Estudo Individual só some da lista — continua no DSA e na CH. */
         .neq("categoria_normativa", CATEGORIA_FORA_DA_LISTA_DE_ATIVIDADES);
-      const recortada = recorte.tipo === "turma" ? base.eq("turma_id", recorte.turmaId) : base.or(recorte.predicado);
+      const recortada =
+        recorte.tipo === "turma"
+          ? base.eq("turma_id", recorte.turmaId)
+          : base.or(recorte.predicado);
       /* Ordem TOTAL (o código é único): sem ela, duas páginas podem repetir ou pular uma linha. */
       return recortada
         .order("data", { ascending: false })
@@ -171,12 +189,15 @@ export async function lerAtividades(
     }),
     pendentes,
   ]);
-  if (lidas.error) return { linhas: [], desativacaoPendente: new Set(), erro: FRASE_DA_FALHA_DA_LISTA };
+  if (lidas.error)
+    return { linhas: [], desativacaoPendente: new Set(), erro: FRASE_DA_FALHA_DA_LISTA };
 
   const brutas = (lidas.data ?? []) as Linha[];
   const nomes = await nomesDosResponsaveis(
     supabase,
-    [...new Set(brutas.map((b) => b.instrutor_id as string | null))].filter((i): i is string => i !== null),
+    [...new Set(brutas.map((b) => b.instrutor_id as string | null))].filter(
+      (i): i is string => i !== null,
+    ),
   );
   return {
     linhas: brutas.map((b) => paraAtividade(b, turmas, nomes)),
@@ -209,12 +230,16 @@ export async function lerTiposDaLista(
         id: t.id as string,
         valor: t.valor as string,
         ativo: Boolean(t.ativo),
-        metadados: (t.metadados as { categoria?: string | null; uso?: string | null } | null) ?? null,
+        metadados:
+          (t.metadados as { categoria?: string | null; uso?: string | null } | null) ?? null,
       });
       return c !== null && c !== CATEGORIA_FORA_DA_LISTA_DE_ATIVIDADES;
     })
     .map((t) => {
-      const rotulo = rotuloDoTipo({ valor: t.valor as string, rotulo: t.rotulo_exibicao as string | null });
+      const rotulo = rotuloDoTipo({
+        valor: t.valor as string,
+        rotulo: t.rotulo_exibicao as string | null,
+      });
       return { valor: t.valor as string, rotulo: t.ativo ? rotulo : `${rotulo} (desativado)` };
     });
 }
@@ -224,7 +249,11 @@ export async function lerLimitesDasTurmas(
   supabase: Cliente,
   turmas: readonly TurmaDoLimite[],
 ): Promise<{
-  readonly tetos: readonly { readonly turmaId: string; readonly turmaCodigo: string; readonly tetos: TetosDaTurma }[];
+  readonly tetos: readonly {
+    readonly turmaId: string;
+    readonly turmaCodigo: string;
+    readonly tetos: TetosDaTurma;
+  }[];
   readonly erro: string | null;
 }> {
   if (turmas.length === 0) return { tetos: [], erro: null };

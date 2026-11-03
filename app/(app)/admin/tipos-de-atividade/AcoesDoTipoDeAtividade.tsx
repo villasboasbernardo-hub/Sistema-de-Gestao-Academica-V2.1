@@ -31,6 +31,7 @@ import {
   type ClassificacaoDoCatalogo,
   type ContagemDoTipo,
 } from "@/lib/dominio/atividades/catalogo-de-tipos";
+import { TAMANHO_MAXIMO_DO_NOME_DO_TIPO } from "@/lib/validacao/tipo-de-atividade";
 
 export function AcoesDoTipoDeAtividade({
   id,
@@ -133,7 +134,11 @@ export function AcoesDoTipoDeAtividade({
       />
 
       {erro ? (
-        <span role="alert" className="text-atrasado-tinta text-xs" data-slot="erro-do-tipo-de-atividade">
+        <span
+          role="alert"
+          className="text-atrasado-tinta text-xs"
+          data-slot="erro-do-tipo-de-atividade"
+        >
           {erro}
         </span>
       ) : null}
@@ -179,9 +184,17 @@ function EdicaoDoTipo({
   }
 
   return (
-    <form onSubmit={gravar} className="flex flex-col gap-3" data-slot="formulario-da-edicao-do-tipo">
+    <form
+      onSubmit={gravar}
+      className="flex flex-col gap-3"
+      data-slot="formulario-da-edicao-do-tipo"
+    >
       {erro ? (
-        <p role="alert" className="text-atrasado-tinta text-sm" data-slot="erro-do-tipo-de-atividade">
+        <p
+          role="alert"
+          className="text-atrasado-tinta text-sm"
+          data-slot="erro-do-tipo-de-atividade"
+        >
           {erro}
         </p>
       ) : null}
@@ -192,7 +205,7 @@ function EdicaoDoTipo({
           {...propsDoControle(campoNome, true)}
           name="rotulo"
           value={nome}
-          maxLength={80}
+          maxLength={TAMANHO_MAXIMO_DO_NOME_DO_TIPO}
           onChange={(e) => definirNome(e.target.value)}
         />
       </div>

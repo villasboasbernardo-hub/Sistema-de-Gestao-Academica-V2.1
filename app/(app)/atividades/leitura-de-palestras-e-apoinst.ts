@@ -90,7 +90,16 @@ export async function lerTurmasDoAno(
     };
   });
   return {
-    turmas: emOrdemDeTurma(turmas).map(({ cursoClassificacao: _c, ...t }) => t),
+    /* A classificação só serve à ordem única; a turma da aba não a carrega. */
+    turmas: emOrdemDeTurma(turmas).map((t) => ({
+      id: t.id,
+      codigo: t.codigo,
+      ano: t.ano,
+      curriculoId: t.curriculoId,
+      cursoCodigo: t.cursoCodigo,
+      arquivada: t.arquivada,
+      eadPura: t.eadPura,
+    })),
     erro: null,
   };
 }
@@ -149,7 +158,10 @@ export async function lerOpcoesDaApoinst(turmaIds: readonly string[]): Promise<O
       .select("valor, ordem, ativo")
       .eq("lista", "escala_antiguidade")
       .order("ordem"),
-    supabase.from("apoinst_planejadas").select("id, observacao").in("turma_id", [...turmaIds]),
+    supabase
+      .from("apoinst_planejadas")
+      .select("id, observacao")
+      .in("turma_id", [...turmaIds]),
   ]);
   if (linhasRes.error || escalaRes.error || observacoesRes.error) {
     return { ...vazio, erro: FALHA_DAS_OPCOES };

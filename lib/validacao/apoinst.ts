@@ -24,7 +24,10 @@ const campos = {
     .string({ message: "Informe o nome da APOINST." })
     .trim()
     .min(1, "Informe o nome da APOINST.")
-    .max(MAXIMO_DO_NOME_DA_APOINST, `O nome tem no máximo ${MAXIMO_DO_NOME_DA_APOINST} caracteres.`),
+    .max(
+      MAXIMO_DO_NOME_DA_APOINST,
+      `O nome tem no máximo ${MAXIMO_DO_NOME_DA_APOINST} caracteres.`,
+    ),
   disciplinaId: z.string({ message: "Escolha a disciplina." }).uuid("Escolha a disciplina."),
   instrutorId: z
     .string({ message: "Escolha o instrutor responsável." })
@@ -32,7 +35,9 @@ const campos = {
   inicioPrevisto: z
     .string({ message: "Informe o início previsto." })
     .regex(DATA_ISO, "Informe o início previsto."),
-  fimPrevisto: z.string({ message: "Informe o fim previsto." }).regex(DATA_ISO, "Informe o fim previsto."),
+  fimPrevisto: z
+    .string({ message: "Informe o fim previsto." })
+    .regex(DATA_ISO, "Informe o fim previsto."),
   taPrevistos: z.coerce
     .number({ message: "Informe os TA previstos." })
     .int("Os TA previstos são um número inteiro.")
@@ -66,7 +71,10 @@ function periodoValido(
 }
 
 export const esquemaDaNovaApoinst = z
-  .object({ turmaId: z.string({ message: "Escolha a turma." }).uuid("Escolha a turma."), ...campos })
+  .object({
+    turmaId: z.string({ message: "Escolha a turma." }).uuid("Escolha a turma."),
+    ...campos,
+  })
   .superRefine(periodoValido);
 
 export const esquemaDaEdicaoDaApoinst = z

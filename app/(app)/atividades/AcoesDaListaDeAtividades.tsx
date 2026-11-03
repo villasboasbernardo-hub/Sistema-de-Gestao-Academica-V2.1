@@ -1,6 +1,6 @@
 /**
- * As ações por linha da lista de atividades — **Editar · Desativar · Excluir** (Bloco 18, spec 033, `FR-006.4`, D-10) —
- * e a resposta delas, ACIMA da lista. Folha de cliente.
+ * As ações por linha da lista de atividades — **Editar · Desativar · Excluir** (Bloco 18, spec 033, `FR-006.4`, D-10).
+ * Folha de cliente.
  *
  * > *"A lista de atividades tem, por linha, Editar (abre o DSA da turma na semana do lançamento — a edição é do DSA,
  * > RP-0/RP-9), Desativar (pede a exclusão do lançamento como rascunho da semana, que conta ao Salvar) e Excluir
@@ -9,58 +9,24 @@
  * ⚠️ **A AÇÃO CHEGA POR PROPRIEDADE** (Princípio XI): é a MESMA exclusão do cartão do DSA (`excluir` de
  *    `lib/acoes/dsa.ts`), com a mesma entrada — ela pede a exclusão como RASCUNHO da semana (RP-0), recusa a turma
  *    arquivada e, na semana publicada, quem recusa é o banco até *Fazer alteração* (RP-5). Nada é gravado fora do DSA.
- * ⚠️ **A RESPOSTA FICA ACIMA DA LISTA** (a lição do `AvisoDaLista`, spec 011): a linha não muda de lugar, e uma mensagem
- *    dentro dela passaria despercebida. Depois do pedido, a página relê, e a linha ganha a marca «desativação pendente».
+ * ⚠️ **A RESPOSTA FICA ACIMA DA LISTA**, no `AvisoDaLista` que já existe (spec 011): a linha não muda de lugar, e uma
+ *    mensagem dentro dela passaria despercebida. ⚠️ **NÃO HÁ CONTÊINER DE CONTEXTO NOVO** (`SC-022`): a primeira escrita
+ *    criava um só para esta lista, e a guarda o acusou — o canônico é o da lista de usuários, que guarda a resposta de
+ *    uma ação, e não recorte. Depois do pedido, a página relê, e a linha ganha a marca «desativação pendente».
  * ⚠️ **O EXCLUIR É SEMPRE INDISPONÍVEL**: lançamento é registro (regra 4); a dica diz o caminho.
  */
 "use client";
 
-import Link from "next/link";
 import { useRouter } from "next/navigation";
 import * as React from "react";
 
 import { BotaoDeIcone } from "@/components/ciaara/botao-de-icone";
 import { DialogoConfirmacao } from "@/components/ciaara/dialogo-confirmacao";
 
+import { useAvisoDaLista } from "../admin/usuarios/AvisoDaLista";
+
 type ResultadoDaExclusao =
-  | { readonly ok: true }
-  | { readonly ok: false; readonly mensagem: string };
-
-type Resposta = { readonly ok: boolean; readonly texto: string; readonly href: string | null };
-
-const ContextoDaResposta = React.createContext<((r: Resposta) => void) | null>(null);
-
-/** A região da resposta das ações, acima da lista, e o contexto que as linhas usam para publicar nela. */
-export function RespostaDasAcoesDaLista({ children }: { readonly children: React.ReactNode }) {
-  const [resposta, definirResposta] = React.useState<Resposta | null>(null);
-  return (
-    <ContextoDaResposta.Provider value={definirResposta}>
-      {resposta ? (
-        <div
-          role={resposta.ok ? "status" : "alert"}
-          data-slot="resposta-da-lista-de-atividades"
-          data-ok={resposta.ok ? "sim" : "nao"}
-          className={
-            resposta.ok
-              ? "border-borda bg-superficie-2 text-texto rounded-ciaara border px-3 py-2 text-sm"
-              : "border-conflito-borda bg-conflito-fundo text-conflito-tinta rounded-ciaara border px-3 py-2 text-sm"
-          }
-        >
-          {resposta.texto}
-          {resposta.href ? (
-            <>
-              {" "}
-              <Link href={resposta.href} className="text-marca underline">
-                Abrir o DSA da semana
-              </Link>
-            </>
-          ) : null}
-        </div>
-      ) : null}
-      {children}
-    </ContextoDaResposta.Provider>
-  );
-}
+  { readonly ok: true } | { readonly ok: false; readonly mensagem: string };
 
 const EXCLUIR_INDISPONIVEL = "lançamento é registro: use Desativar";
 
@@ -85,7 +51,7 @@ export function AcoesDaAtividade({
   readonly pendente: boolean;
   readonly excluir: (entrada: unknown) => Promise<ResultadoDaExclusao>;
 }) {
-  const publicar = React.useContext(ContextoDaResposta);
+  const { avisar } = useAvisoDaLista();
   const router = useRouter();
   const [ocupado, iniciar] = React.useTransition();
 
@@ -93,14 +59,13 @@ export function AcoesDaAtividade({
     iniciar(async () => {
       const r = await excluir({ fatoId: atividadeId, origem: "atividade_nao_letiva" });
       if (r.ok) {
-        publicar?.({
-          ok: true,
-          texto: `Desativação de «${resumo}» pedida como rascunho da semana no DSA. Ela só conta depois de «Salvar a semana»; até lá, a atividade continua na lista e nas contas.`,
-          href: hrefDoDsa,
+        avisar({
+          tom: "ok",
+          texto: `Desativação de «${resumo}» pedida como rascunho da semana no DSA. Ela só conta depois de «Salvar a semana» (o ícone Editar da linha abre o DSA); até lá, a atividade continua na lista e nas contas.`,
         });
         router.refresh();
       } else {
-        publicar?.({ ok: false, texto: r.mensagem, href: null });
+        avisar({ tom: "erro", texto: r.mensagem });
       }
     });
 

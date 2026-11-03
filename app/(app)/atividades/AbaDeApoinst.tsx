@@ -98,11 +98,16 @@ export async function AbaDeApoinst({ contexto }: { readonly contexto: ContextoDo
     />
   ) : !seAplica ? (
     <p role="status" className="text-texto-suave text-sm" data-slot="apoinst-nao-se-aplica">
-      A APOINST planejada vale para as turmas de {anoInicial.valor} em diante. As turmas de {ano} ficam como
-      estão, sem APOINST planejada (sem retroajuste) — escolha outro ano no canto superior direito.
+      A APOINST planejada vale para as turmas de {anoInicial.valor} em diante. As turmas de {ano}{" "}
+      ficam como estão, sem APOINST planejada (sem retroajuste) — escolha outro ano no canto
+      superior direito.
     </p>
   ) : erro ? (
-    <EstadoVazio motivo="sem-permissao" titulo="Não foi possível ler a APOINST agora" detalhe={erro} />
+    <EstadoVazio
+      motivo="sem-permissao"
+      titulo="Não foi possível ler a APOINST agora"
+      detalhe={erro}
+    />
   ) : comDsa.length === 0 ? (
     <EstadoVazio
       motivo="sem-dado"

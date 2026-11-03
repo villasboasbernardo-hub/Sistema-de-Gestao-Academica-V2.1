@@ -25,7 +25,9 @@ import { enderecoDoDsa } from "@/lib/navegacao/endereco-de-turma";
 import { AcoesDaAtividade } from "./AcoesDaListaDeAtividades";
 
 export type AcoesDaTabela = {
-  readonly excluir: (entrada: unknown) => Promise<{ readonly ok: true } | { readonly ok: false; readonly mensagem: string }>;
+  readonly excluir: (
+    entrada: unknown,
+  ) => Promise<{ readonly ok: true } | { readonly ok: false; readonly mensagem: string }>;
   /** As turmas arquivadas: somente leitura (D-COR-5). */
   readonly arquivadas: ReadonlySet<string>;
   readonly desativacaoPendente: ReadonlySet<string>;
@@ -130,7 +132,9 @@ export function TabelaDeAtividades({
                       dataLegivel={dataParaLeitura(l.data)}
                       hrefDoDsa={enderecoParaEditar(l)}
                       indisponivel={
-                        l.turmaId !== null && acoes.arquivadas.has(l.turmaId) ? MOTIVO_DA_ARQUIVADA : null
+                        l.turmaId !== null && acoes.arquivadas.has(l.turmaId)
+                          ? MOTIVO_DA_ARQUIVADA
+                          : null
                       }
                       pendente={pendente}
                       excluir={acoes.excluir}

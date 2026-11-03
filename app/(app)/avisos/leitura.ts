@@ -176,7 +176,10 @@ async function lerAvisosDoCalendario(
 /** O que a leitura das atividades entrega à montagem — `null` quando alguma leitura falhou. */
 type AtividadesLidas = {
   readonly turmas: readonly TurmaParaAviso[];
-  readonly obrigatoriasPendentes: ReadonlyMap<string, readonly { readonly codigo: string; readonly nome: string }[]>;
+  readonly obrigatoriasPendentes: ReadonlyMap<
+    string,
+    readonly { readonly codigo: string; readonly nome: string }[]
+  >;
   readonly apoinstAtrasadas: ReadonlyMap<
     string,
     readonly { readonly codigo: string; readonly nome: string; readonly fimPrevisto: string }[]
@@ -225,7 +228,10 @@ async function lerAtividadesDosAvisos(
       quadro.obrigatoriasPendentes.map((p) => ({ codigo: p.codigo, nome: p.nome })),
     );
   }
-  const apoinstAtrasadas = new Map<string, { codigo: string; nome: string; fimPrevisto: string }[]>();
+  const apoinstAtrasadas = new Map<
+    string,
+    { codigo: string; nome: string; fimPrevisto: string }[]
+  >();
   for (const linha of apoinst.quadro.linhas) {
     /* A desativada aparece na lista da tela, mas não conta — nem no aviso. */
     if (!linha.ativa || linha.situacao !== "atrasada") continue;
@@ -269,8 +275,15 @@ export async function lerAvisos(
         "id, codigo, status, curso_id, ano_letivo, data_inicio, data_termino, modalidade, sala_alocada, alunos, curriculo_id, regime:regimes_de_horario!turmas_regime_do_proprio_curso_fk(regime_tempos), curriculo:curriculos!turmas_curriculo_do_proprio_curso_fk(duracao_semanas)",
       ),
   );
-  const arquivadasPromessa = Promise.resolve(supabase.from("vw_turmas_arquivadas").select("turma_id"));
-  const atividadesPromessa = lerAtividadesDosAvisos(supabase, hoje, turmasPromessa, arquivadasPromessa);
+  const arquivadasPromessa = Promise.resolve(
+    supabase.from("vw_turmas_arquivadas").select("turma_id"),
+  );
+  const atividadesPromessa = lerAtividadesDosAvisos(
+    supabase,
+    hoje,
+    turmasPromessa,
+    arquivadasPromessa,
+  );
 
   const [
     cursosRes,
@@ -697,9 +710,12 @@ export async function lerAvisos(
    */
   const valorDasSemanas = parametrosDaVistaRes.error
     ? null
-    : ((parametrosDaVistaRes.data ?? []).find((p) => p.chave === "atividades.aviso_aec_semanas")?.valor ?? null);
+    : ((parametrosDaVistaRes.data ?? []).find((p) => p.chave === "atividades.aviso_aec_semanas")
+        ?.valor ?? null);
   const semanasDeAviso =
-    valorDasSemanas === null || !Number.isFinite(Number(valorDasSemanas)) ? null : Number(valorDasSemanas);
+    valorDasSemanas === null || !Number.isFinite(Number(valorDasSemanas))
+      ? null
+      : Number(valorDasSemanas);
   if (atividadesLidas === null || semanasDeAviso === null) naoLidos.add("atividades");
   const atividades =
     atividadesLidas === null

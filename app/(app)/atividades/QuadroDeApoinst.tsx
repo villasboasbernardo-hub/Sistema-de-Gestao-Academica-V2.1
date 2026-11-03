@@ -104,7 +104,9 @@ export function QuadroDeApoinst({
   function mudarSituacao(l: LinhaDeApoinst): void {
     iniciar(async () => {
       definirResposta(null);
-      const r = l.ativa ? await desativarApoinst({ id: l.id }) : await reativarApoinst({ id: l.id });
+      const r = l.ativa
+        ? await desativarApoinst({ id: l.id })
+        : await reativarApoinst({ id: l.id });
       if (!r.ok) {
         definirResposta({ texto: r.erro, falha: true });
         return;
@@ -119,7 +121,11 @@ export function QuadroDeApoinst({
       titulo: "APOINST",
       celula: (l) => (
         <span className="flex flex-col whitespace-normal" data-apoinst={l.codigo}>
-          <span className={l.ativa ? "text-texto font-medium" : "text-texto-suave font-medium line-through"}>
+          <span
+            className={
+              l.ativa ? "text-texto font-medium" : "text-texto-suave font-medium line-through"
+            }
+          >
             {l.nome}
           </span>
           <span className="text-texto-suave text-xs">
@@ -132,8 +138,9 @@ export function QuadroDeApoinst({
                   {h.situacao === "cumprida" ? "Marcada concluída" : "Marcação desfeita"} em{" "}
                   {instanteComHoraParaLeitura(h.em)}
                   {h.autor ? ` por ${h.autor}` : ""}
-                  {h.dataRealizada ? ` (concluída em ${dataParaLeitura(h.dataRealizada)})` : ""}:{" "}
-                  {h.justificativa}
+                  {h.dataRealizada
+                    ? ` (concluída em ${dataParaLeitura(h.dataRealizada)})`
+                    : ""}: {h.justificativa}
                 </li>
               ))}
             </ul>
@@ -291,7 +298,9 @@ export function QuadroDeApoinst({
       {resposta ? (
         <p
           role={resposta.falha ? "alert" : "status"}
-          className={resposta.falha ? "text-conflito-tinta text-sm" : "text-executado-tinta text-sm"}
+          className={
+            resposta.falha ? "text-conflito-tinta text-sm" : "text-executado-tinta text-sm"
+          }
           data-slot="resposta-da-apoinst"
         >
           {resposta.texto}

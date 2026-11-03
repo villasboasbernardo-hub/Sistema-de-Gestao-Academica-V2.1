@@ -19,7 +19,12 @@
  *
  * Função pura: nada de `supabase`, `next` nem `react` (imposto por ESLint).
  */
-import { ROTULO_DA_SITUACAO_DA_APOINST, SITUACOES_DA_APOINST, type LinhaDaApoinst, type SituacaoDaApoinst } from "./apoinst";
+import {
+  ROTULO_DA_SITUACAO_DA_APOINST,
+  SITUACOES_DA_APOINST,
+  type LinhaDaApoinst,
+  type SituacaoDaApoinst,
+} from "./apoinst";
 import {
   ROTULO_DA_SITUACAO_DA_PREVISTA,
   ehCumprida,
@@ -109,7 +114,10 @@ export function linhasDePalestras(
 }
 
 /** As avulsas com o curso da turma — só as das turmas recebidas, pela ordem delas e depois pela data. */
-export function avulsasDaAba(turmas: readonly TurmaDaAba[], avulsas: readonly AvulsaNaTela[]): AvulsaDaAba[] {
+export function avulsasDaAba(
+  turmas: readonly TurmaDaAba[],
+  avulsas: readonly AvulsaNaTela[],
+): AvulsaDaAba[] {
   const posicao = new Map(turmas.map((t, i) => [t.id, i]));
   const curso = new Map(turmas.map((t) => [t.id, t.cursoCodigo]));
   return avulsas
@@ -146,18 +154,24 @@ export type FiltroDePalestras = {
 };
 
 export function filtrarPalestras(
-  entrada: { readonly linhas: readonly LinhaDePalestra[]; readonly avulsas: readonly AvulsaDaAba[] },
+  entrada: {
+    readonly linhas: readonly LinhaDePalestra[];
+    readonly avulsas: readonly AvulsaDaAba[];
+  },
   filtro: FiltroDePalestras,
 ): { readonly linhas: LinhaDePalestra[]; readonly avulsas: AvulsaDaAba[] } {
   const situacao = situacaoDePalestraValida(filtro.situacao) ? filtro.situacao : "";
-  const daTurma = <T extends { readonly turmaCodigo: string; readonly cursoCodigo: string }>(x: T) =>
+  const daTurma = <T extends { readonly turmaCodigo: string; readonly cursoCodigo: string }>(
+    x: T,
+  ) =>
     (filtro.turma === "" || x.turmaCodigo === filtro.turma) &&
     (filtro.curso === "" || x.cursoCodigo === filtro.curso);
   const linhas =
     filtro.vinculo === "avulsa"
       ? []
       : entrada.linhas.filter(
-          (l) => daTurma(l) && (situacao === "" || situacaoNoFiltroDePalestras(l.situacao) === situacao),
+          (l) =>
+            daTurma(l) && (situacao === "" || situacaoNoFiltroDePalestras(l.situacao) === situacao),
         );
   const avulsas =
     filtro.vinculo === "do_curriculo" || situacao !== "" ? [] : entrada.avulsas.filter(daTurma);
@@ -170,7 +184,10 @@ export type FiltroDaApoinst = {
   readonly situacao: string;
 };
 
-export function filtrarApoinst(linhas: readonly LinhaDeApoinst[], filtro: FiltroDaApoinst): LinhaDeApoinst[] {
+export function filtrarApoinst(
+  linhas: readonly LinhaDeApoinst[],
+  filtro: FiltroDaApoinst,
+): LinhaDeApoinst[] {
   const situacao = situacaoDeApoinstValida(filtro.situacao) ? filtro.situacao : "";
   return linhas.filter(
     (l) =>

@@ -485,20 +485,35 @@ describe("`FR-031` · turma e salas: identidade no caminho, nada na consulta", (
     }
   });
 
-  it("a ficha da turma declara `aba` e `aberta`, e só elas", () => {
+  it("a ficha da turma declara `aba`, `aberta`, os filtros da aba Atividades e `gravada`, e só eles", () => {
     // ⚠️ Spec 014, PR 5 (R-12): `aba` ENTROU — a guarda foi INVERTIDA, não apagada (padrão do `FR-012` da spec 012):
     //    a ficha tinha só `aberta`; agora a aba «Avaliações» é estado da URL, com `ficha` como padrão.
     // ⚠️ `gravada` entrou em 17/10/2026 (spec 016, FR-015.2): a confirmação da gravação na ficha.
+    // ⚠️ Bloco 18 (spec 033, FR-007.1): a aba Atividades e os sete filtros dela (os do módulo, sem turma nem curso).
     expect(parametrosDaRota("/turmas/[turma]").map((p) => p.nome)).toEqual([
       "aba",
       "aberta",
+      "categoria",
+      "tipo",
+      "de",
+      "ate",
+      "disciplina",
+      "vinculo",
+      "responsavel",
       "gravada",
     ]);
     const aba = parametrosDaRota("/turmas/[turma]").find((p) => p.nome === "aba") as Parametro;
     expect(aba.tipo).toBe("escolha");
     // ⚠️ Bloco 17 (item 4): as abas APOINST e Palestras («Em breve») entraram em 01/11/2026.
+    // ⚠️ Bloco 18 (spec 033, D-9): a aba Atividades, entre Avaliações e APOINST.
     if (aba.tipo === "escolha")
-      expect([...aba.opcoes]).toEqual(["ficha", "avaliacoes", "apoinst", "palestras"]);
+      expect([...aba.opcoes]).toEqual([
+        "ficha",
+        "avaliacoes",
+        "atividades",
+        "apoinst",
+        "palestras",
+      ]);
     expect([aba.padrao, aba.historico]).toEqual(["ficha", "empilha"]);
   });
 });
