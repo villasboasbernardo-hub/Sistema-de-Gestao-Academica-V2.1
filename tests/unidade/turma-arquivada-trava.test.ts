@@ -25,6 +25,14 @@ const TRAVADAS: Readonly<Record<string, Readonly<Record<string, string | null>>>
   "lib/acoes/dia-parado.ts": { pararDia: null, desfazerParada: null },
   "lib/acoes/previsto-proens.ts": { gravarPrevistoProens: null },
   "lib/acoes/juntar-sessao.ts": { juntarComoSessao: null },
+  /* Bloco 18 (spec 033, D-11): a marcação à mão e a APOINST planejada — a trava no servidor, `turma_em_oferta` na policy. */
+  "lib/acoes/marcacoes-de-atividade.ts": { registrarMarcacao: null },
+  "lib/acoes/apoinst.ts": {
+    criarApoinst: null,
+    editarApoinst: null,
+    desativarApoinst: "mudarSituacao",
+    reativarApoinst: "mudarSituacao",
+  },
   "lib/acoes/dsa.ts": {
     lancar: null,
     lancarEstudoIndividualDaSemana: null,

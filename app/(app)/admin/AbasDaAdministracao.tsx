@@ -1,5 +1,6 @@
 /**
- * As abas da Administração — Usuários, Permissões e Salas —, com a aba ativa pelo caminho do NAVEGADOR.
+ * As abas da Administração — Usuários, Permissões, Salas e Tipos de atividade —, com a aba ativa pelo caminho do
+ * NAVEGADOR.
  *
  * ⚠️ **O MESMO DEFEITO DO MENU LATERAL** (conferência do PR #67, 17/10/2026): `layout.tsx` decidia a
  * aba ativa pelo caminho lido do cabeçalho da requisição, e o App Router não redesenha o layout ao
@@ -24,6 +25,11 @@ const ABAS = [
    *    digitação, que é o que o `SC-003` proíbe.
    */
   { rotulo: "Salas", rota: "/admin/salas" },
+  /*
+   * Bloco 18 (spec 033, RA-1, FR-001.3): o catálogo de tipos de atividade é parâmetro administrado, como as salas — e
+   *    fica aqui pelo mesmo motivo (D-6): a policy de `config_listas` é a dos parâmetros.
+   */
+  { rotulo: "Tipos de atividade", rota: "/admin/tipos-de-atividade" },
 ] as const;
 
 export function AbasDaAdministracao() {

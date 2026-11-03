@@ -27,7 +27,10 @@ describe("RN-RESP-1 · as colunas de quem responde na edição", () => {
   it("atividade, só com instrutorId (quem chama o endpoint direto): o nome livre vai a NULL junto", () => {
     expect(
       responsavelNaEdicao({ origem: "atividade_nao_letiva", categoria: "AEC", instrutorId: ID }),
-    ).toEqual({ ok: true, colunas: { instrutor_id: ID, responsavel_externo: null } });
+    ).toEqual({
+      ok: true,
+      colunas: { instrutor_id: ID, responsavel_externo: null, responsavel_externo_om: null },
+    });
   });
 
   it("atividade, só com o nome livre: o instrutor do cadastro vai a NULL junto", () => {
@@ -56,7 +59,10 @@ describe("RN-RESP-1 · as colunas de quem responde na edição", () => {
         instrutorId: ID,
         responsavelExterno: null,
       }),
-    ).toEqual({ ok: true, colunas: { instrutor_id: ID, responsavel_externo: null } });
+    ).toEqual({
+      ok: true,
+      colunas: { instrutor_id: ID, responsavel_externo: null, responsavel_externo_om: null },
+    });
   });
 
   it("atividade, tirar o instrutor (null) não inventa nome livre: só apaga", () => {

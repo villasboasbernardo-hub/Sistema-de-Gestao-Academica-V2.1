@@ -17,6 +17,8 @@
  *    *Currículo* (a barra do currículo, os dados com um *Salvar* e o PDF no alto; as sub-abas *Disciplinas · Horários ·
  *    Atividades e limites* embaixo). O link antigo com `?parte=` e sem `?aba=` vai para o *Currículo*; `parte=dados`,
  *    que deixou de existir, cai em *Disciplinas*.
+ * ⚠️ **AS AEC PREVISTAS DO CURRÍCULO, DESDE O BLOCO 18** (spec 033, RA-2, FR-002.2): na parte *Atividades e limites*,
+ *    abaixo dos limites, com a mesma permissão (`cursos.editar`) e a mesma RC-6. Lidas na mesma rodada da parte.
  */
 import { estadosPorRegistro, type ImpedimentosDoRegistro } from "@/lib/dominio/exclusao-permanente";
 import { redirect } from "next/navigation";
@@ -53,6 +55,13 @@ import { lerGradeDeDisciplinas } from "../../../disciplinas/consulta";
 import { excluirRegimeDeHorario } from "@/lib/acoes/regime-de-horario";
 import { estadoDaExclusaoDoRegime } from "@/lib/dominio/exclusao-de-partes";
 import { lerAvaliacoesDoCurso } from "../../../turmas/[turma]/consulta-de-avaliacoes";
+import {
+  tiposDeAec,
+  type DisciplinaDaAecPrevista,
+  type TipoParaAecPrevista,
+} from "@/lib/dominio/atividades/aec-previstas-no-curriculo";
+import type { TipoDeAtividade } from "@/lib/dominio/categoria-pelo-tipo";
+import { lerAecPrevistasDoCurriculo } from "../consulta-de-aec-previstas";
 import { parametroDoAno } from "../../../turmas/[turma]/tetos";
 import { alcanceDoPerfil } from "../../consulta";
 import { FormularioDeCurso } from "../../FormularioDeCurso";
@@ -63,6 +72,7 @@ import { RegimesDoCurso } from "../RegimesDoCurso";
 import { AbasDaEdicaoDoCurso } from "./AbasDaEdicaoDoCurso";
 import { BarraDoCurriculo } from "./BarraDoCurriculo";
 import { travasDoBanco, vigenciasDoBanco } from "./consulta";
+import { AecPrevistasDoCurriculo } from "./AecPrevistasDoCurriculo";
 import { EnvioDoCurriculo } from "./EnvioDoCurriculo";
 import { FormularioDoCurriculo } from "./FormularioDoCurriculo";
 import { LimitesDoCurriculo, type LimiteNaEdicao } from "./LimitesDoCurriculo";
@@ -83,6 +93,10 @@ type CurriculoDaEdicao = {
 };
 
 const CATEGORIAS = ["AEC", "TAD", "TR"] as const;
+
+/* Sem o catálogo não há como escolher o tipo: a parte diz que não leu, em vez de oferecer uma escolha vazia. */
+const FRASE_DA_FALHA_DOS_TIPOS =
+  "Não foi possível ler o catálogo de tipos de atividade agora. Recarregue a página; se persistir, procure o suporte.";
 
 export default async function EditarCurso({
   params,
@@ -231,9 +245,10 @@ export default async function EditarCurso({
             .select("categoria, tempos, fonte_arquivo, fonte_pagina")
             .eq("curriculo_id", curriculoId)
             .eq("status", "ativo"),
+          /* A CH curricular dos limites e, desde o Bloco 18, a escolha da disciplina da AEC prevista. */
           supabase
             .from("disciplinas")
-            .select("carga_horaria_tempos")
+            .select("id, cod_disciplina, nome_disciplina, carga_horaria_tempos")
             .eq("curriculo_id", curriculoId)
             .eq("status", "ativo"),
           supabase
@@ -245,6 +260,13 @@ export default async function EditarCurso({
               "teto.tr_percentual_chr",
             ])
             .eq("status", "ativo"),
+          /* Bloco 18 (spec 033, RA-2): as AEC previstas do currículo (todas, para reativar) e os tipos do catálogo. */
+          lerAecPrevistasDoCurriculo(curriculoId, false),
+          supabase
+            .from("config_listas")
+            .select("id, valor, rotulo_exibicao, ativo, metadados")
+            .eq("lista", "tipos_atividade")
+            .order("ordem"),
         ])
       : Promise.resolve(null),
     /* As avaliações do currículo, com o arbitrado (spec 014, D5.3): editam-se aqui, junto das disciplinas. */
@@ -299,8 +321,28 @@ export default async function EditarCurso({
 
   /* Os limites da parte *Atividades*: o declarado, ou o percentual da norma que vale sem ele. */
   let limites: LimiteNaEdicao[] = [];
+  /* Bloco 18 (RA-2): as AEC previstas, os tipos de classificação AEC e as disciplinas do currículo para a escolha. */
+  let aecPrevistas: Awaited<ReturnType<typeof lerAecPrevistasDoCurriculo>> = {
+    lista: [],
+    erro: null,
+  };
+  let tiposDaAecPrevista: TipoParaAecPrevista[] = [];
+  let catalogoLido = true;
+  let disciplinasDaAecPrevista: DisciplinaDaAecPrevista[] = [];
   if (atividadesRes) {
-    const [limitesRes, disciplinasRes, parametrosRes] = atividadesRes;
+    const [limitesRes, disciplinasRes, parametrosRes, previstasRes, tiposRes] = atividadesRes;
+    aecPrevistas = previstasRes;
+    catalogoLido = !tiposRes.error;
+    tiposDaAecPrevista = tiposDeAec(
+      (tiposRes.data ?? []) as unknown as (TipoDeAtividade & {
+        readonly rotulo_exibicao: string | null;
+      })[],
+    );
+    disciplinasDaAecPrevista = (disciplinasRes.data ?? []).map((d) => ({
+      id: d.id as string,
+      cod: (d.cod_disciplina as string | null) ?? "",
+      nome: (d.nome_disciplina as string | null) ?? "",
+    }));
     const ano = Number(hoje.slice(0, 4));
     const chCurricular =
       (disciplinasRes.data ?? []).reduce((s, d) => s + Number(d.carga_horaria_tempos ?? 0), 0) ||
@@ -556,12 +598,22 @@ export default async function EditarCurso({
               </div>
             }
             atividades={
-              <div data-slot="parte-atividades">
+              <div className="flex flex-col gap-6" data-slot="parte-atividades">
                 <LimitesDoCurriculo
                   sigla={codigo}
                   versao={curriculo.versao}
                   limites={limites}
                   podeEditar={editavel && podeEditarCurso}
+                />
+                <AecPrevistasDoCurriculo
+                  sigla={codigo}
+                  versao={curriculo.versao}
+                  previstas={aecPrevistas.lista}
+                  erro={aecPrevistas.erro}
+                  tipos={tiposDaAecPrevista}
+                  disciplinas={disciplinasDaAecPrevista}
+                  avisoDoCatalogo={catalogoLido ? null : FRASE_DA_FALHA_DOS_TIPOS}
+                  podeEditar={editavel && podeEditarCurso && catalogoLido}
                 />
               </div>
             }

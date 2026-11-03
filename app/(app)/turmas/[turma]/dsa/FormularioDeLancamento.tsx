@@ -45,6 +45,14 @@
  * (`FR-003`), o Estudo Individual **sem** instrutor (`FR-004`) e a aula com **instrutores adicionais** do cadastro, no
  * lugar do texto livre *"Demais instrutores"* (`FR-006`, RD-9). ⛔ *Tipo da avaliação* e *Instrumento* ficam os dois: o
  * banco mostrou que guardam informação diferente (item 3a, parado para Bernardo).
+ *
+ * ⚠️ **BLOCO 18 (spec 033, RA-4, FR-003)** *(pedido de Bernardo Villas Boas, 03/11/2026)*: na AEC, no TAD e no TR, o
+ * tipo aparece pelo **rótulo** do catálogo; o **Conta como** (*TA da disciplina · AEC · TAD · TR*, com o padrão do tipo)
+ * troca a classificação — e o *TA da disciplina* pede a disciplina; o **Cumpre (opcional)** liga a atividade a uma AEC
+ * prevista do currículo da turma ou a uma APOINST planejada (nunca na de todas as turmas); o responsável de fora ganha a
+ * **OM**; e o **Local** é uma sala da lista ou *Outro local* em texto livre, gravando no mesmo `local`. O Estudo
+ * Individual e o Apoio Individualizado ficam como estavam: sem «Conta como» nem vínculo. Quem decide cada coisa é a
+ * função pura (`lib/dominio/atividades/lancamento-de-atividade.ts`), e a Server Action confere de novo.
  */
 "use client";
 
@@ -64,7 +72,23 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import type { EscalaDeAntiguidade } from "@/lib/dominio/antiguidade";
-import { descricaoObrigatoria, type CategoriaDeAtividade } from "@/lib/dominio/categoria-pelo-tipo";
+import {
+  ROTULO_DA_CATEGORIA_DE_ATIVIDADE,
+  categoriaEfetiva,
+  contaComoDoBanco,
+  descricaoObrigatoria,
+  foraDaCht,
+  type CategoriaDeAtividade,
+} from "@/lib/dominio/categoria-pelo-tipo";
+import {
+  aceitaVinculo,
+  contaComoParaGravar,
+  disciplinaNaAtividade,
+  opcoesDeContaComo,
+  opcoesDeVinculo,
+  vinculoDaOpcao,
+  type OpcoesDaAtividade,
+} from "@/lib/dominio/atividades/lancamento-de-atividade";
 import type { InstrumentoOferecido } from "@/lib/dominio/dsa/instrumento-da-prova";
 import {
   frasePara,
@@ -74,7 +98,7 @@ import {
   type MotivoDoInstrutorVazio,
 } from "@/lib/dominio/dsa/pre-preenchimento";
 import { semQuemMinistra } from "@/lib/dominio/dsa/instrutores-adicionais";
-import { LOCAL_DO_ESTUDO_INDIVIDUAL, ROTULO_DO_APOIO } from "@/lib/dominio/dsa/rotulos";
+import { LOCAL_DO_ESTUDO_INDIVIDUAL } from "@/lib/dominio/dsa/rotulos";
 import { provasParaSessaoNoDia } from "@/lib/dominio/dsa/sessao-de-aplicacao";
 import type { TempoParaEscolher } from "@/lib/dominio/dsa/tempos-do-dia";
 import type { InstrutorParaExibir } from "@/lib/dominio/nome-instrutor";
@@ -179,6 +203,11 @@ export type FormularioDeLancamentoProps = {
   readonly instrumentos?: readonly InstrumentoOferecido[];
   readonly subtipos: readonly TipoOferecido[];
   readonly podeAtividadeGlobal?: boolean;
+  /**
+   * RA-4 (Bloco 18): as salas do «Local» e as AEC previstas e APOINST do «Cumpre» — lidas pela página, só para a tela.
+   * Ausentes, o local é texto livre e não há «Cumpre», como antes.
+   */
+  readonly opcoesDaAtividade?: OpcoesDaAtividade;
   readonly lancar: (entrada: unknown) => Promise<ResultadoDaAcao>;
   readonly aoFechar: () => void;
 };
@@ -222,14 +251,15 @@ const NAO_LETIVOS: ReadonlySet<Tipo> = new Set<Tipo>([
   "Apoio_Individualizado",
 ]);
 
-/** O rótulo da categoria que o tipo dá, mostrado antes de gravar (spec 014, FR-011). */
-const ROTULO_DA_CATEGORIA: Readonly<Record<string, string>> = {
-  AEC: "AEC",
-  TAD: "TAD",
-  TR: "TR",
-  Estudo_Individual: "Estudo Individual (fora da CHT)",
-  Apoio_Individualizado: `${ROTULO_DO_APOIO} (fora da CHT)`,
-};
+/**
+ * O rótulo da classificação que o tipo dá, mostrado antes de gravar (spec 014, FR-011) — desde o Bloco 18, só no Estudo
+ * Individual e no Apoio Individualizado, que não trocam: na AEC, no TAD e no TR quem diz é o campo «Conta como».
+ */
+function rotuloDaCategoria(categoria: string): string {
+  const c = categoria as CategoriaDeAtividade;
+  const rotulo = ROTULO_DA_CATEGORIA_DE_ATIVIDADE[c] ?? categoria;
+  return foraDaCht(c) ? `${rotulo} (fora da CHT)` : rotulo;
+}
 
 /** O alerta do item 1c, com as palavras do comando de 08/10/2026. */
 export const ALERTA_SEM_UNIDADE =
@@ -257,9 +287,13 @@ export function FormularioDeLancamento({
   instrumentos = [],
   subtipos,
   podeAtividadeGlobal = false,
+  opcoesDaAtividade,
   lancar,
   aoFechar,
 }: FormularioDeLancamentoProps) {
+  /* RA-4: as salas da lista (o «Local») — vazias, o local é só texto livre, como antes. */
+  const salasDaLista = opcoesDaAtividade?.salas ?? [];
+  const ehSalaDaLista = (valor: string): boolean => salasDaLista.some((s) => s.valor === valor);
   const [tipo, definirTipo] = React.useState<Tipo>("aula");
   /* Por que o instrutor não veio sugerido — a frase de `frasePara` (`RN-DEG-01`), nunca campo mudo. */
   const [motivoDoInstrutor, definirMotivoDoInstrutor] =
@@ -289,6 +323,12 @@ export function FormularioDeLancamento({
   const [local, definirLocal] = React.useState(salaDaTurma ?? "");
   /* O local só acompanha o tipo enquanto ninguém o editou — depois, é escolha da pessoa. */
   const [localEditado, definirLocalEditado] = React.useState(false);
+  /* RA-4 (FR-003.5): uma sala da lista OU «Outro local» em texto livre — os dois gravam no mesmo `local`. */
+  const [localLivre, definirLocalLivre] = React.useState(() => !ehSalaDaLista(salaDaTurma ?? ""));
+  /* RA-4: o «Conta como» ("" = o padrão do tipo), o vínculo «Cumpre» e a OM do responsável de fora. */
+  const [contaComo, definirContaComo] = React.useState("");
+  const [vinculo, definirVinculo] = React.useState("");
+  const [omDoExterno, definirOmDoExterno] = React.useState("");
   const [conteudo, definirConteudo] = React.useState("");
   const [tipoAvaliacao, definirTipoAvaliacao] = React.useState("");
   /* `RN-RESP-1`: o fiscal do cadastro OU de nome livre — exclusivos, como no banco (`fiscal_id` × nome). */
@@ -313,6 +353,28 @@ export function FormularioDeLancamento({
   const [gravando, definirGravando] = React.useState(false);
 
   const naoLetivo = NAO_LETIVOS.has(tipo);
+  /*
+   * RA-4 (Bloco 18): a classificação PADRÃO é a do grupo (os tipos oferecidos são os da categoria do botão); a que vale
+   * sai do «Conta como», pela função espelho do gatilho. ⚠️ A de todas as turmas não leva disciplina, «TA da disciplina»
+   * nem vínculo — são da turma.
+   */
+  const categoriaDoGrupo = naoLetivo ? (tipo as CategoriaDeAtividade) : null;
+  const global = podeAtividadeGlobal && todasAsTurmas && tipo !== "Estudo_Individual";
+  const contaComoGravado =
+    categoriaDoGrupo === null ? null : contaComoParaGravar(categoriaDoGrupo, contaComoDoBanco(contaComo));
+  const categoriaQueVale =
+    categoriaDoGrupo === null ? null : categoriaEfetiva(categoriaDoGrupo, contaComoGravado);
+  const opcoesDaClassificacao = opcoesDeContaComo({ categoriaDoTipo: categoriaDoGrupo, global });
+  const disciplinaDaAtividade =
+    categoriaDoGrupo === null
+      ? "obrigatoria"
+      : disciplinaNaAtividade({ categoriaDoTipo: categoriaDoGrupo, contaComo: contaComoGravado, global });
+  const temVinculo =
+    opcoesDaAtividade !== undefined && aceitaVinculo({ categoriaDoTipo: categoriaDoGrupo, global });
+  const opcoesDoVinculo = opcoesDeVinculo(
+    opcoesDaAtividade?.previstas ?? [],
+    opcoesDaAtividade?.apoinst ?? [],
+  );
   const unidadesDaDisciplina = unidades.filter((u) => u.disciplinaId === disciplinaId);
   const avaliacoesDaDisciplina = avaliacoesParaVista.filter((a) => a.disciplinaId === disciplinaId);
   const itensDaDisciplina = avaliacoesDoCurriculo.filter((i) => i.disciplinaId === disciplinaId);
@@ -328,7 +390,7 @@ export function FormularioDeLancamento({
         ? { tipo: "avaliacao", papel: "aplicador" }
         : tipo === "vista_prova"
           ? { tipo: "vista" }
-          : { tipo: "atividade", categoria: tipo },
+          : { tipo: "atividade", categoria: categoriaQueVale },
   );
 
   function escolherTipo(novo: Tipo): void {
@@ -342,15 +404,65 @@ export function FormularioDeLancamento({
     if (novo === "Estudo_Individual") definirTodasAsTurmas(false);
     definirUnidade("");
     definirAvaliacao("");
-    /* Disciplina só existe em aula, avaliação, vista e AEC. */
+    /* RA-4: o «Conta como» volta ao padrão do tipo novo, e o vínculo sai. */
+    definirContaComo("");
+    definirVinculo("");
+    /* Disciplina só existe em aula, avaliação, vista, AEC e «TA da disciplina» (que volta ao padrão aqui). */
     if (NAO_LETIVOS.has(novo) && novo !== "AEC") definirDisciplina("");
     /*
      * ⚠️ **O ESTUDO INDIVIDUAL É NA BIBLIOTECA** (decisão de 07/10/2026) — pelo MESMO texto que o
      * lançamento da semana em um clique usa, nunca escrito aqui. Só enquanto ninguém editou o local.
      */
     if (!localEditado) {
-      definirLocal(novo === "Estudo_Individual" ? LOCAL_DO_ESTUDO_INDIVIDUAL : (salaDaTurma ?? ""));
+      const novoLocal = novo === "Estudo_Individual" ? LOCAL_DO_ESTUDO_INDIVIDUAL : (salaDaTurma ?? "");
+      definirLocal(novoLocal);
+      definirLocalLivre(!ehSalaDaLista(novoLocal));
     }
+  }
+
+  /* RA-4: trocar o tipo volta o «Conta como» ao padrão (o tipo novo pode ter outra classificação). */
+  function escolherSubtipo(id: string): void {
+    definirSubtipo(id);
+    definirContaComo("");
+  }
+
+  /* RA-4 (FR-003.2): sair do «TA da disciplina» para uma classificação sem disciplina tira a disciplina escolhida. */
+  function escolherContaComo(valor: string): void {
+    definirContaComo(valor);
+    if (categoriaDoGrupo === null) return;
+    const pedida = disciplinaNaAtividade({
+      categoriaDoTipo: categoriaDoGrupo,
+      contaComo: contaComoParaGravar(categoriaDoGrupo, contaComoDoBanco(valor)),
+      global,
+    });
+    if (pedida === "nenhuma") definirDisciplina("");
+  }
+
+  /*
+   * RA-4 (FR-003.3): escolher a AEC prevista pré-preenche o «O que é» com o nome dela (quando vazio) e a disciplina dela
+   * (quando o campo existe e está vazio) — e os dois continuam editáveis.
+   */
+  function escolherVinculo(valor: string): void {
+    definirVinculo(valor);
+    const { atividadePrevistaId } = vinculoDaOpcao(valor);
+    const prevista = opcoesDaAtividade?.previstas.find((p) => p.id === atividadePrevistaId);
+    if (prevista === undefined) return;
+    if (descricao.trim() === "") definirDescricao(prevista.nome);
+    if (prevista.disciplinaId !== null && disciplinaDaAtividade !== "nenhuma" && disciplinaId === "") {
+      definirDisciplina(prevista.disciplinaId);
+    }
+  }
+
+  /* RA-4 (FR-003.5): a sala da lista preenche o local; «Outro local» abre o texto livre, vazio. */
+  function escolherSala(valor: string): void {
+    definirLocalEditado(true);
+    if (valor === "") {
+      definirLocalLivre(true);
+      definirLocal("");
+      return;
+    }
+    definirLocalLivre(false);
+    definirLocal(valor);
   }
 
   /*
@@ -487,7 +599,9 @@ export function FormularioDeLancamento({
         conduzNomeExterno: quemConduz === "" ? texto(conduzExterno) : null,
       };
     }
-    const global = podeAtividadeGlobal && todasAsTurmas && tipo !== "Estudo_Individual";
+    const doVinculo = temVinculo ? vinculoDaOpcao(vinculo) : { atividadePrevistaId: null, apoinstId: null };
+    const nomeDeFora =
+      tipo === "Estudo_Individual" || quemMinistra !== "" ? null : texto(responsavelExterno);
     return {
       tipo: "atividade",
       ...comum,
@@ -500,10 +614,16 @@ export function FormularioDeLancamento({
       /* Bloco 16 (FR-004): o Estudo Individual não tem instrutor nem nome livre. */
       instrutorId: tipo === "Estudo_Individual" ? null : nulo(quemMinistra),
       /* `RN-RESP-1`: com instrutor do cadastro, o nome livre não viaja (`ativ_responsavel_exclusivo`). */
-      responsavelExterno:
-        tipo === "Estudo_Individual" || quemMinistra !== "" ? null : texto(responsavelExterno),
-      /* A disciplina da AEC é opcional, e só da AEC (item 1b). */
-      disciplinaId: tipo === "AEC" && !global ? nulo(disciplinaId) : null,
+      responsavelExterno: nomeDeFora,
+      /* RA-4 (FR-003.4): a OM só com o nome de fora (`ativ_om_so_do_externo`). */
+      responsavelExternoOm: nomeDeFora === null ? null : texto(omDoExterno),
+      /* A disciplina opcional da AEC (item 1b) ou a obrigatória do «TA da disciplina» (RA-4); nunca na global. */
+      disciplinaId: disciplinaDaAtividade === "nenhuma" ? null : nulo(disciplinaId),
+      /* RA-4 (FR-003.2): nulo é o padrão do tipo — só a troca de verdade viaja. */
+      contaComo: contaComoGravado,
+      /* RA-4 (FR-003.3): o vínculo «Cumpre», no máximo um; nunca na global, no EI nem no Apoio. */
+      atividadePrevistaId: doVinculo.atividadePrevistaId,
+      apoinstId: doVinculo.apoinstId,
       /* A quantidade de alunos, opcional, só no Apoio (FR-020). */
       quantidadeAlunos:
         tipo === "Apoio_Individualizado" && quantidadeAlunos.trim() !== ""
@@ -576,14 +696,33 @@ export function FormularioDeLancamento({
               obrigatorio
               textoVazio="Escolha o tipo…"
               valor={subtipo}
-              aoMudar={definirSubtipo}
-              opcoes={subtiposDoTipo.map((s) => ({ valor: s.id, rotulo: s.valor }))}
+              aoMudar={escolherSubtipo}
+              /* RA-1 (Bloco 18, FR-001.2): o tipo pelo RÓTULO do catálogo; o valor continua a chave. */
+              opcoes={subtiposDoTipo.map((s) => ({ valor: s.id, rotulo: s.rotulo }))}
             />
           )}
-          {/* ⚠️ Spec 014, FR-011: a categoria que o tipo dá aparece ANTES de gravar. */}
-          {tipoEscolhido ? (
+          {/*
+            ⚠️ Spec 014, FR-011: a classificação que o tipo dá aparece ANTES de gravar. Bloco 18 (RA-4, FR-003.2): na AEC,
+               no TAD e no TR ela é o campo «Conta como», com o padrão do tipo — e o «TA da disciplina» pede a disciplina;
+               no Estudo Individual e no Apoio, que não trocam, continua o texto.
+          */}
+          {tipoEscolhido && opcoesDaClassificacao.length > 0 ? (
+            <EscolhaSimples
+              id="dsa-conta-como"
+              rotulo="Conta como"
+              obrigatorio
+              valor={contaComoGravado ?? tipoEscolhido.categoria}
+              aoMudar={escolherContaComo}
+              ajuda={
+                contaComoGravado === "CHD"
+                  ? "Soma na CH da disciplina escolhida e na do instrutor, como aula — e sai da AEC, do TAD e do TR."
+                  : `O padrão do tipo é ${rotuloDaCategoria(tipoEscolhido.categoria)}.`
+              }
+              opcoes={opcoesDaClassificacao}
+            />
+          ) : tipoEscolhido ? (
             <p className="text-texto-suave text-xs" data-slot="categoria-do-tipo">
-              Conta como: {ROTULO_DA_CATEGORIA[tipoEscolhido.categoria] ?? tipoEscolhido.categoria}
+              Conta como: {rotuloDaCategoria(tipoEscolhido.categoria)}
             </p>
           ) : null}
           {podeAtividadeGlobal && tipo !== "Estudo_Individual" ? (
@@ -591,7 +730,14 @@ export function FormularioDeLancamento({
               <input
                 type="checkbox"
                 checked={todasAsTurmas}
-                onChange={(e) => definirTodasAsTurmas(e.target.checked)}
+                onChange={(e) => {
+                  definirTodasAsTurmas(e.target.checked);
+                  /* A de todas as turmas não conta como «TA da disciplina» nem cumpre vínculo de uma turma. */
+                  if (e.target.checked) {
+                    if (contaComo === "CHD") definirContaComo("");
+                    definirVinculo("");
+                  }
+                }}
                 data-slot="atividade-de-todas-as-turmas"
               />
               Todas as turmas (com DSA nesta data)
@@ -613,16 +759,40 @@ export function FormularioDeLancamento({
         </div>
       ) : null}
 
-      {/* b) A DISCIPLINA — obrigatória em aula, avaliação e vista; opcional na AEC. */}
-      {!naoLetivo || tipo === "AEC" ? (
+      {/*
+        b) A DISCIPLINA — obrigatória em aula, avaliação, vista e no «TA da disciplina» (RA-4); opcional quando a atividade
+           conta como AEC; nenhuma na atividade de todas as turmas.
+      */}
+      {!naoLetivo || disciplinaDaAtividade !== "nenhuma" ? (
         <EscolhaSimples
           id="dsa-disciplina"
-          rotulo={tipo === "AEC" ? "Disciplina (opcional)" : "Disciplina"}
-          obrigatorio={tipo !== "AEC"}
-          textoVazio={tipo === "AEC" ? "Sem disciplina" : "Escolha a disciplina…"}
+          rotulo={disciplinaDaAtividade === "opcional" ? "Disciplina (opcional)" : "Disciplina"}
+          obrigatorio={disciplinaDaAtividade === "obrigatoria"}
+          textoVazio={disciplinaDaAtividade === "opcional" ? "Sem disciplina" : "Escolha a disciplina…"}
           valor={disciplinaId}
           aoMudar={escolherDisciplina}
           opcoes={disciplinas.map((d) => ({ valor: d.id, rotulo: `${d.codigo} — ${d.nome}` }))}
+        />
+      ) : null}
+
+      {/*
+        RA-4 (FR-003.3): o «Cumpre (opcional)» — uma AEC prevista do currículo da turma, com «(já cumprida)», ou uma
+        APOINST planejada da turma. ⚠️ O vazio diz POR QUÊ: não há, não foi possível ler, ou o perfil não as vê.
+      */}
+      {naoLetivo && temVinculo ? (
+        <EscolhaSimples
+          id="dsa-vinculo"
+          rotulo="Cumpre (opcional)"
+          textoVazio="Não cumpre atividade prevista (avulsa)"
+          valor={vinculo}
+          aoMudar={escolherVinculo}
+          ajuda={
+            opcoesDaAtividade?.avisoDoVinculo ??
+            (opcoesDoVinculo.length === 0
+              ? "Esta turma não tem AEC prevista no currículo nem APOINST planejada."
+              : "A AEC prevista fica cumprida com os TA lançados; a APOINST, executada.")
+          }
+          opcoes={opcoesDoVinculo}
         />
       ) : null}
 
@@ -788,11 +958,13 @@ export function FormularioDeLancamento({
          */
         <div className="flex flex-col gap-1">
           <Label htmlFor="dsa-descricao">
-            {descricaoObrigatoria(tipo as CategoriaDeAtividade) ? "O que é" : "O que é (opcional)"}
+            {descricaoObrigatoria(categoriaQueVale ?? (tipo as CategoriaDeAtividade))
+              ? "O que é"
+              : "O que é (opcional)"}
           </Label>
           <Input
             id="dsa-descricao"
-            required={descricaoObrigatoria(tipo as CategoriaDeAtividade)}
+            required={descricaoObrigatoria(categoriaQueVale ?? (tipo as CategoriaDeAtividade))}
             value={descricao}
             onChange={(e) => definirDescricao(e.target.value)}
           />
@@ -898,6 +1070,17 @@ export function FormularioDeLancamento({
           nomeLivre={responsavelExterno}
           aoMudarNomeLivre={definirResponsavelExterno}
           slot="responsavel-do-lancamento"
+          /* RA-4 (FR-003.4): na atividade, o «Responsável / Palestrante» de fora leva nome e OM. */
+          {...(naoLetivo
+            ? {
+                legenda: "Responsável / Palestrante",
+                om: {
+                  id: "dsa-responsavel-om",
+                  valor: omDoExterno,
+                  aoMudar: definirOmDoExterno,
+                },
+              }
+            : {})}
         />
       )}
       {tipo === "aula" &&
@@ -976,17 +1159,52 @@ export function FormularioDeLancamento({
         />
       ) : null}
 
-      <div className="flex flex-col gap-1">
-        <Label htmlFor="dsa-local">Local</Label>
-        <Input
-          id="dsa-local"
-          value={local}
-          onChange={(e) => {
-            definirLocalEditado(true);
-            definirLocal(e.target.value);
-          }}
-        />
-      </div>
+      {/*
+        RA-4 (FR-003.5): na atividade, o LOCAL é uma sala da lista OU «Outro local» em texto livre — os dois gravam no mesmo
+        `local` (texto), e o texto livre continua no `#dsa-local`. Sem a lista (não lida, ou vazia), só o texto, como antes.
+      */}
+      {naoLetivo && salasDaLista.length > 0 ? (
+        <>
+          <EscolhaSimples
+            id="dsa-sala"
+            rotulo="Local"
+            textoVazio="Outro local (texto livre)"
+            valor={localLivre ? "" : local}
+            aoMudar={escolherSala}
+            opcoes={salasDaLista}
+          />
+          {localLivre ? (
+            <div className="flex flex-col gap-1">
+              <Label htmlFor="dsa-local">Outro local (texto livre)</Label>
+              <Input
+                id="dsa-local"
+                value={local}
+                onChange={(e) => {
+                  definirLocalEditado(true);
+                  definirLocal(e.target.value);
+                }}
+              />
+            </div>
+          ) : null}
+        </>
+      ) : (
+        <div className="flex flex-col gap-1">
+          <Label htmlFor="dsa-local">Local</Label>
+          <Input
+            id="dsa-local"
+            value={local}
+            onChange={(e) => {
+              definirLocalEditado(true);
+              definirLocal(e.target.value);
+            }}
+          />
+          {naoLetivo && opcoesDaAtividade?.avisoDasSalas ? (
+            <p className="text-xs text-atrasado-tinta" data-slot="aviso-das-salas">
+              {opcoesDaAtividade.avisoDasSalas}
+            </p>
+          ) : null}
+        </div>
+      )}
 
       {recusa ? (
         <p role="alert" className="text-conflito-tinta text-sm" data-slot="recusa-do-lancamento">

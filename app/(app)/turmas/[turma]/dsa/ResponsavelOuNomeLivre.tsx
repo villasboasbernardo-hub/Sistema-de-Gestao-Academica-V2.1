@@ -12,6 +12,9 @@
  *    a este componente (a frase da D-32 a substitui antes) —, então vazia com `instrutores.ler` é *"Nenhum instrutor
  *    ativo no cadastro"*, e sem a permissão é o «você não vê» do seletor. Uma falha de leitura já aparece na faixa da
  *    semana (`aviso-de-leitura`).
+ * ⚠️ **A OM DO RESPONSÁVEL DE FORA** (RA-4, Bloco 18, spec 033): na atividade, o nome livre ganha o campo da OM —
+ *    *"texto livre com nome e OM para externo"*. Ela aparece junto do nome livre e some com ele (o instrutor do cadastro
+ *    escolhido): quem monta o lançamento manda a OM nula sem nome, e a Server Action e o banco recusam a OM sozinha.
  * ⚠️ **FOLHA DE CLIENTE, DECLARADA**: digitar e escolher são interação.
  */
 "use client";
@@ -43,6 +46,8 @@ export type ResponsavelOuNomeLivreProps = {
   readonly nomeLivre: string;
   readonly aoMudarNomeLivre: (texto: string) => void;
   readonly slot: string;
+  /** RA-4 (Bloco 18): a OM do responsável de fora — só na atividade; ausente, o campo não existe. */
+  readonly om?: { readonly id: string; readonly valor: string; readonly aoMudar: (texto: string) => void };
 };
 
 export function ResponsavelOuNomeLivre({
@@ -59,6 +64,7 @@ export function ResponsavelOuNomeLivre({
   nomeLivre,
   aoMudarNomeLivre,
   slot,
+  om,
 }: ResponsavelOuNomeLivreProps) {
   const conteudo = (
     <>
@@ -90,6 +96,18 @@ export function ResponsavelOuNomeLivre({
             value={nomeLivre}
             onChange={(e) => aoMudarNomeLivre(e.target.value)}
             placeholder={exemplo}
+          />
+        </div>
+      ) : null}
+      {om !== undefined && regra.nomeLivre && instrutorId === "" ? (
+        <div className="flex flex-col gap-1">
+          <Label htmlFor={om.id}>OM do responsável de fora (opcional)</Label>
+          <Input
+            id={om.id}
+            value={om.valor}
+            maxLength={120}
+            onChange={(e) => om.aoMudar(e.target.value)}
+            placeholder="A organização militar, por extenso ou sigla"
           />
         </div>
       ) : null}

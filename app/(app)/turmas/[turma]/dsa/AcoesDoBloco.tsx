@@ -32,6 +32,11 @@
  *    Boas, 29/10/2026. *Salvar* grava a edição e o movimento; *Cancelar* fecha sem gravar (e vira *Fechar* depois de
  *    gravar com aviso — o *Entendi* saiu); *Excluir* abre a confirmação, que continua escrita (RT-1). O título diz a
  *    disciplina **por extenso** e **quem ministra**, quebrando a linha, sem cortar (D-13).
+ *
+ * ⚠️ **BLOCO 18 (spec 033, RA-4)**: na ATIVIDADE de AEC, TAD ou TR, o cartão edita também o **Conta como**, a
+ *    **disciplina** que ele pede (opcional na AEC, obrigatória no *TA da disciplina*), o **Cumpre** (AEC prevista ou
+ *    APOINST) e a **OM** do responsável de fora — com os valores GRAVADOS (`fato.gravado`), mandando só o que mudou, pela
+ *    mesma regra pura do lançamento (`lib/dominio/atividades/lancamento-de-atividade.ts`).
  */
 "use client";
 
@@ -49,6 +54,21 @@ import { SeletorInstrutor } from "@/components/ciaara/seletor-instrutor";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import type { EscalaDeAntiguidade } from "@/lib/dominio/antiguidade";
+import {
+  CATEGORIAS_DE_ATIVIDADE,
+  contaComoDoBanco,
+  type CategoriaDeAtividade,
+} from "@/lib/dominio/categoria-pelo-tipo";
+import {
+  aceitaVinculo,
+  contaComoParaGravar,
+  disciplinaNaAtividade,
+  opcaoDoVinculo,
+  opcoesDeContaComo,
+  opcoesDeVinculo,
+  vinculoDaOpcao,
+  type OpcoesDaAtividade,
+} from "@/lib/dominio/atividades/lancamento-de-atividade";
 import type { InstrumentoOferecido } from "@/lib/dominio/dsa/instrumento-da-prova";
 import type { DiaDaGrade, ValoresGravados } from "@/lib/dominio/dsa/grade";
 import type { OrigemDoFato } from "@/lib/dominio/dsa/posicao-herdada";
@@ -110,6 +130,8 @@ export type AcoesDoBlocoProps = {
   readonly tecnicas: readonly string[];
   /** A2 (16/10/2026): os instrumentos da prova sem item — os ativos, menos a OD. */
   readonly instrumentos?: readonly InstrumentoOferecido[];
+  /** RA-4 (Bloco 18): as AEC previstas e APOINST do «Cumpre» — lidas pela página. Ausentes, o cartão não o oferece. */
+  readonly opcoesDaAtividade?: OpcoesDaAtividade;
   readonly atualizar: (entrada: unknown) => Promise<ResultadoDaAcao>;
   readonly excluir: (entrada: unknown) => Promise<ResultadoDaAcao>;
   readonly aoFechar: () => void;
@@ -129,6 +151,7 @@ export function AcoesDoBloco({
   escala,
   tecnicas,
   instrumentos = [],
+  opcoesDaAtividade,
   atualizar,
   excluir,
   aoFechar,
@@ -188,6 +211,21 @@ export function AcoesDoBloco({
     definirAdicionais((atuais) => semQuemMinistra(atuais, id));
   }
   const [nomeLivre, definirNomeLivre] = React.useState(g.responsavelExterno ?? "");
+  /*
+   * RA-4 (Bloco 18): a classificação do TIPO é o padrão do «Conta como»; o gravado reabre com o que está no banco. A
+   * atividade de todas as turmas não tem «TA da disciplina», disciplina nem vínculo.
+   */
+  const categoriaDoTipo: CategoriaDeAtividade | null = (
+    CATEGORIAS_DE_ATIVIDADE as readonly string[]
+  ).includes(g.categoriaDoTipo ?? "")
+    ? (g.categoriaDoTipo as CategoriaDeAtividade)
+    : null;
+  const atividadeGlobal = g.global === true;
+  const contaComoGravada = contaComoDoBanco(g.contaComo ?? null);
+  const vinculoGravado = opcaoDoVinculo(g.atividadePrevistaId ?? null, g.apoinstId ?? null);
+  const [contaComo, definirContaComo] = React.useState<string>(contaComoGravada ?? "");
+  const [vinculo, definirVinculo] = React.useState(vinculoGravado);
+  const [omDoExterno, definirOmDoExterno] = React.useState(g.responsavelExternoOm ?? "");
   const [local, definirLocal] = React.useState(g.local ?? "");
   const [instrumentoId, definirInstrumento] = React.useState(g.instrumentoId ?? "");
   const [recusa, definirRecusa] = React.useState<string | null>(null);
@@ -214,6 +252,32 @@ export function AcoesDoBloco({
     !listaDeQuemMinistra.some((i) => i.id === instrutorId);
   const semUnidade = ehAula && disciplinaId !== "" && unidadeId === "";
   const diaEscolhido = diasDaSemana.find((d) => d.data === dia);
+
+  /* RA-4: o que a atividade pede agora — pela mesma regra pura do lançamento. */
+  const contaComoParaMandar =
+    categoriaDoTipo === null ? null : contaComoParaGravar(categoriaDoTipo, contaComoDoBanco(contaComo));
+  const opcoesDaClassificacao = ehAtividade
+    ? opcoesDeContaComo({ categoriaDoTipo, global: atividadeGlobal })
+    : [];
+  const disciplinaDaAtividade =
+    ehAtividade && categoriaDoTipo !== null
+      ? disciplinaNaAtividade({
+          categoriaDoTipo,
+          contaComo: contaComoParaMandar,
+          global: atividadeGlobal,
+        })
+      : "nenhuma";
+  const temVinculo =
+    ehAtividade &&
+    opcoesDaAtividade !== undefined &&
+    aceitaVinculo({ categoriaDoTipo, global: atividadeGlobal });
+  const opcoesDoVinculo = (() => {
+    const lista = opcoesDeVinculo(opcoesDaAtividade?.previstas ?? [], opcoesDaAtividade?.apoinst ?? []);
+    /* O vínculo gravado que saiu da lista (desativado) continua escolhível — sem ele o campo reabriria trocado. */
+    return vinculoGravado !== "" && !lista.some((o) => o.valor === vinculoGravado)
+      ? [{ valor: vinculoGravado, rotulo: "O vínculo gravado (fora da lista ativa)" }, ...lista]
+      : lista;
+  })();
 
   async function executar(acao: () => Promise<ResultadoDaAcao>): Promise<void> {
     definirRecusa(null);
@@ -265,6 +329,23 @@ export function AcoesDoBloco({
       const novoLivre = novoInstrutor === null ? texto(nomeLivre) : null;
       if (novoInstrutor !== g.instrutorId) m["instrutorId"] = novoInstrutor;
       if (novoLivre !== (g.responsavelExterno ?? null)) m["responsavelExterno"] = novoLivre;
+      /* RA-4: a OM anda com o nome de fora — sem nome, ela vai nula. */
+      const novaOm = novoLivre === null ? null : texto(omDoExterno);
+      if (novaOm !== (g.responsavelExternoOm ?? null)) m["responsavelExternoOm"] = novaOm;
+      /* RA-4: o «Conta como», a disciplina que ele pede e o vínculo — só o que mudou. */
+      if (categoriaDoTipo !== null) {
+        if (contaComoParaMandar !== contaComoGravada) m["contaComo"] = contaComoParaMandar;
+        const novaDisciplina =
+          disciplinaDaAtividade === "nenhuma" || disciplinaId === "" ? null : disciplinaId;
+        if (novaDisciplina !== (g.disciplinaId ?? null)) m["disciplinaId"] = novaDisciplina;
+      }
+      if (temVinculo && vinculo !== vinculoGravado) {
+        const novo = vinculoDaOpcao(vinculo);
+        if (novo.atividadePrevistaId !== (g.atividadePrevistaId ?? null)) {
+          m["atividadePrevistaId"] = novo.atividadePrevistaId;
+        }
+        if (novo.apoinstId !== (g.apoinstId ?? null)) m["apoinstId"] = novo.apoinstId;
+      }
     } else if (temQuemMinistra && instrutorId !== "" && instrutorId !== g.instrutorId) {
       /* Quem ministra não se apaga por aqui: vazio é "não mexi". */
       m["instrutorId"] = instrutorId;
@@ -434,6 +515,48 @@ export function AcoesDoBloco({
         </div>
       ) : null}
 
+      {/* RA-4 (Bloco 18): o «Conta como» da atividade de AEC, TAD ou TR — o padrão é o do tipo. */}
+      {opcoesDaClassificacao.length > 0 && categoriaDoTipo !== null ? (
+        <EscolhaSimples
+          id="dsa-editar-conta-como"
+          rotulo="Conta como"
+          obrigatorio
+          valor={contaComoParaMandar ?? categoriaDoTipo}
+          aoMudar={(v) => {
+            definirContaComo(v);
+            const pedida = disciplinaNaAtividade({
+              categoriaDoTipo,
+              contaComo: contaComoParaGravar(categoriaDoTipo, contaComoDoBanco(v)),
+              global: atividadeGlobal,
+            });
+            if (pedida === "nenhuma") definirDisciplina("");
+          }}
+          opcoes={opcoesDaClassificacao}
+        />
+      ) : null}
+      {disciplinaDaAtividade !== "nenhuma" ? (
+        <EscolhaSimples
+          id="dsa-editar-disciplina"
+          rotulo={disciplinaDaAtividade === "opcional" ? "Disciplina (opcional)" : "Disciplina"}
+          obrigatorio={disciplinaDaAtividade === "obrigatoria"}
+          textoVazio={disciplinaDaAtividade === "opcional" ? "Sem disciplina" : "Escolha a disciplina…"}
+          valor={disciplinaId}
+          aoMudar={definirDisciplina}
+          opcoes={disciplinas.map((d) => ({ valor: d.id, rotulo: `${d.codigo} — ${d.nome}` }))}
+        />
+      ) : null}
+      {temVinculo ? (
+        <EscolhaSimples
+          id="dsa-editar-vinculo"
+          rotulo="Cumpre (opcional)"
+          textoVazio="Não cumpre atividade prevista (avulsa)"
+          valor={vinculo}
+          aoMudar={definirVinculo}
+          {...(opcoesDaAtividade?.avisoDoVinculo ? { ajuda: opcoesDaAtividade.avisoDoVinculo } : {})}
+          opcoes={opcoesDoVinculo}
+        />
+      ) : null}
+
       {temQuemMinistra && ehAula && listaDeQuemMinistra.length === 0 ? (
         /*
          * RD-1 (Bloco 11): a disciplina escolhida não tem habilitado — a frase, no lugar do seletor vazio. ⚠️ Sem
@@ -479,6 +602,10 @@ export function AcoesDoBloco({
           nomeLivre={nomeLivre}
           aoMudarNomeLivre={definirNomeLivre}
           slot="responsavel-do-lancamento"
+          /* RA-4 (Bloco 18): na atividade, a OM do responsável de fora. */
+          {...(ehAtividade
+            ? { om: { id: "dsa-editar-responsavel-om", valor: omDoExterno, aoMudar: definirOmDoExterno } }
+            : {})}
         />
       ) : null}
       {/* RD-9 (Bloco 16): os instrutores adicionais da AULA, habilitados na disciplina escolhida. */}

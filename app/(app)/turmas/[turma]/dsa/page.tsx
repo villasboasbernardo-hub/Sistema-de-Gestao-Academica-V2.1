@@ -99,6 +99,7 @@ import {
   semanaEscolhida,
 } from "./consulta";
 import { lerExtrasDaImpressao, lerSemanaDoDsa } from "./leitura";
+import { lerOpcoesDaAtividade } from "./leitura-do-lancamento";
 import { BotaoImprimir, EdicaoDasAssinaturasNaTela } from "./AssinaturasEditaveis";
 import { RodapeDaSemana } from "./DocumentoNaTela";
 import { NavegacaoDaSemana } from "./NavegacaoDaSemana";
@@ -272,7 +273,7 @@ export default async function SemanaDoDsa({
   const diasADistancia = diasForaDaEtapa(paraEtapa, diasDaSemanaIso);
 
   /* ⚠️ As duas leituras são independentes: uma rodada só, nenhum `await` em sequência inútil. */
-  const [lida, extras, tiposDeParadaRes, arquivamentoRes, publicacao] = await Promise.all([
+  const [lida, extras, tiposDeParadaRes, arquivamentoRes, publicacao, opcoesDaAtividade] = await Promise.all([
     lerSemanaDoDsa(supabase, {
       comRascunho: true,
       turmaId,
@@ -308,6 +309,20 @@ export default async function SemanaDoDsa({
        */
       ate: diasDaSemanaIso.at(-1) ?? hoje,
     }),
+    /*
+     * RA-4 (Bloco 18, spec 033): as salas do «Local» e as AEC previstas e APOINST do «Cumpre» — SÓ da tela, fora de
+     * `lerPeriodoDoDsa` (a planilha de contingência a usa, e erro ali recusa a planilha). Só para quem lança.
+     */
+    pode(permissoes, "registros_aula", "criar")
+      ? lerOpcoesDaAtividade(supabase, {
+          turmaId,
+          turmaCodigo: codigo,
+          curriculoId: (turma.curriculo_id as string | null) ?? null,
+          salaDaTurma: (turma.sala_alocada as string | null) ?? null,
+          hoje,
+          podeLerPrevistas: pode(permissoes, "cursos", "ler"),
+        })
+      : Promise.resolve(null),
   ]);
   /*
    * Spec 024 (RP-4): semana publicada — o papel de HOJE (só o salvo, montado com o mesmo «hoje» do retrato) ainda é o
@@ -797,6 +812,7 @@ export default async function SemanaDoDsa({
               subtipos={lida.subtipos}
               idsDeEstudoIndividual={[...lida.idsDeEstudoIndividual]}
               podeAtividadeGlobal={pode(permissoes, "atividades_globais", "criar")}
+              {...(opcoesDaAtividade ? { opcoesDaAtividade } : {})}
               lancar={lancar}
               mover={mover}
               atualizar={atualizar}

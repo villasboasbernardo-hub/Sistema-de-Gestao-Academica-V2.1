@@ -10,8 +10,10 @@
  * ⚠️ **"HOJE" É O DE SÃO PAULO, mandado daqui** (`hojeNaCiaara()`, D20): o banco não lê relógio.
  * ⚠️ **ZERO LINHAS É RECUSA**, não sucesso vazio (gotcha 4 do lado da escrita).
  */
-import { revalidatePath } from "next/cache";
-
+import {
+  curriculoDoCurso,
+  revalidarCurriculoDoCurso as revalidar,
+} from "@/lib/acoes/curriculo-do-curso";
 import { comJustificativa, pedeJustificativa } from "@/lib/acoes/justificativa";
 import {
   recusaPorAlcance,
@@ -51,29 +53,10 @@ function primeiraMensagem(issues: readonly { message: string }[]): string {
   return issues[0]?.message ?? "Dados inválidos.";
 }
 
-function revalidar(sigla: string): void {
-  revalidatePath("/cursos");
-  revalidatePath(`/cursos/${sigla}`);
-  revalidatePath("/cursos/[curso]", "page");
-  revalidatePath("/cursos/[curso]/editar", "page");
-  revalidatePath("/turmas", "layout");
-}
-
-/** O curso pela sigla e o currículo pelo número — `null` quando a sessão não alcança. */
-async function curriculoDoCurso(
-  sigla: string,
-  versao: number,
-): Promise<{ readonly cursoId: string; readonly curriculoId: string } | null> {
-  const supabase = await criarClienteDeServidor();
-  const { data } = await supabase
-    .from("curriculos")
-    .select("id, curso_id, cursos!curriculos_curso_id_fkey!inner(codigo)")
-    .eq("cursos.codigo", sigla)
-    .eq("versao", versao)
-    .maybeSingle();
-  if (!data) return null;
-  return { cursoId: data.curso_id as string, curriculoId: data.id as string };
-}
+/*
+ * `curriculoDoCurso` e `revalidar` moram em `curriculo-do-curso.ts` desde o Bloco 18 (spec 033): servem também às ações
+ * das AEC previstas, e exportá-los DAQUI os abriria como Server Action (endpoint HTTP) sem tela nenhuma.
+ */
 
 /** RC-7 — o currículo novo, cópia do vigente hoje. Devolve o número dele ("Currículo N"). */
 export async function criarCurriculo(entrada: unknown): Promise<ResultadoDoCurriculo> {

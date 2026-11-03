@@ -61,7 +61,7 @@ export default async function Avisos() {
         <EstadoVazio
           motivo="sem-dado"
           titulo="Nenhum aviso"
-          detalhe="Nada pede atenção agora nos cursos, nas turmas, nas avaliações nem nos instrutores que você alcança."
+          detalhe="Nada pede atenção agora nos cursos, nas turmas, nas avaliações, nos instrutores nem nas atividades que você alcança."
         />
       ) : null}
 

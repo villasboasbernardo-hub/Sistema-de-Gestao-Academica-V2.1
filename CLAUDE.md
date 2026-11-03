@@ -67,6 +67,7 @@ diferente *(decisão de 17/09/2026)*. ⚠️ **Medido no histórico em
 | Vai escrever policy RLS ou mexer em auth | `docs/fase-2/22-Seguranca-RLS-e-Autenticacao.md` |
 | Vai criar tela ou componente | `docs/fase-2/23-Design-System-Tailwind-shadcn.md` **e** `docs/correcoes/padroes-de-tela.md` (RT-1 a RT-8, que prevalecem) |
 | Vai mexer no lançamento do DSA, na barra de ações dele, no papel ou no Início | `docs/correcoes/regras-do-dsa-lancamento.md` (RD-1 a RD-10) **e** `docs/correcoes/regras-da-publicacao-do-dsa.md` (RP-0 a RP-9) |
+| Vai mexer em atividade (catálogo de tipos, «Conta como», AEC previstas do currículo, palestras, APOINST, estatísticas e avisos de atividade) | `docs/correcoes/regras-de-atividades.md` (RA-1 a RA-9, Bloco 18, spec 033) |
 | Não sabe onde um arquivo mora | `docs/fase-2/24-Estrutura-do-Repositorio-e-Convencoes.md` |
 | Vai buscar/ mutar dado | `docs/fase-2/25-Camada-de-Dados-e-Estado.md` |
 | Vai começar um épico | `docs/fase-1/06-Backlog-de-Epicos-V2.1.md` (§3) + `docs/vibe-coding/42-Prompts-por-Epico.md` |

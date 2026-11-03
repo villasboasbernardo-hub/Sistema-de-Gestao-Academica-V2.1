@@ -20,6 +20,10 @@
  *    devolve coluna de responsável nenhuma.
  * ⚠️ **A SESSÃO DE APLICAÇÃO NÃO TEM RESPONSÁVEL PRÓPRIO** (`RN-AV-12`, 16/10/2026): o aplicador e o fiscal são os da
  *    avaliação, e mandar `instrutorId` para ela é recusado com a frase de `FRASE_SEM_APLICADOR_NA_SESSAO`.
+ * ⚠️ **A OM DO RESPONSÁVEL DE FORA ANDA COM O NOME** (RA-4, Bloco 18, spec 033): `responsavel_externo_om` só existe com
+ *    `responsavel_externo` (`CHECK ativ_om_so_do_externo`), então tudo que APAGA o nome livre — o instrutor do cadastro
+ *    escolhido, ou o próprio nome apagado — apaga a OM junto, e a OM mandada sem nome de fora é recusada aqui, com a
+ *    frase, antes do banco. Ela é só da ATIVIDADE.
  * ⚠️ TypeScript puro: sem `next`, sem `react`, sem `supabase` (Princípio II).
  */
 import type { CategoriaDeAtividade } from "@/lib/dominio/categoria-pelo-tipo";
@@ -37,14 +41,19 @@ export type EntradaDoResponsavelNaEdicao = {
   readonly categoria: CategoriaDeAtividade | null;
   readonly instrutorId?: string | null | undefined;
   readonly responsavelExterno?: string | null | undefined;
+  /** RA-4 (Bloco 18): a OM do responsável de fora da ATIVIDADE (`responsavel_externo_om`); `undefined` não mexe. */
+  readonly responsavelExternoOm?: string | null | undefined;
 };
+
+/** A frase da OM sem o nome de fora — a mesma do esquema do lançar. */
+export const FRASE_DA_OM_SEM_EXTERNO = "A OM é do responsável de fora: escreva o nome junto.";
 
 export type ResponsavelNaEdicao =
   | { readonly ok: true; readonly colunas: Readonly<Record<string, string | null>> }
   | {
       readonly ok: false;
       readonly mensagem: string;
-      readonly campo: "responsavelExterno" | "instrutorId";
+      readonly campo: "responsavelExterno" | "instrutorId" | "responsavelExternoOm";
     };
 
 /**
@@ -81,9 +90,22 @@ export function responsavelNaEdicao(entrada: EntradaDoResponsavelNaEdicao): Resp
   );
   if (recusa !== null) return { ok: false, mensagem: recusa, campo: "responsavelExterno" };
 
-  const { instrutorId, responsavelExterno } = entrada;
+  const { instrutorId, responsavelExterno, responsavelExternoOm } = entrada;
   if (entrada.origem === "sessao_aplicacao" && instrutorId !== undefined) {
     return { ok: false, mensagem: FRASE_SEM_APLICADOR_NA_SESSAO, campo: "instrutorId" };
+  }
+  if (responsavelExternoOm != null) {
+    /* A OM é só do nome livre da atividade: sem ele (ou com o instrutor do cadastro no mesmo envio), não há de quem ser. */
+    if (entrada.origem !== "atividade_nao_letiva") {
+      return {
+        ok: false,
+        mensagem: "A OM só existe no responsável de fora da atividade.",
+        campo: "responsavelExternoOm",
+      };
+    }
+    if (responsavelExterno === null || (instrutorId != null && responsavelExterno === undefined)) {
+      return { ok: false, mensagem: FRASE_DA_OM_SEM_EXTERNO, campo: "responsavelExternoOm" };
+    }
   }
   const colunas: Record<string, string | null> = {};
   switch (entrada.origem) {
@@ -105,11 +127,18 @@ export function responsavelNaEdicao(entrada: EntradaDoResponsavelNaEdicao): Resp
     case "atividade_nao_letiva":
       if (instrutorId !== undefined) {
         colunas["instrutor_id"] = instrutorId;
-        if (instrutorId !== null) colunas["responsavel_externo"] = null;
+        if (instrutorId !== null) {
+          colunas["responsavel_externo"] = null;
+          colunas["responsavel_externo_om"] = null;
+        }
       }
       if (responsavelExterno !== undefined) {
         colunas["responsavel_externo"] = responsavelExterno;
         if (responsavelExterno !== null) colunas["instrutor_id"] = null;
+        else colunas["responsavel_externo_om"] = null;
+      }
+      if (responsavelExternoOm !== undefined) {
+        colunas["responsavel_externo_om"] = responsavelExternoOm;
       }
       break;
   }

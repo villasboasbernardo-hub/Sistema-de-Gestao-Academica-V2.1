@@ -17,6 +17,7 @@
  */
 import { z } from "zod";
 
+import { CONTA_COMO } from "@/lib/dominio/categoria-pelo-tipo";
 import { TA_MAXIMO } from "@/lib/dominio/dsa/horario-do-bloco";
 
 /** `aaaa-mm-dd`. ⚠️ **O formato do banco e da URL não muda** (restrição de Bernardo). */
@@ -49,6 +50,26 @@ const textoOuNulo = z
   .trim()
   .transform((v) => (v === "" ? null : v))
   .nullable();
+
+/**
+ * RA-4 (Bloco 18, spec 033): a OM do responsável de fora — texto aparado, vazio vira nulo, até 120 letras (o irmão no
+ * banco é `ativ_om_so_do_externo`, que também a exige com o nome).
+ */
+const omDoExterno = z
+  .string()
+  .trim()
+  .max(120, "A OM vai até 120 letras.")
+  .transform((v) => (v === "" ? null : v))
+  .nullable();
+
+/**
+ * RA-4: COMO a atividade conta — `CHD` («TA da disciplina»), `AEC`, `TAD` ou `TR`. Nulo é o padrão do tipo. A regra que
+ * depende da classificação do tipo (EI e Apoio não trocam; o `CHD` exige disciplina) é da ação, por
+ * `recusaPelaCategoria`; o banco tem os irmãos (`ativ_conta_como_*`, `conta_como_fora_da_cht`).
+ */
+const contaComo = z.enum(CONTA_COMO, {
+  message: "Escolha como a atividade conta: TA da disciplina, AEC, TAD ou TR.",
+});
 
 /**
  * Os **demais instrutores** do lançamento (spec 014, FR-046): o 2º nome de *"CC A. / 1ºTen B."*, como veio —
@@ -272,8 +293,40 @@ const atividade = z
       .nullable()
       .default(null),
     outrosInstrutores,
+    /* RA-4 (Bloco 18): o «Conta como»; nulo = o padrão do tipo. */
+    contaComo: contaComo.nullable().default(null),
+    /*
+     * RA-4/FR-003.3: o vínculo «Cumpre» — uma AEC prevista do currículo da turma OU uma APOINST planejada da turma, no
+     * máximo uma, e nunca na atividade de todas as turmas. O banco confere que o alvo é da turma
+     * (`app.conferir_vinculo_da_atividade`).
+     */
+    atividadePrevistaId: uuid.nullable().default(null),
+    apoinstId: uuid.nullable().default(null),
+    /* RA-4/FR-003.4: a OM do palestrante de fora (o nome segue em `responsavelExterno`). */
+    responsavelExternoOm: omDoExterno.default(null),
   })
   .superRefine((v, ctx) => {
+    if (v.atividadePrevistaId !== null && v.apoinstId !== null) {
+      ctx.addIssue({
+        code: "custom",
+        path: ["apoinstId"],
+        message: "A atividade cumpre uma AEC prevista OU uma APOINST, não as duas.",
+      });
+    }
+    if ((v.atividadePrevistaId !== null || v.apoinstId !== null) && v.turmaId === null) {
+      ctx.addIssue({
+        code: "custom",
+        path: [v.atividadePrevistaId !== null ? "atividadePrevistaId" : "apoinstId"],
+        message: "A atividade de todas as turmas não cumpre AEC prevista nem APOINST de uma turma.",
+      });
+    }
+    if (v.responsavelExternoOm !== null && v.responsavelExterno === null) {
+      ctx.addIssue({
+        code: "custom",
+        path: ["responsavelExternoOm"],
+        message: "A OM é do responsável de fora: escreva o nome junto.",
+      });
+    }
     if (v.disciplinaId !== null && v.turmaId === null) {
       ctx.addIssue({
         code: "custom",
@@ -398,6 +451,15 @@ const camposDaEdicao = z.object({
    * item ligado, a ação grava nulo. `undefined` não mexe.
    */
   instrumentoId: uuid.nullable().optional(),
+  /*
+   * RA-4 (Bloco 18, spec 033): na ATIVIDADE, o «Conta como», o vínculo «Cumpre» e a OM do responsável de fora.
+   * `undefined` não mexe; `null` apaga (o «Conta como» nulo volta ao padrão do tipo). A regra que depende da
+   * classificação e do gravado é da ação (`classificacaoNaEdicao`, `responsavelNaEdicao`).
+   */
+  contaComo: contaComo.nullable().optional(),
+  atividadePrevistaId: uuid.nullable().optional(),
+  apoinstId: uuid.nullable().optional(),
+  responsavelExternoOm: omDoExterno.optional(),
 });
 
 /**
@@ -414,7 +476,19 @@ const FRASE_DO_EXCLUSIVO = {
   path: ["responsavelExterno"],
 };
 
-export const esquemaDaEdicao = camposDaEdicao.refine(exclusivo, FRASE_DO_EXCLUSIVO);
+/** RA-4: um vínculo no máximo — mandar os dois preenchidos é contradição (`ativ_um_vinculo`). */
+const umVinculo = (e: {
+  atividadePrevistaId?: string | null | undefined;
+  apoinstId?: string | null | undefined;
+}) => !(e.atividadePrevistaId != null && e.apoinstId != null);
+const FRASE_DO_UM_VINCULO = {
+  message: "A atividade cumpre uma AEC prevista OU uma APOINST, não as duas.",
+  path: ["apoinstId"],
+};
+
+export const esquemaDaEdicao = camposDaEdicao
+  .refine(exclusivo, FRASE_DO_EXCLUSIVO)
+  .refine(umVinculo, FRASE_DO_UM_VINCULO);
 
 export type Edicao = z.infer<typeof esquemaDaEdicao>;
 
@@ -437,7 +511,8 @@ export const esquemaDaAtualizacao = camposDaEdicao
     message: "Escolha a unidade de ensino OU só a disciplina, não as duas.",
     path: ["disciplinaId"],
   })
-  .refine(exclusivo, FRASE_DO_EXCLUSIVO);
+  .refine(exclusivo, FRASE_DO_EXCLUSIVO)
+  .refine(umVinculo, FRASE_DO_UM_VINCULO);
 
 export type Atualizacao = z.infer<typeof esquemaDaAtualizacao>;
 

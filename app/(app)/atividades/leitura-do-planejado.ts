@@ -8,9 +8,11 @@
  * ⚠️ **SÓ O SALVO CONTA** (RP-8): o rascunho vinculado não cumpre (`.eq("salvo", true)`).
  * ⚠️ **«NÃO LI» NÃO É «NÃO HÁ»** (gotcha 4, RN-DEG-01): a falha de leitura volta em `erro`, e quem chama a mostra.
  * ⚠️ **SEM AWAIT EM LAÇO**: uma rodada de `Promise.all`, e o resto em memória.
+ * ⚠️ **SEM `server-only`, E O CLIENTE PODE VIR DE QUEM CHAMA** (frente E do Bloco 18): a leitura dos Avisos
+ *    (`app/(app)/avisos/leitura.ts`) chama este módulo com o cliente da sessão que ela recebeu, e é chamada por teste
+ *    de invariante sem servidor (`tests/invariantes/leitura-dos-avisos.test.ts`) — como `regimes-das-semanas.ts` e
+ *    `contagem-presencial.ts`. Sem o cliente, vale o do servidor, como antes. Nenhum dos dois é o administrativo.
  */
-import "server-only";
-
 import {
   quadroDaApoinst,
   type ApoinstPlanejada,
@@ -31,6 +33,9 @@ import { contagemNaPrimeira, lerTodasAsPaginas } from "@/lib/supabase/paginacao"
 import { criarClienteDeServidor } from "@/lib/supabase/server";
 
 type Linha = Record<string, unknown>;
+
+/** O cliente da SESSÃO — o do servidor, ou o que quem chama já tem (a leitura dos Avisos). */
+type ClienteDaSessao = Awaited<ReturnType<typeof criarClienteDeServidor>>;
 
 export type TurmaDoPlanejado = {
   readonly id: string;
@@ -58,7 +63,7 @@ const COLUNAS_DO_LANCAMENTO =
 
 /** Os nomes dos instrutores do cadastro que os lançamentos citam (por id). */
 async function nomesDosInstrutores(
-  supabase: Awaited<ReturnType<typeof criarClienteDeServidor>>,
+  supabase: ClienteDaSessao,
   ids: readonly string[],
 ): Promise<ReadonlyMap<string, string>> {
   if (ids.length === 0) return new Map();
@@ -105,16 +110,20 @@ function marcacaoDaLinha(m: Linha): MarcacaoDeAtividade {
  * As AEC previstas de cada turma (pelo currículo dela), com os lançamentos vinculados e as marcações — e as palestras
  * AVULSAS das mesmas turmas.
  */
-export async function lerPalestrasDasTurmas(turmas: readonly TurmaDoPlanejado[]): Promise<{
+export async function lerPalestrasDasTurmas(
+  turmas: readonly TurmaDoPlanejado[],
+  /** O cliente da sessão de quem chama (a leitura dos Avisos); ausente, o do servidor. */
+  cliente?: ClienteDaSessao,
+): Promise<{
   readonly quadros: ReadonlyMap<string, QuadroDasPrevistas>;
   readonly avulsas: readonly PalestraAvulsa[];
   readonly erro: string | null;
 }> {
   const vazio = { quadros: new Map<string, QuadroDasPrevistas>(), avulsas: [], erro: null };
   if (turmas.length === 0) return vazio;
-  const supabase = await criarClienteDeServidor();
+  const supabase = cliente ?? (await criarClienteDeServidor());
   const turmaIds = turmas.map((t) => t.id);
-  const curriculos = [...new Set(turmas.map((t) => t.curriculoId).filter((c): c is string => c !== null))];
+  const curriculos =[...new Set(turmas.map((t) => t.curriculoId).filter((c): c is string => c !== null))];
 
   const [previstas, vinculados, avulsas, marcacoes] = await Promise.all([
     curriculos.length === 0
@@ -242,13 +251,15 @@ export async function lerPalestrasDasTurmas(turmas: readonly TurmaDoPlanejado[])
 export async function lerApoinstDasTurmas(
   turmas: readonly TurmaDoPlanejado[],
   hoje: string,
+  /** O cliente da sessão de quem chama (a leitura dos Avisos); ausente, o do servidor. */
+  cliente?: ClienteDaSessao,
 ): Promise<{ readonly quadro: QuadroDaApoinst; readonly erro: string | null }> {
   const neutro: QuadroDaApoinst = {
     linhas: [],
     porSituacao: { planejada: 0, em_andamento: 0, concluida: 0, atrasada: 0 },
   };
   if (turmas.length === 0) return { quadro: neutro, erro: null };
-  const supabase = await criarClienteDeServidor();
+  const supabase = cliente ?? (await criarClienteDeServidor());
   const turmaIds = turmas.map((t) => t.id);
 
   const [planejadas, lancamentos, marcacoes] = await Promise.all([

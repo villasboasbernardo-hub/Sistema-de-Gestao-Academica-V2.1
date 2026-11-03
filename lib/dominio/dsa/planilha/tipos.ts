@@ -39,6 +39,11 @@ export type FatoDoInsumo = {
   readonly unidadeNumero: number | null;
   readonly tipoAvaliacao: string | null;
   readonly categoria: CategoriaNormativa | null;
+  /**
+   * RA-4 (Bloco 18, spec 033): `atividades_nao_letivas.conta_como`. Só o `CHD` («TA da disciplina») muda a chave: a
+   * atividade conta na CH da disciplina, como a aula sem UE. Ausente ou nulo = a categoria decide, como antes.
+   */
+  readonly contaComo?: string | null;
 };
 
 /**

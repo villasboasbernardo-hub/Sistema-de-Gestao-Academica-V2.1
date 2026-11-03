@@ -54,6 +54,7 @@ import {
   tiposOferecidos,
   type TipoDeAtividade,
 } from "@/lib/dominio/categoria-pelo-tipo";
+import { rotuloDoTipo } from "@/lib/dominio/atividades/grupos";
 import { montarSemana, type FatoDaSemana, type Semana } from "@/lib/dominio/dsa/grade";
 import {
   instrumentosOferecidos,
@@ -130,6 +131,12 @@ type ClienteDeServidor = Awaited<ReturnType<typeof criarClienteDeServidor>>;
 export type TipoOferecido = {
   readonly id: string;
   readonly valor: string;
+  /**
+   * RA-1 (Bloco 18, FR-001.2): o nome do tipo NA TELA — o rótulo do catálogo (`rotulo_exibicao`), senão o valor. O
+   * valor continua a chave que o gatilho, a sincronização e o ETL casam (decisão 4: «Atividade Extracurricular» é o
+   * valor, «Atividade Extraclasse» o rótulo).
+   */
+  readonly rotulo: string;
   readonly categoria: string;
 };
 
@@ -515,7 +522,7 @@ export async function lerPeriodoDoDsa(
       supabase
         .from("atividades_nao_letivas")
         .select(
-          "id, codigo, criado_em, data, ta_inicial, categoria_normativa, subtipo, descricao, responsavel_externo, status, turma_id, disciplina_id, bloqueia_aula, outros_instrutores",
+          "id, codigo, criado_em, data, ta_inicial, categoria_normativa, subtipo, descricao, responsavel_externo, status, turma_id, disciplina_id, bloqueia_aula, outros_instrutores, tipo_atividade_id, conta_como, responsavel_externo_om, atividade_prevista_id, apoinst_id",
           contagemNaPrimeira(f),
         )
         .or(`turma_id.eq.${turmaId},turma_id.is.null`)
@@ -1372,8 +1379,32 @@ export function montarSemanaDoDsa(
     disciplina_id: string | null;
     bloqueia_aula: boolean | null;
     outros_instrutores?: string[] | null;
+    tipo_atividade_id?: string | null;
+    conta_como?: string | null;
+    responsavel_externo_om?: string | null;
+    atividade_prevista_id?: string | null;
+    apoinst_id?: string | null;
   }[];
+  /*
+   * RA-1 (Bloco 18, FR-001.2): o tipo aparece pelo RÓTULO do catálogo — só a lista ativa é lida; o tipo desativado cai
+   * no valor gravado (`subtipo`), como antes. E a classificação DO TIPO é o padrão do «Conta como» que o cartão reabre.
+   */
+  const tiposDaLista = new Map(
+    daLista("tipos_atividade").map((l) => [
+      l.id,
+      {
+        rotulo: rotuloDoTipo({ valor: l.valor, rotulo: l.rotulo_exibicao ?? null }),
+        categoria: categoriaPeloTipo({
+          id: l.id,
+          valor: l.valor,
+          ativo: true,
+          metadados: (l.metadados ?? null) as TipoDeAtividade["metadados"],
+        }),
+      },
+    ]),
+  );
   for (const n of atividades) {
+    const doTipo = n.tipo_atividade_id ? tiposDaLista.get(n.tipo_atividade_id) : undefined;
     /*
      * ⚠️ O SUBTIPO vai no campo da técnica porque é o rótulo que a GRADE mostra na célula. O papel
      * não o imprime na coluna T/E — ver `diaImpresso`, que trata a origem não letiva à parte.
@@ -1389,9 +1420,19 @@ export function montarSemanaDoDsa(
       }),
       conteudoGravado: n.descricao,
       apoio: n.categoria_normativa === "Apoio_Individualizado",
-      tecnica: n.subtipo,
+      /* O nome do tipo na célula: o rótulo do catálogo (FR-001.2); o papel não o imprime (T/E vazia na atividade). */
+      tecnica: doTipo?.rotulo ?? n.subtipo,
       externo: n.responsavel_externo,
-      /* A disciplina OPCIONAL da AEC (item 1b): só para exibir — ela não entra na CH da disciplina. */
+      externoOm: n.responsavel_externo_om ?? null,
+      contaComo: n.conta_como ?? null,
+      categoriaDoTipo: doTipo?.categoria ?? null,
+      atividadePrevistaId: n.atividade_prevista_id ?? null,
+      apoinstId: n.apoinst_id ?? null,
+      global: n.turma_id === null,
+      /*
+       * A disciplina OPCIONAL da AEC (item 1b), só para exibir; no «TA da disciplina» (RA-4) ela conta na CH — mas quem
+       * a leva à CH é a view (`vw_ocupacao_ta` dá a disciplina ao `conta_como = 'CHD'`), não esta leitura.
+       */
       disciplinaId: n.disciplina_id,
       outros: nomesDosOutros(n.outros_instrutores),
     });
@@ -1876,7 +1917,12 @@ export function montarSemanaDoDsa(
         ativo: true,
         metadados: (l.metadados ?? null) as TipoDeAtividade["metadados"],
       })),
-    ).map((t) => ({ id: t.id, valor: t.valor, categoria: categoriaPeloTipo(t) as string })),
+    ).map((t) => ({
+      id: t.id,
+      valor: t.valor,
+      rotulo: tiposDaLista.get(t.id)?.rotulo ?? t.valor,
+      categoria: categoriaPeloTipo(t) as string,
+    })),
     idsDeEstudoIndividual,
     marcasDeConflito,
     ocupacaoAcumulada: [
