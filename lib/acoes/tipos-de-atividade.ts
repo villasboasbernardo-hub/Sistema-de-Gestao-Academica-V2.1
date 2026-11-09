@@ -18,18 +18,31 @@
  *    spec 033). A ação não decide permissão: ela traduz a recusa.
  * ⚠️ **SÓ OS TIPOS DE AEC, TAD E TR SE EDITAM** (decisão 2): Estudo Individual e Apoio Individualizado são só leitura no
  *    catálogo — a ação recusa antes de gravar, para a recusa dizer o porquê.
+ * ⚠️ **A TROCA QUE TIRA O TIPO DA AEC É CONFERIDA ANTES** (achados da revisão do Bloco 18; `impedimentoDaTroca`):
+ *    (a) AEC prevista ATIVA de currículo com o tipo — o «Novo currículo» a copia por INSERT e o porteiro do banco a
+ *    recusaria, derrubando o currículo novo inteiro; ⚠️ o BANCO NÃO RECUSA esta troca por escrita direta (pendência,
+ *    portão 9.4); (b) lançamento que segue o tipo com disciplina — a recategorização violaria
+ *    `ativ_disciplina_so_aec_da_turma`, e o banco desfaria a troca com uma frase que não fala do tipo. A conferência lê
+ *    pela sessão (a RLS recorta) e pula a turma arquivada, que a recategorização também pula. Leitura que falha
+ *    RECUSA — nunca vira «não há impedimento» (gotcha 4).
  */
 import { randomUUID } from "node:crypto";
 
 import { revalidatePath } from "next/cache";
 
 import { traduzirRecusa, type ErroDoBanco } from "@/lib/acoes/traducao-de-recusas";
+import { idsArquivados } from "@/lib/dominio/arquivamento-da-turma";
 import {
+  contagemDoTipo,
+  contagemPorTipo,
   ehClassificacaoDoCatalogo,
+  impedimentoDaTroca,
   proximaOrdem,
   tipoComOMesmoNome,
+  type ClassificacaoDoCatalogo,
 } from "@/lib/dominio/atividades/catalogo-de-tipos";
 import { categoriaPeloTipo, type TipoDeAtividade } from "@/lib/dominio/categoria-pelo-tipo";
+import { contagemNaPrimeira, lerTodasAsPaginas } from "@/lib/supabase/paginacao";
 import { criarClienteDeServidor } from "@/lib/supabase/server";
 import type { Json, TablesUpdate } from "@/lib/tipos/database";
 import {
@@ -51,6 +64,15 @@ function primeiraMensagem(issues: readonly { message: string }[]): string {
 
 const SEM_PERMISSAO = "O seu perfil não edita o catálogo de tipos de atividade.";
 
+/**
+ * A segunda guarda do impedimento (b): a conferência de antes pode não ver um lançamento (o recorte da RLS, ou um
+ * lançado entre a conferência e a gravação), e aí quem recusa é o CHECK — com a frase do CATÁLOGO, não a do DSA.
+ */
+const FRASE_DA_DISCIPLINA_NA_TROCA =
+  "Há lançamento deste tipo com disciplina que segue a classificação do tipo: só a AEC e o «TA da disciplina» levam " +
+  "disciplina. No DSA, tire a disciplina dele ou troque o «Conta como» para TA da disciplina antes de mudar a " +
+  "classificação. Nada foi alterado.";
+
 /** A recusa do banco: a de permissão com a frase do catálogo; a de unicidade nomeando o tipo; o resto, traduzido. */
 function recusa(error: ErroDoBanco, nome?: string): ResultadoDoTipo {
   if (error.code === "42501" && !error.hint) return falha(SEM_PERMISSAO);
@@ -58,6 +80,9 @@ function recusa(error: ErroDoBanco, nome?: string): ResultadoDoTipo {
     return falha(
       `Já existe um tipo chamado «${nome}» no catálogo — se ele estiver desativado, reative-o.`,
     );
+  }
+  if (error.code === "23514" && error.message.includes("ativ_disciplina_so_aec_da_turma")) {
+    return falha(FRASE_DA_DISCIPLINA_NA_TROCA);
   }
   return falha(traduzirRecusa(error));
 }
@@ -117,6 +142,104 @@ function tipoEditavel(
     };
   if (!ehClassificacaoDoCatalogo(categoria)) return { erro: FRASE_SO_LEITURA };
   return { linha };
+}
+
+const FRASE_DA_CONFERENCIA =
+  "Não foi possível conferir agora o que impede a troca da classificação (AEC previstas e lançamentos do tipo). " +
+  "Nada foi alterado. Recarregue a página e tente de novo.";
+
+type LancamentoComDisciplina = {
+  readonly id: string;
+  readonly data: string | null;
+  readonly turma_id: string | null;
+  readonly rascunho_de: string | null;
+  readonly turma: { readonly codigo: string | null } | null;
+};
+
+/**
+ * Os impedimentos da troca da classificação padrão, lidos AGORA, pela sessão. `erro` quando uma das leituras falha — e
+ * aí a ação recusa, em vez de seguir como se não houvesse impedimento (gotcha 4).
+ */
+async function conferirImpedimentos(
+  supabase: Cliente,
+  tipoId: string,
+  atual: ClassificacaoDoCatalogo,
+  nova: ClassificacaoDoCatalogo,
+): Promise<{ readonly recusa: string | null; readonly erro: boolean }> {
+  const lerPrevistas = atual === "AEC" && nova !== "AEC";
+  const lerLancamentos = nova !== "AEC";
+  if (!lerPrevistas && !lerLancamentos) return { recusa: null, erro: false };
+
+  const vazio = { data: [] as unknown[], error: null };
+  const [previstasRes, lancamentosRes, arquivadasRes] = await Promise.all([
+    lerPrevistas
+      ? supabase
+          .from("aec_previstas_curriculo")
+          .select("id, curso:cursos!aec_previstas_curriculo_curso_id_fkey(codigo)")
+          .eq("tipo_atividade_id", tipoId)
+          .eq("status", "ativo")
+      : Promise.resolve(vazio),
+    lerLancamentos
+      ? lerTodasAsPaginas((f) =>
+          supabase
+            .from("atividades_nao_letivas")
+            .select(
+              "id, data, turma_id, rascunho_de, turma:turmas!atividades_nao_letivas_turma_id_fkey(codigo)",
+              contagemNaPrimeira(f),
+            )
+            .eq("tipo_atividade_id", tipoId)
+            .eq("status", "ativo")
+            /* O gatilho toca o salvo E o rascunho: os dois entram (sem filtro de `salvo`). */
+            .is("conta_como", null)
+            .not("disciplina_id", "is", null)
+            .order("data", { ascending: false })
+            .order("id")
+            .range(f.de, f.ate),
+        )
+      : Promise.resolve(vazio),
+    lerLancamentos
+      ? supabase.from("vw_turmas_arquivadas").select("turma_id")
+      : Promise.resolve(vazio),
+  ]);
+  if (previstasRes.error || lancamentosRes.error || arquivadasRes.error) {
+    return { recusa: null, erro: true };
+  }
+
+  const previstas = (previstasRes.data ?? []) as unknown as {
+    readonly id: string;
+    readonly curso: { readonly codigo: string | null } | null;
+  }[];
+  const arquivadas = idsArquivados(
+    (arquivadasRes.data ?? []) as unknown as { turma_id: string | null }[],
+  );
+  /* A turma arquivada a recategorização pula (RT-8): ela não impede. */
+  const naoArquivados = ((lancamentosRes.data ?? []) as unknown as LancamentoComDisciplina[]).filter(
+    (l) => l.turma_id === null || !arquivadas.has(l.turma_id),
+  );
+  const contagem = contagemDoTipo(
+    contagemPorTipo(
+      naoArquivados.map((l) => ({
+        tipoId,
+        contaComo: null,
+        id: l.id,
+        comDisciplina: true,
+        rascunhoDe: l.rascunho_de,
+      })),
+    ),
+    tipoId,
+  );
+  const exemplo = naoArquivados[0];
+  return {
+    recusa: impedimentoDaTroca(atual, nova, {
+      previstasAtivas: previstas.length,
+      cursosDasPrevistas: previstas.map((p) => p.curso?.codigo ?? ""),
+      comDisciplina: contagem.comDisciplina,
+      exemploComDisciplina: exemplo
+        ? { turma: exemplo.turma?.codigo ?? null, data: exemplo.data }
+        : null,
+    }),
+    erro: false,
+  };
 }
 
 /** *Novo tipo* — a chave e o rótulo são o nome; a classificação vai em `metadados.categoria`; a ordem, no fim. */
@@ -188,7 +311,14 @@ export async function editarTipo(entrada: unknown): Promise<ResultadoDoTipo> {
       `Já existe o tipo «${repetido.rotulo ?? repetido.valor}» no catálogo: escolha outro nome.`,
     );
 
-  const classificacaoMuda = (linha.metadados?.categoria ?? null) !== classificacao;
+  const atual = linha.metadados?.categoria ?? null;
+  const classificacaoMuda = atual !== classificacao;
+  /* `tipoEditavel` garante a classificação de AEC, TAD ou TR — a conferência só roda quando ela muda. */
+  if (classificacaoMuda && ehClassificacaoDoCatalogo(atual)) {
+    const conferencia = await conferirImpedimentos(supabase, id, atual, classificacao);
+    if (conferencia.erro) return falha(FRASE_DA_CONFERENCIA);
+    if (conferencia.recusa) return falha(conferencia.recusa);
+  }
   const mudancas: TablesUpdate<"config_listas"> = {
     rotulo_exibicao: rotulo,
     ...(classificacaoMuda

@@ -30,6 +30,8 @@ import { escolherAno } from "./paineis";
 const ANO = 2048;
 const NOME_DA_PREVISTA = "Palestra de segurança da amostra das Palestras";
 const NOME_DA_APOINST = "Prática de sondagem da amostra";
+/** A APOINST que o caso do Operador grava para ele mesmo (achado 27): o caso não depende do Encarregado. */
+const NOME_DA_APOINST_DO_OPERADOR = "Prática de balizamento da amostra";
 const JUSTIFICATIVA_DO_REGISTRO =
   "Palestra dada antes da virada para o sistema, conferida na pasta do curso.";
 const JUSTIFICATIVA_DO_DESFAZER = "Registrada na turma errada; volta ao que o DSA diz.";
@@ -418,22 +420,36 @@ test.describe("RA-6 · a APOINST planejada no módulo Atividades", () => {
     );
 
     await abrirAbaDoModulo(page, EMAIL_ENC, "APOINST", ANO);
-    /* D-14: a ordem do pedido — Atividades · Palestras · APOINST, e o Calendário por último (para quem o tem). */
-    const rotulos = await page
-      .getByRole("tablist", { name: "Seções de Atividades" })
-      .getByRole("tab")
-      .allTextContents();
+    /*
+     * D-14: a ordem do pedido — Atividades · Palestras · APOINST, e o Calendário por último (para quem o tem).
+     * ⚠️ `allTextContents` NÃO ESPERA (medido em 03/11/2026: a lista saiu vazia, a aba ainda desenhando): primeiro a
+     *    contagem da aba à vista, que reexecuta, e só depois a leitura dos rótulos.
+     */
+    await expect(page.locator('[data-slot="contagem-de-apoinst"]')).toBeVisible();
+    const abas = page.getByRole("tablist", { name: "Seções de Atividades" }).getByRole("tab");
+    await expect(abas.nth(2)).toHaveText("APOINST");
+    const rotulos = await abas.allTextContents();
     expect(rotulos.slice(0, 3)).toEqual(["Atividades", "Palestras", "APOINST"]);
     if (rotulos.length === 4) expect(rotulos[3]).toBe("Calendário");
-    await expect(page.locator('[data-slot="contagem-de-apoinst"]')).toBeVisible();
     await expect(page.locator('[data-slot="aba-apoinst-em-breve"]')).toHaveCount(0);
 
     /* ── Nova APOINST: turma (seletor único), nome, disciplina, o DESIGNADO, período e TA ────────── */
     await page.locator('[data-slot="abrir-nova-apoinst"]').click();
     const dialogo = page.locator('[data-slot="dialogo-da-apoinst"]');
     await expect(dialogo.locator('[data-slot="formulario-da-apoinst"]')).toBeVisible();
-    await dialogo.locator('[data-slot="seletor-turma"]').click();
-    await page.getByRole("option", { name: turmaNova().codigo, exact: true }).click();
+    /*
+     * ⚠️ COM UMA TURMA SÓ QUE RECEBE APOINST NO ANO, o formulário não mostra o seletor: diz «Turma: <código>» (medido em
+     *    03/11/2026, na base limpa do e2e). Com mais de uma, o seletor único (SC-004). Os dois caminhos levam à mesma turma.
+     */
+    const seletor = dialogo.locator('[data-slot="seletor-turma"]');
+    const turmaUnica = dialogo.locator('[data-slot="turma-da-apoinst"]');
+    await expect(seletor.or(turmaUnica)).toBeVisible();
+    if (await seletor.isVisible()) {
+      await seletor.click();
+      await page.getByRole("option", { name: turmaNova().codigo, exact: true }).click();
+    } else {
+      await expect(turmaUnica).toContainText(turmaNova().codigo);
+    }
     await dialogo.locator('[data-slot="nome-da-apoinst"]').fill(NOME_DA_APOINST);
     await dialogo.getByLabel("Disciplina da turma").selectOption(SEMEADO.disciplinas.I as string);
     await dialogo.locator('[data-slot="seletor-instrutor"]').click();
@@ -522,12 +538,69 @@ test.describe("RA-6 · a APOINST planejada no módulo Atividades", () => {
     );
   });
 
-  test("o Operador lê a aba APOINST do módulo e NÃO tem a Nova APOINST (só o trio planeja)", async ({
+  test("o Operador lê a aba APOINST do módulo — a linha está lá — e NÃO tem a Nova APOINST nem as ações da linha (só o trio planeja)", async ({
     page,
   }) => {
+    test.setTimeout(90_000);
+    /*
+     * ⚠️ INDEPENDENTE DO CASO DO ENCARREGADO (achado 27 da revisão do Bloco 18, 03/11/2026): sem modo serial e com
+     *    `fullyParallel`, os casos deste arquivo se repartem em grupos, cada grupo com o seu `beforeAll` (a sua semente)
+     *    e o seu `afterAll` (que apaga a APOINST). Com dois processos, este caso abre o 2º grupo, onde a APOINST do
+     *    Encarregado nunca existe — e «nenhuma ação na linha» passava sobre uma lista VAZIA. A APOINST deste caso é
+     *    gravada aqui, sem sessão (a carga), no instrutor designado na disciplina da turma (o gatilho o exige).
+     */
+    conferir(
+      "marcações da rodada anterior",
+      (
+        await banco()
+          .from("marcacoes_de_atividade")
+          .delete()
+          .eq("turma_id", turmaNova().id)
+          .not("apoinst_id", "is", null)
+      ).error,
+    );
+    conferir(
+      "APOINST da rodada anterior",
+      (await banco().from("apoinst_planejadas").delete().eq("turma_id", turmaNova().id)).error,
+    );
+    conferir(
+      "a APOINST do caso do Operador",
+      (
+        await banco()
+          .from("apoinst_planejadas")
+          .insert({
+            turma_id: turmaNova().id,
+            disciplina_id: SEMEADO.disciplinas.I,
+            instrutor_id: SEMEADO.instrutorId,
+            nome: NOME_DA_APOINST_DO_OPERADOR,
+            inicio_previsto: `${ANO}-05-03`,
+            fim_previsto: `${ANO}-05-14`,
+            ta_previstos: 4,
+            status: "ativo",
+          })
+      ).error,
+    );
+    const gravadas = await apoinstNoBanco();
+    expect(gravadas, "a APOINST do caso do Operador não foi gravada").toHaveLength(1);
+    const codigo = gravadas[0]?.codigo as string;
+
     await abrirAbaDoModulo(page, EMAIL_OPR, "APOINST", ANO);
     await expect(page.locator('[data-slot="contagem-de-apoinst"]')).toBeVisible();
+    /* O CONTROLE POSITIVO: a linha está na tabela — só então a falta das ações diz alguma coisa. */
+    const linha = page
+      .locator('[data-slot="quadro-de-apoinst"] tr')
+      .filter({ has: page.locator(`[data-apoinst="${codigo}"]`) });
+    await expect(linha).toHaveCount(1, { timeout: 15_000 });
+    await expect(linha).toContainText(NOME_DA_APOINST_DO_OPERADOR);
+    await expect(linha.locator('[data-slot="situacao-da-apoinst"]')).toHaveAttribute(
+      "data-situacao",
+      "planejada",
+    );
+
+    /* O caso que discrimina (DoD 8): o Operador lê, mas não planeja — nem a Nova APOINST, nem as ações da linha. */
     await expect(page.locator('[data-slot="abrir-nova-apoinst"]')).toHaveCount(0);
+    await expect(linha.locator('[data-slot="acoes-da-apoinst"]')).toHaveCount(0);
+    await expect(linha.locator('[data-slot="desativar-apoinst"]')).toHaveCount(0);
     await expect(
       page.locator('[data-slot="quadro-de-apoinst"] [data-slot="acoes-da-apoinst"]'),
     ).toHaveCount(0);

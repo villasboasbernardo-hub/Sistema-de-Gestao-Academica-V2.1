@@ -161,7 +161,14 @@ export async function semearDsa(processo: number, emailOperador: string): Promis
      * sozinho e reprova na suíte, que é a classe `e2e-instrutores-fragil-sob-carga`.
      */
     nomeHabilitado: `Silva Do Percurso Do Dsa ${s}`,
-    nomeSemHabilitacao: "Sem Vinculo Do Percurso",
+    /*
+     * ⚠️ **E O SEM HABILITAÇÃO TAMBÉM LEVA O SUFIXO** (achado 28 da revisão do Bloco 18, 03/11/2026): com o mesmo nome em
+     *    todo processo, o seletor da ATIVIDADE — que mostra o cadastro ativo inteiro, e não só os habilitados — punha os de
+     *    todos os processos com semente de pé, na ordem do código, e o `.first()` pegava o `DSA-E2D0-SEMV` no processo 1.
+     *    O lançamento gravava o instrutor do outro processo, o `limparDsa` dele falhava calado na FK, e a recriação do
+     *    outro lado deixava a gravação com um `uuid` apagado. Os negativos que usam este nome continuam valendo.
+     */
+    nomeSemHabilitacao: `Sem Vinculo Do Percurso ${s}`,
   };
 
   await limparDsa(semeado);
@@ -510,6 +517,14 @@ export async function semearDsa(processo: number, emailOperador: string): Promis
       .maybeSingle();
     if (existe) {
       semVinculoId = (existe as { id: string }).id;
+      /* A linha de uma rodada anterior pode ter o nome antigo, sem o sufixo: ele é reposto, com o erro conferido. */
+      const { error: erroNome } = await admin()
+        .from("instrutores")
+        .update({ nome_completo: semeado.nomeSemHabilitacao })
+        .eq("id", semVinculoId);
+      if (erroNome) {
+        throw new Error(`falha ao repor o nome do instrutor sem vínculo: ${erroNome.message}`);
+      }
     } else {
       const { data, error } = await admin()
         .from("instrutores")

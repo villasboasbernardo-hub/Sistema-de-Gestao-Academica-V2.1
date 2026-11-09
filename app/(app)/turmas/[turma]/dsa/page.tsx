@@ -475,7 +475,13 @@ export default async function SemanaDoDsa({
       ),
     };
   }
-  /* Bloco 18 (spec 033, FR-008.1): Palestras e APOINST no DSA — o acompanhamento da turma, SÓ LEITURA. */
+  /*
+   * Bloco 18 (spec 033, FR-008.1): Palestras e APOINST no DSA — o acompanhamento da turma, SÓ LEITURA.
+   * ⚠️ O «HOJE» É O DE HOJE (`hojeNaCiaara`), não o fim da semana mostrada (achado da revisão do Bloco 18): as duas abas
+   *    contam TODOS os lançamentos salvos da turma — é o acompanhamento dela, o mesmo veredito da ficha —, e o «situação
+   *    em DD/MM/AAAA» com o fim da semana diria uma data que os números não respeitam (a APOINST concluída por lançamento
+   *    de semana posterior, a *Atrasada* de uma semana futura). O corte pela semana é das abas Disciplinas e Avaliações.
+   */
   const contextoDoAcompanhamento: ContextoDaTurmaNasAbas = {
     turmaId,
     turmaCodigo: codigo,
@@ -483,7 +489,7 @@ export default async function SemanaDoDsa({
     curriculoId: (turma.curriculo_id as string | null) ?? null,
     anoLetivo: Number(turma.ano_letivo),
     dataTermino: (turma.data_termino as string | null) ?? null,
-    hoje: ultimoDia,
+    hoje,
     arquivada,
     ead: false,
     permissoes,

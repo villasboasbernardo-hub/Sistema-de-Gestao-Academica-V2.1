@@ -60,6 +60,10 @@ import {
   type CategoriaDeAtividade,
 } from "@/lib/dominio/categoria-pelo-tipo";
 import {
+  contaComoInicialDoCampo,
+  contaComoNaEdicao,
+} from "@/lib/dominio/atividades/conta-como-na-edicao";
+import {
   aceitaVinculo,
   contaComoParaGravar,
   disciplinaNaAtividade,
@@ -221,9 +225,10 @@ export function AcoesDoBloco({
     ? (g.categoriaDoTipo as CategoriaDeAtividade)
     : null;
   const atividadeGlobal = g.global === true;
-  const contaComoGravada = contaComoDoBanco(g.contaComo ?? null);
   const vinculoGravado = opcaoDoVinculo(g.atividadePrevistaId ?? null, g.apoinstId ?? null);
-  const [contaComo, definirContaComo] = React.useState<string>(contaComoGravada ?? "");
+  const [contaComo, definirContaComo] = React.useState<string>(
+    contaComoInicialDoCampo(g.contaComo),
+  );
   const [vinculo, definirVinculo] = React.useState(vinculoGravado);
   const [omDoExterno, definirOmDoExterno] = React.useState(g.responsavelExternoOm ?? "");
   const [local, definirLocal] = React.useState(g.local ?? "");
@@ -339,7 +344,9 @@ export function AcoesDoBloco({
       if (novaOm !== (g.responsavelExternoOm ?? null)) m["responsavelExternoOm"] = novaOm;
       /* RA-4: o «Conta como», a disciplina que ele pede e o vínculo — só o que mudou. */
       if (categoriaDoTipo !== null) {
-        if (contaComoParaMandar !== contaComoGravada) m["contaComo"] = contaComoParaMandar;
+        /* Só o que a pessoa MEXEU: a escolha gravada igual ao padrão novo do tipo não vira «padrão» em silêncio. */
+        const conta = contaComoNaEdicao({ categoriaDoTipo, gravada: g.contaComo, campo: contaComo });
+        if (conta.mandar) m["contaComo"] = conta.valor;
         const novaDisciplina =
           disciplinaDaAtividade === "nenhuma" || disciplinaId === "" ? null : disciplinaId;
         if (novaDisciplina !== (g.disciplinaId ?? null)) m["disciplinaId"] = novaDisciplina;

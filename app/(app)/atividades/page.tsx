@@ -32,6 +32,7 @@ import { usuarioDaSessao } from "@/lib/autorizacao/sessao";
 import { lerParametros } from "@/lib/navegacao/esquema";
 import { criarClienteDeServidor } from "@/lib/supabase/server";
 
+import { alcanceDoPerfil } from "../cursos/consulta";
 import { AbaDeApoinst } from "./AbaDeApoinst";
 import { AbaDeAtividades } from "./AbaDeAtividades";
 import { AbaDePalestras } from "./AbaDePalestras";
@@ -64,7 +65,14 @@ export default async function Atividades({
   const ano = escolha.ano;
 
   /* Bloco 18 (spec 033, FR-006.5 e FR-006.6): as abas Palestras e APOINST, para todos os que leem atividades. */
-  const contexto: ContextoDoModulo = { ano, hoje, permissoes, temCalendario, valores };
+  const contexto: ContextoDoModulo = {
+    ano,
+    hoje,
+    permissoes,
+    temCalendario,
+    valores,
+    alcance: alcanceDoPerfil(usuario?.perfil, usuario?.escopoCurso),
+  };
   if (aba === "palestras") return <AbaDePalestras contexto={contexto} />;
   if (aba === "apoinst") return <AbaDeApoinst contexto={contexto} />;
 

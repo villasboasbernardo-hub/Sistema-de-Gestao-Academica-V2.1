@@ -167,11 +167,15 @@ begin
     raise exception 'A AEC prevista não muda de currículo: desative-a e cadastre outra no currículo certo.'
       using errcode = '23514', hint = 'aec_prevista_de_outro_curriculo';
   end if;
-  select c.metadados ->> 'categoria' into v_categoria
-    from public.config_listas c where c.id = new.tipo_atividade_id and c.lista = 'tipos_atividade';
-  if v_categoria is distinct from 'AEC' then
-    raise exception 'A AEC prevista tem de ser de um tipo de atividade de classificação AEC.'
-      using errcode = '23514', hint = 'aec_prevista_tipo_sem_aec';
+  -- ⚠️ SÓ QUANDO O TIPO NASCE OU MUDA (achado da revisão do Bloco 18): conferir em todo UPDATE travaria a edição e a
+  --    desativação da AEC prevista cujo tipo o Admin reclassificou depois no catálogo.
+  if tg_op = 'INSERT' or new.tipo_atividade_id is distinct from old.tipo_atividade_id then
+    select c.metadados ->> 'categoria' into v_categoria
+      from public.config_listas c where c.id = new.tipo_atividade_id and c.lista = 'tipos_atividade';
+    if v_categoria is distinct from 'AEC' then
+      raise exception 'A AEC prevista tem de ser de um tipo de atividade de classificação AEC.'
+        using errcode = '23514', hint = 'aec_prevista_tipo_sem_aec';
+    end if;
   end if;
   if new.disciplina_id is not null then
     if v_curriculo is null then
@@ -420,11 +424,29 @@ create index idx_ativ_atividade_prevista on public.atividades_nao_letivas (ativi
 create index idx_ativ_apoinst on public.atividades_nao_letivas (apoinst_id) where apoinst_id is not null;
 
 -- O porteiro do vínculo: a AEC prevista é do currículo da turma; a APOINST é da turma; as duas ativas — conferido quando o
--- vínculo nasce ou muda (a sombra do rascunho o copia e passa pela mesma conferência).
+-- vínculo NASCE ou MUDA.
+-- ⚠️ A SOMBRA DO RASCUNHO NÃO É VÍNCULO NOVO (achado da revisão do Bloco 18): para editar ou excluir um lançamento SALVO,
+--    `gravar_rascunho_do_dsa` primeiro INSERE a sombra copiando todas as colunas, o vínculo inclusive. Conferida como
+--    vínculo novo, a sombra de um lançamento ligado a AEC prevista ou APOINST que o trio DESATIVOU depois seria recusada —
+--    e o lançamento ficaria sem edição nem exclusão. A sombra que mantém o vínculo e a turma do salvo passa.
 create or replace function app.conferir_vinculo_da_atividade()
 returns trigger language plpgsql security definer set search_path = '' as $$
+declare
+  v_origem          record;
+  v_mesma_prevista  boolean := false;
+  v_mesma_apoinst   boolean := false;
 begin
-  if new.atividade_prevista_id is not null
+  if tg_op = 'INSERT' and new.rascunho_de is not null then
+    select o.atividade_prevista_id, o.apoinst_id, o.turma_id into v_origem
+      from public.atividades_nao_letivas o where o.id = new.rascunho_de;
+    if found then
+      v_mesma_prevista := v_origem.atividade_prevista_id is not distinct from new.atividade_prevista_id
+                          and v_origem.turma_id is not distinct from new.turma_id;
+      v_mesma_apoinst := v_origem.apoinst_id is not distinct from new.apoinst_id
+                         and v_origem.turma_id is not distinct from new.turma_id;
+    end if;
+  end if;
+  if new.atividade_prevista_id is not null and not v_mesma_prevista
      and (tg_op = 'INSERT' or new.atividade_prevista_id is distinct from old.atividade_prevista_id
           or new.turma_id is distinct from old.turma_id) then
     if not exists (select 1 from public.aec_previstas_curriculo p join public.turmas t on t.curriculo_id = p.curriculo_id
@@ -433,7 +455,7 @@ begin
         using errcode = '23514', hint = 'vinculo_fora_do_curriculo_da_turma';
     end if;
   end if;
-  if new.apoinst_id is not null
+  if new.apoinst_id is not null and not v_mesma_apoinst
      and (tg_op = 'INSERT' or new.apoinst_id is distinct from old.apoinst_id
           or new.turma_id is distinct from old.turma_id) then
     if not exists (select 1 from public.apoinst_planejadas a

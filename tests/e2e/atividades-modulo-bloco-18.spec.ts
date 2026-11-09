@@ -19,14 +19,20 @@
  * ⚠️ **SERIAL E IDEMPOTENTE** (regra 9.1): o *Desativar* deixa um rascunho, e a nova tentativa recomeça do preparo, que
  *    limpa a rodada anterior. O curso é reaproveitado.
  * ⚠️ **A TURMA MORA EM 2047**: a atividade GLOBAL de 10/05/2026 de outras amostras não alcança o ano dela.
+ * ⚠️ **E A TURMA PODE FICAR** (achado 24 da revisão, 03/11/2026): o último caso salva uma semana no DSA, e o evento vai
+ *    para a trilha `dsa_eventos_da_semana`, imutável (FK `restrict`) — turma com trilha não se apaga. O preparo então a
+ *    REAPROVEITA, com a linha e a disciplina dela, como reaproveita o curso; tudo o que é lançamento e AEC prevista sai.
  */
 import { createClient } from "@supabase/supabase-js";
 import { expect, test, type Page } from "@playwright/test";
+
+import { enderecoDaTurma } from "@/lib/navegacao/endereco-de-turma";
 
 import { apagarConta, chaveLocal, criarConta, emailDeTeste, entrar } from "./conta-de-teste";
 import { apagarLinhasDaTurma } from "./dsa-de-teste";
 import { irAFichaDaTurma } from "./navegar-turmas";
 import { abrirPainel, escolherAno } from "./paineis";
+import { irParaASemanaDoDia, salvarASemana } from "./percurso-do-dsa";
 
 test.describe.configure({ mode: "serial" });
 
@@ -38,6 +44,22 @@ const ANO = 2047;
 /** Segunda a quinta da semana ISO 11 de 2047 — a semana que o *Editar* abre. */
 const DIAS = ["2047-03-11", "2047-03-12", "2047-03-13", "2047-03-14"] as const;
 const NOME_PREVISTA = "Palestra prevista da amostra do módulo";
+
+/**
+ * O último caso (SC-005): a semana ISO 20 de 2047 (13 a 18/05), longe da 11 dos lançamentos semeados e do rascunho de
+ * exclusão que o *Desativar* deixa nela — o «Salvar a semana» daqui não pode levar aquele rascunho junto.
+ */
+const SEMANA_DO_CUMPRE = 20;
+const SEGUNDA_DO_CUMPRE = "2047-05-13";
+/** Terça-feira, 1º tempo: a Palestra que cumpre (2 TA). E o 3º tempo, livre, para reabrir o formulário depois. */
+const CELULA_DO_CUMPRE = "0:1";
+const CELULA_DA_CONFERENCIA = "2:1";
+/** A AEC prevista que o DSA cumpre — nasce no próprio caso, para não mudar o «1 de 1» do FR-006.3. */
+const NOME_PREVISTA_DO_DSA = "Palestra prevista que o DSA cumpre";
+/** Uma sala da lista que a migration semeia (`20260917210558`). */
+const SALA_DA_LISTA = "Laboratório de Informática";
+const GRADE = '[data-slot="grade-alocacao"]';
+const FORMULARIO = '[data-slot="formulario-de-lancamento"]';
 
 let EMAIL = "";
 let SIGLA = "";
@@ -71,10 +93,27 @@ async function idDoTipo(valor: string): Promise<string> {
   return (data as { id: string }).id;
 }
 
-/** A rodada anterior sai: atividades (os rascunhos antes), AEC previstas, linhas, turmas e disciplinas. */
+/** A turma tem semana salva ou publicada no DSA? A trilha é imutável, e a turma com ela não se apaga. */
+async function turmaTemTrilha(turmaId: string): Promise<boolean> {
+  const { count, error } = await banco
+    .from("dsa_eventos_da_semana")
+    .select("id", { count: "exact", head: true })
+    .eq("turma_id", turmaId);
+  conferir("a trilha do DSA da turma", error);
+  return (count ?? 0) > 0;
+}
+
+/**
+ * A rodada anterior sai: atividades (os rascunhos antes), AEC previstas, linhas, turmas e disciplinas — menos a turma
+ * com trilha do DSA, que fica com a linha e a disciplina dela (a linha aponta a disciplina, FK `restrict`).
+ */
 async function limpar(): Promise<void> {
   if (CURSO_ID === "") return;
-  const { data: turmas } = await banco.from("turmas").select("id").eq("curso_id", CURSO_ID);
+  const { data: turmas, error: erroTurmas } = await banco
+    .from("turmas")
+    .select("id")
+    .eq("curso_id", CURSO_ID);
+  conferir("ler as turmas", erroTurmas);
   const ids = ((turmas ?? []) as { id: string }[]).map((t) => t.id);
   if (ids.length > 0) {
     conferir(
@@ -91,10 +130,17 @@ async function limpar(): Promise<void> {
     "AEC previstas",
     (await banco.from("aec_previstas_curriculo").delete().eq("curso_id", CURSO_ID)).error,
   );
+  let ficouTurma = false;
   for (const id of ids) {
+    if (await turmaTemTrilha(id)) {
+      ficouTurma = true;
+      continue;
+    }
     await apagarLinhasDaTurma(id);
     conferir("turma", (await banco.from("turmas").delete().eq("id", id)).error);
   }
+  /* A turma que ficou leva a disciplina junto: a linha dela a aponta, e o preparo reaproveita as duas. */
+  if (ficouTurma) return;
   const { data: discs } = await banco.from("disciplinas").select("id").eq("curso_id", CURSO_ID);
   const idsDisc = ((discs ?? []) as { id: string }[]).map((d) => d.id);
   if (idsDisc.length > 0) {
@@ -156,19 +202,29 @@ test.beforeAll(async ({}, info) => {
   conferir("currículo 1", e1);
   CURRICULO_1 = (c1 as { id: string }).id;
 
-  conferir(
-    "disciplina",
-    (
-      await banco.from("disciplinas").insert({
-        codigo: `ATM-DIS-${p}`,
-        curso_id: CURSO_ID,
-        curriculo_id: CURRICULO_1,
-        cod_disciplina: "I",
-        nome_disciplina: "Disciplina da amostra do módulo",
-        carga_horaria_tempos: 40,
-      })
-    ).error,
-  );
+  /* A disciplina e a turma de uma rodada anterior com trilha do DSA ficaram (ver `limpar`): são reaproveitadas. */
+  const { data: disciplinaQueFicou, error: erroDisciplina } = await banco
+    .from("disciplinas")
+    .select("id")
+    .eq("curriculo_id", CURRICULO_1)
+    .eq("cod_disciplina", "I")
+    .maybeSingle();
+  conferir("a disciplina da rodada anterior", erroDisciplina);
+  if (!disciplinaQueFicou) {
+    conferir(
+      "disciplina",
+      (
+        await banco.from("disciplinas").insert({
+          codigo: `ATM-DIS-${p}`,
+          curso_id: CURSO_ID,
+          curriculo_id: CURRICULO_1,
+          cod_disciplina: "I",
+          nome_disciplina: "Disciplina da amostra do módulo",
+          carga_horaria_tempos: 40,
+        })
+      ).error,
+    );
+  }
   const { data: d } = await banco
     .from("disciplinas")
     .select("id")
@@ -177,21 +233,30 @@ test.beforeAll(async ({}, info) => {
     .single();
   DISCIPLINA_ID = (d as { id: string }).id;
 
-  conferir(
-    "turma",
-    (
-      await banco.from("turmas").insert({
-        curso_id: CURSO_ID,
-        turma: "T1",
-        ano_letivo: ANO,
-        status: "ativa",
-        modalidade: "presencial",
-        data_inicio: `${ANO}-02-01`,
-        data_termino: `${ANO}-11-30`,
-        alunos: 10,
-      })
-    ).error,
-  );
+  const { data: turmaQueFicou, error: erroTurmaQueFicou } = await banco
+    .from("turmas")
+    .select("id")
+    .eq("curso_id", CURSO_ID)
+    .eq("ano_letivo", ANO)
+    .maybeSingle();
+  conferir("a turma da rodada anterior", erroTurmaQueFicou);
+  if (!turmaQueFicou) {
+    conferir(
+      "turma",
+      (
+        await banco.from("turmas").insert({
+          curso_id: CURSO_ID,
+          turma: "T1",
+          ano_letivo: ANO,
+          status: "ativa",
+          modalidade: "presencial",
+          data_inicio: `${ANO}-02-01`,
+          data_termino: `${ANO}-11-30`,
+          alunos: 10,
+        })
+      ).error,
+    );
+  }
   const { data: turma, error: et } = await banco
     .from("turmas")
     .select("id, codigo")
@@ -495,4 +560,227 @@ test("FR-007.1 · a aba Atividades da turma: a lista, os filtros e o uso do limi
     "data-atividade",
     CODIGO.daDisciplina(),
   );
+});
+
+/* ───────────────────────────── SC-005 · o «Cumpre» do DSA, por clique, e o RP-0 ───────────────────────────── */
+
+type LancamentoVinculadoNoBanco = {
+  readonly atividade_prevista_id: string | null;
+  readonly apoinst_id: string | null;
+  readonly subtipo: string | null;
+  readonly tempos_consumidos: number | null;
+  readonly salvo: boolean;
+};
+
+/** A linha que VALE do lançamento vinculado à prevista: a ativa sem sombra de rascunho (antes do Salvar, o rascunho). */
+async function lancamentoVinculado(previstaId: string): Promise<LancamentoVinculadoNoBanco | null> {
+  const { data, error } = await banco
+    .from("atividades_nao_letivas")
+    .select("atividade_prevista_id, apoinst_id, subtipo, tempos_consumidos, salvo")
+    .eq("turma_id", TURMA_ID)
+    .eq("atividade_prevista_id", previstaId)
+    .eq("status", "ativo")
+    .is("rascunho_de", null)
+    .maybeSingle();
+  conferir("o lançamento vinculado", error);
+  return data as LancamentoVinculadoNoBanco | null;
+}
+
+/** Na ficha: a aba Palestras pelo clique, e a URL dona dela. */
+async function abrirPalestrasDaTurma(page: Page): Promise<void> {
+  await page
+    .getByRole("tablist", { name: "Seções da turma" })
+    .getByRole("tab", { name: "Palestras", exact: true })
+    .click();
+  await expect.poll(() => new URL(page.url()).searchParams.get("aba")).toBe("palestras");
+  await expect(page.locator('[data-slot="palestras-da-turma"]')).toBeVisible({ timeout: 15_000 });
+}
+
+/** No DSA: a aba Palestras do acompanhamento, abaixo da grade (FR-008.1). */
+async function abrirPalestrasDoDsa(page: Page): Promise<void> {
+  await page.locator('[data-acompanhamento="palestras"]').click();
+  await expect
+    .poll(() => new URL(page.url()).searchParams.get("acompanhamento"))
+    .toBe("palestras");
+  await expect(page.locator('[data-slot="acompanhamento-de-palestras"]')).toBeVisible({
+    timeout: 15_000,
+  });
+}
+
+/** A linha da AEC prevista no quadro da ficha (`palestras-da-turma`) ou no do DSA (`acompanhamento-de-palestras`). */
+const linhaDaPrevistaEm = (
+  page: Page,
+  onde: "palestras-da-turma" | "acompanhamento-de-palestras",
+  codigo: string,
+) =>
+  page
+    .locator(`[data-slot="${onde}"] tr`)
+    .filter({ has: page.locator(`[data-prevista="${codigo}"]`) });
+
+/** Do DSA de volta à ficha, pelo código da turma no cabeçalho (o link da ficha). */
+async function voltarAFicha(page: Page): Promise<void> {
+  await page.locator('[data-slot="semana-atual"] [data-slot="turma-do-dsa"]').first().click();
+  await expect
+    .poll(() => new URL(page.url()).pathname, { timeout: 15_000 })
+    .toBe(enderecoDaTurma(TURMA));
+}
+
+/** Da ficha ao DSA, pelo ícone, e à semana do caso pelo campo de data. */
+async function abrirODsaNaSemana(page: Page): Promise<void> {
+  await page.locator('[data-slot="abrir-o-dsa"]').click();
+  await irParaASemanaDoDia(page, SEGUNDA_DO_CUMPRE, SEMANA_DO_CUMPRE, ANO);
+  await expect(page.locator(GRADE)).toBeVisible();
+}
+
+/** Espera o desfecho de uma gravação no formulário: «fechou», «avisou» ou «recusou: …». */
+async function desfechoDoLancamento(page: Page): Promise<string> {
+  const ler = async (): Promise<string> => {
+    const recusa = page.locator('[data-slot="recusa-do-lancamento"]');
+    if ((await recusa.count()) > 0) return `recusou: ${await recusa.innerText()}`;
+    if ((await page.locator(FORMULARIO).count()) === 0) return "fechou";
+    if ((await page.locator('[data-slot="avisos-do-lancamento"]').count()) > 0) return "avisou";
+    return "em curso";
+  };
+  await expect.poll(ler, { timeout: 60_000 }).not.toBe("em curso");
+  return ler();
+}
+
+test("SC-005 · o «Cumpre» do DSA: a Palestra vinculada é rascunho e não cumpre; «Salvar a semana» a faz «Cumprida» na turma e no DSA", async ({
+  page,
+}) => {
+  /*
+   * > *"Palestra prevista fica CUMPRIDA por lançamento vinculado no DSA (…)"* — RA-5, Bernardo Villas Boas, 03/11/2026
+   *
+   * ⚠️ **ACHADO 24 DA REVISÃO (03/11/2026)**: nenhum caso passava pelo «Cumpre» com uma AEC prevista — a linha vinculada
+   *    da semente nasce pela `service_role`, já salva. Apagar o envio do vínculo no formulário, ou a gravação das duas
+   *    colunas na ação, passava a suíte inteira. Aqui o vínculo nasce PELA TELA, e o caso confere as três metades: a
+   *    linha gravada, o rascunho que NÃO cumpre (RP-0) e o salvo que cumpre — na ficha e no acompanhamento do DSA.
+   */
+  test.setTimeout(240_000);
+
+  /* A segunda AEC prevista, SEM lançamento: é a que o DSA vai cumprir. Gravada sem sessão (a carga). */
+  const previstaId = crypto.randomUUID();
+  conferir(
+    "a AEC prevista do DSA",
+    (
+      await banco.from("aec_previstas_curriculo").insert({
+        id: previstaId,
+        curso_id: CURSO_ID,
+        curriculo_id: CURRICULO_1,
+        nome: NOME_PREVISTA_DO_DSA,
+        tipo_atividade_id: await idDoTipo("Palestra"),
+        ta_previstos: 2,
+        obrigatoria: true,
+        ordem: 2,
+      })
+    ).error,
+  );
+  const { data: prevista, error: erroPrevista } = await banco
+    .from("aec_previstas_curriculo")
+    .select("codigo")
+    .eq("id", previstaId)
+    .single();
+  conferir("o código da AEC prevista do DSA", erroPrevista);
+  const codigoDaPrevista = (prevista as { codigo: string }).codigo;
+
+  /* ── 1. A ficha → Palestras: a prevista nasce «A cumprir» (o controle positivo da linha) ─────────────────── */
+  await irAFichaDaTurma(page, EMAIL, TURMA);
+  await abrirPalestrasDaTurma(page);
+  const naFicha = () => linhaDaPrevistaEm(page, "palestras-da-turma", codigoDaPrevista);
+  await expect(naFicha()).toHaveCount(1);
+  await expect(naFicha().locator('[data-slot="situacao-da-prevista"]')).toHaveAttribute(
+    "data-situacao",
+    "a_cumprir",
+  );
+
+  /* ── 2. O DSA por clique → a semana → a Palestra que CUMPRE a prevista, escolhida no «Cumpre» ────────────── */
+  await abrirODsaNaSemana(page);
+  await page.locator(`${GRADE} td[data-celula="${CELULA_DO_CUMPRE}"]`).click();
+  await expect(page.locator(FORMULARIO)).toBeVisible();
+  await page.locator('[data-tipo="AEC"]').click();
+  await page.locator("#dsa-subtipo").selectOption({ label: "Palestra" });
+  const vinculo = page.locator("#dsa-vinculo");
+  const opcao = vinculo.locator(`option[value="prevista:${previstaId}"]`);
+  await expect(opcao).toHaveCount(1);
+  await expect(opcao).toContainText(NOME_PREVISTA_DO_DSA);
+  await expect(opcao, "a prevista ainda não tem lançamento").not.toContainText("já cumprida");
+  await vinculo.selectOption(`prevista:${previstaId}`);
+  /* FR-003.3: escolher a prevista preenche o «O que é» com o nome dela (vazio até ali). */
+  await expect(page.locator("#dsa-descricao")).toHaveValue(NOME_PREVISTA_DO_DSA);
+  await page.locator("#dsa-tempos").fill("2");
+  await page.locator("#dsa-sala").selectOption(SALA_DA_LISTA);
+  await page.locator('[data-slot="gravar-lancamento"]').click();
+  expect(await desfechoDoLancamento(page)).not.toMatch(/^recusou/);
+  if ((await page.locator(FORMULARIO).count()) > 0) {
+    await page.locator('[data-slot="fechar-formulario"]').click();
+  }
+
+  /* ── 3. No banco: a linha VINCULADA à prevista, e RASCUNHO (RP-0) — a prova é a linha, não o campo (PEND-016-2) ── */
+  await expect
+    .poll(() => lancamentoVinculado(previstaId), { timeout: 30_000 })
+    .not.toBeNull();
+  expect(await lancamentoVinculado(previstaId)).toMatchObject({
+    atividade_prevista_id: previstaId,
+    apoinst_id: null,
+    subtipo: "Palestra",
+    tempos_consumidos: 2,
+    salvo: false,
+  });
+
+  /* ── 4. RP-0: o rascunho NÃO cumpre — nem no acompanhamento do DSA, nem na ficha ──────────────────────────── */
+  await abrirPalestrasDoDsa(page);
+  const noDsa = () => linhaDaPrevistaEm(page, "acompanhamento-de-palestras", codigoDaPrevista);
+  await expect(noDsa()).toHaveCount(1);
+  await expect(noDsa().locator('[data-slot="situacao-da-prevista"]')).toHaveAttribute(
+    "data-situacao",
+    "a_cumprir",
+  );
+  await expect(noDsa()).toContainText("0 de 2 TA");
+
+  await voltarAFicha(page);
+  await abrirPalestrasDaTurma(page);
+  await expect(naFicha().locator('[data-slot="situacao-da-prevista"]')).toHaveAttribute(
+    "data-situacao",
+    "a_cumprir",
+  );
+  await expect(naFicha()).toContainText("0 de 2 TA");
+
+  /* ── 5. «Salvar a semana»: só então o lançamento conta ───────────────────────────────────────────────────── */
+  await abrirODsaNaSemana(page);
+  await salvarASemana(page);
+  await expect
+    .poll(async () => (await lancamentoVinculado(previstaId))?.salvo, { timeout: 30_000 })
+    .toBe(true);
+
+  /* ── 6. Cumprida no acompanhamento do DSA — por lançamento, não à mão ────────────────────────────────────── */
+  await abrirPalestrasDoDsa(page);
+  await expect(noDsa().locator('[data-slot="situacao-da-prevista"]')).toHaveAttribute(
+    "data-situacao",
+    "cumprida",
+    { timeout: 15_000 },
+  );
+  await expect(noDsa()).toContainText("Cumprida");
+  await expect(noDsa()).toContainText("2 de 2 TA");
+
+  /* E o «Cumpre» do formulário passa a dizer «(já cumprida)» — sem esconder a opção (a palestra pode ter mais sessões). */
+  await page.locator(`${GRADE} td[data-celula="${CELULA_DA_CONFERENCIA}"]`).click();
+  await expect(page.locator(FORMULARIO)).toBeVisible();
+  await page.locator('[data-tipo="AEC"]').click();
+  await page.locator("#dsa-subtipo").selectOption({ label: "Palestra" });
+  await expect(page.locator(`#dsa-vinculo option[value="prevista:${previstaId}"]`)).toContainText(
+    "(já cumprida)",
+  );
+  await page.locator('[data-slot="fechar-formulario"]').click();
+  await expect(page.locator(FORMULARIO)).toHaveCount(0);
+
+  /* ── 7. Cumprida na ficha da turma, e sem o *Registrar cumprimento* (não há o que marcar à mão) ───────────── */
+  await voltarAFicha(page);
+  await abrirPalestrasDaTurma(page);
+  await expect(naFicha().locator('[data-slot="situacao-da-prevista"]')).toHaveAttribute(
+    "data-situacao",
+    "cumprida",
+  );
+  await expect(naFicha()).toContainText("Cumprida");
+  await expect(naFicha()).toContainText("2 de 2 TA");
+  await expect(naFicha().locator('[data-slot="registrar-marcacao"]')).toHaveCount(0);
 });

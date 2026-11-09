@@ -12,6 +12,8 @@
  *    do filtro e do *Nova APOINST*, e não ganha ação. A EAD pura (sem DSA) fica de fora: a APOINST se executa no DSA.
  * ⚠️ **AS AÇÕES SEGUEM A PERMISSÃO** (`planejamento_de_atividades.editar` — só o trio), nunca o perfil comparado à mão;
  *    o banco decide de qualquer jeito.
+ * ⚠️ **«NÃO HÁ» × «VOCÊ NÃO VÊ»** (gotcha 4): ao perfil de alcance RECORTADO, sem turma, a frase é «nenhuma ao seu
+ *    alcance» — as turmas existem, a RLS é que não as mostra (achado da revisão do Bloco 18).
  * ⚠️ Sem marcador de cliente: as folhas são o quadro, o formulário, os filtros e os painéis.
  */
 import { BarraDeAcoes } from "@/components/ciaara/barra-de-acoes";
@@ -107,6 +109,12 @@ export async function AbaDeApoinst({ contexto }: { readonly contexto: ContextoDo
       motivo="sem-permissao"
       titulo="Não foi possível ler a APOINST agora"
       detalhe={erro}
+    />
+  ) : comDsa.length === 0 && contexto.alcance === "recortado" ? (
+    <EstadoVazio
+      motivo="sem-permissao"
+      titulo={`Nenhuma turma ao seu alcance com DSA em ${ano}`}
+      detalhe="O seu perfil vê só as turmas dos cursos sob a sua responsabilidade."
     />
   ) : comDsa.length === 0 ? (
     <EstadoVazio

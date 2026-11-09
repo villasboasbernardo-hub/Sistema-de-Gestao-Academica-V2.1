@@ -10,6 +10,11 @@ export type ContextoDoModulo = {
   readonly ano: number;
   readonly hoje: string;
   readonly permissoes: Permissoes;
+  /**
+   * O alcance do perfil (`alcanceDoPerfil`): com «recortado», a lista vazia de turmas é «você não vê», não «não há»
+   * (gotcha 4; achado da revisão do Bloco 18 nas abas Palestras e APOINST).
+   */
+  readonly alcance: "todos" | "recortado";
   /** A aba Calendário existe para quem tem `calendario.*` (spec 023, D-6). */
   readonly temCalendario: boolean;
   readonly valores: Readonly<Record<string, string | number | readonly string[]>>;

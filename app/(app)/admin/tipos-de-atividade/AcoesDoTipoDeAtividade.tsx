@@ -4,7 +4,11 @@
  *
  * ⚠️ **EDITAR DIZ QUANTOS MUDAM ANTES DE GRAVAR** (FR-001.3): trocar a classificação padrão de um tipo com lançamento
  *    recategoriza os ativos que seguem o tipo — é o gatilho de sempre (`app.recategorizar_pelo_tipo`). O número sai de
- *    `fraseDoEfeito`, sobre a contagem que o servidor leu; esta folha não conta nada.
+ *    `fraseDoEfeito`, sobre a contagem que o servidor leu; esta folha não conta nada. Os de turma arquivada ficam como
+ *    estão (RT-8), e o diálogo os diz à parte.
+ * ⚠️ **E DIZ O QUE IMPEDE A TROCA, ANTES DE GRAVAR** (`impedimentoDaTroca`, achados da revisão do Bloco 18): AEC prevista
+ *    ativa de currículo com o tipo, e lançamento que segue o tipo com disciplina. O aviso é do número lido pela página;
+ *    quem recusa é a ação, que confere de novo ao gravar.
  * ⚠️ **EXCLUIR FICA INDISPONÍVEL, COM O MOTIVO** (regra 4; nenhuma exceção nominal cobre o catálogo): o ícone é focável e
  *    a dica diz *"tem registros: use Desativar"* ou *"sem exceção à regra 4: use Desativar"*.
  * ⚠️ **DESATIVAR CONFIRMA; REATIVAR, NÃO**: desativar tira o tipo da escolha do lançamento; reativar não alcança o passado
@@ -28,6 +32,7 @@ import {
   dicaDoExcluirDoTipo,
   ehClassificacaoDoCatalogo,
   fraseDoEfeito,
+  impedimentoDaTroca,
   type ClassificacaoDoCatalogo,
   type ContagemDoTipo,
 } from "@/lib/dominio/atividades/catalogo-de-tipos";
@@ -40,6 +45,7 @@ export function AcoesDoTipoDeAtividade({
   classificacao,
   ativo,
   contagem,
+  previstasAtivas,
 }: {
   readonly id: string;
   /** A chave gravada — fica, e o diálogo a mostra. */
@@ -49,6 +55,8 @@ export function AcoesDoTipoDeAtividade({
   readonly ativo: boolean;
   /** Os lançamentos ativos e salvos do tipo; `null` quando a contagem não pôde ser lida. */
   readonly contagem: ContagemDoTipo | null;
+  /** As AEC previstas ativas de currículo com o tipo; `null` quando não puderam ser lidas. */
+  readonly previstasAtivas: number | null;
 }) {
   const router = useRouter();
   const [erro, definirErro] = React.useState<string | null>(null);
@@ -98,6 +106,7 @@ export function AcoesDoTipoDeAtividade({
             rotulo={rotulo}
             classificacao={classificacao}
             contagem={contagem}
+            previstasAtivas={previstasAtivas}
             fechar={fechar}
             aoGravar={() => router.refresh()}
           />
@@ -152,6 +161,7 @@ function EdicaoDoTipo({
   rotulo,
   classificacao,
   contagem,
+  previstasAtivas,
   fechar,
   aoGravar,
 }: {
@@ -159,6 +169,7 @@ function EdicaoDoTipo({
   readonly rotulo: string;
   readonly classificacao: ClassificacaoDoCatalogo;
   readonly contagem: ContagemDoTipo | null;
+  readonly previstasAtivas: number | null;
   readonly fechar: () => void;
   readonly aoGravar: () => void;
 }) {
@@ -168,6 +179,14 @@ function EdicaoDoTipo({
   const [gravando, definirGravando] = React.useState(false);
   const campoNome = `tipo-${id}-rotulo`;
   const campoClassificacao = `tipo-${id}-classificacao`;
+  /* O aviso só sai com os DOIS números lidos: sem um deles, a ação é que confere (e diz) ao gravar. */
+  const impedimento =
+    contagem === null || previstasAtivas === null
+      ? null
+      : impedimentoDaTroca(classificacao, escolhida, {
+          previstasAtivas,
+          comDisciplina: contagem.comDisciplina,
+        });
 
   async function gravar(evento: React.FormEvent) {
     evento.preventDefault();
@@ -236,6 +255,15 @@ function EdicaoDoTipo({
         >
           {fraseDoEfeito(classificacao, escolhida, contagem)}
         </p>
+        {impedimento ? (
+          <p
+            role="alert"
+            className="text-conflito-tinta text-xs"
+            data-slot="impedimento-da-troca"
+          >
+            A troca será recusada ao gravar. {impedimento}
+          </p>
+        ) : null}
       </div>
 
       <DialogFooter>

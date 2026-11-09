@@ -14,12 +14,17 @@
  *    gravada (que o gatilho, a sincronização e o ETL casam) aparece em letra menor, para quem edita saber que ela fica.
  * ⚠️ **A CONTAGEM É DOS LANÇAMENTOS ATIVOS E SALVOS** (RP-8) que a pessoa alcança (a RLS recorta), e é ela que o diálogo
  *    de *Editar* usa para dizer quantos mudam de categoria. Leitura que falha é dita — nunca vira zero (gotcha 4).
+ *    ⚠️ Os de TURMA ARQUIVADA ficam fora do «mudam» (a recategorização os pula, RT-8), e o RASCUNHO entra só no
+ *    impedimento da disciplina (o gatilho toca o rascunho também) — por isso a leitura não filtra `salvo`.
+ * ⚠️ **O DIÁLOGO AVISA O QUE IMPEDE A TROCA** (`impedimentoDaTroca`): AEC prevista ativa de currículo com o tipo e
+ *    lançamento que segue o tipo com disciplina. Quem recusa é a ação, que confere de novo ao gravar.
  * ⚠️ **SEM MARCADOR DE CLIENTE.** O cadastro e as ações da linha são folhas.
  */
 import { EstadoVazio } from "@/components/ciaara/EstadoVazio";
 import { SePodeVer } from "@/components/ciaara/SePodeVer";
 import { permissoesDoPerfil, pode } from "@/lib/autorizacao/matriz";
 import { usuarioDaSessao } from "@/lib/autorizacao/sessao";
+import { idsArquivados } from "@/lib/dominio/arquivamento-da-turma";
 import {
   contagemDoTipo,
   contagemPorTipo,
@@ -43,7 +48,7 @@ export default async function TiposDeAtividade() {
   const permissoes = await permissoesDoPerfil(usuario?.perfil ?? null);
   const supabase = await criarClienteDeServidor();
 
-  const [catalogoRes, lancamentosRes] = await Promise.all([
+  const [catalogoRes, lancamentosRes, arquivadasRes, previstasRes] = await Promise.all([
     supabase
       .from("config_listas")
       .select("id, valor, rotulo_exibicao, ativo, ordem, metadados")
@@ -52,10 +57,21 @@ export default async function TiposDeAtividade() {
     lerTodasAsPaginas((f) =>
       supabase
         .from("atividades_nao_letivas")
-        .select("id, tipo_atividade_id, conta_como", contagemNaPrimeira(f))
+        .select(
+          "id, tipo_atividade_id, conta_como, turma_id, disciplina_id, salvo, rascunho_de",
+          contagemNaPrimeira(f),
+        )
         .eq("status", "ativo")
-        .eq("salvo", true)
         .not("tipo_atividade_id", "is", null)
+        .order("id")
+        .range(f.de, f.ate),
+    ),
+    supabase.from("vw_turmas_arquivadas").select("turma_id"),
+    lerTodasAsPaginas((f) =>
+      supabase
+        .from("aec_previstas_curriculo")
+        .select("id, tipo_atividade_id", contagemNaPrimeira(f))
+        .eq("status", "ativo")
         .order("id")
         .range(f.de, f.ate),
     ),
@@ -80,15 +96,43 @@ export default async function TiposDeAtividade() {
       metadados: l.metadados as TipoDeAtividade["metadados"],
     })),
   );
-  const contagens = lancamentosRes.error
+  const arquivadas =
+    arquivadasRes.error === null
+      ? idsArquivados((arquivadasRes.data ?? []) as { turma_id: string | null }[])
+      : null;
+  const contagens =
+    lancamentosRes.error || arquivadas === null
+      ? null
+      : contagemPorTipo(
+          (
+            (lancamentosRes.data ?? []) as {
+              id: string;
+              tipo_atividade_id: string | null;
+              conta_como: string | null;
+              turma_id: string | null;
+              disciplina_id: string | null;
+              salvo: boolean | null;
+              rascunho_de: string | null;
+            }[]
+          ).map((l) => ({
+            tipoId: l.tipo_atividade_id,
+            contaComo: l.conta_como,
+            id: l.id,
+            turmaArquivada: l.turma_id !== null && arquivadas.has(l.turma_id),
+            comDisciplina: l.disciplina_id !== null,
+            salvo: l.salvo !== false,
+            rascunhoDe: l.rascunho_de,
+          })),
+        );
+  /* As AEC previstas ATIVAS de currículo por tipo — o impedimento (a) da troca. `null` quando não foram lidas. */
+  const previstasPorTipo = previstasRes.error
     ? null
-    : contagemPorTipo(
-        (
-          (lancamentosRes.data ?? []) as {
-            tipo_atividade_id: string | null;
-            conta_como: string | null;
-          }[]
-        ).map((l) => ({ tipoId: l.tipo_atividade_id, contaComo: l.conta_como })),
+    : ((previstasRes.data ?? []) as { tipo_atividade_id: string | null }[]).reduce(
+        (mapa, p) =>
+          p.tipo_atividade_id === null
+            ? mapa
+            : mapa.set(p.tipo_atividade_id, (mapa.get(p.tipo_atividade_id) ?? 0) + 1),
+        new Map<string, number>(),
       );
 
   const podeEditar = pode(permissoes, "parametros", "editar");
@@ -136,6 +180,13 @@ export default async function TiposDeAtividade() {
             <p role="alert" className="text-atrasado-tinta text-sm" data-slot="contagem-nao-lida">
               Não foi possível contar os lançamentos de cada tipo agora: a coluna fica sem número, e
               o diálogo de Editar não diz quantos mudam de categoria.
+            </p>
+          ) : null}
+          {previstasPorTipo === null ? (
+            <p role="alert" className="text-atrasado-tinta text-sm" data-slot="previstas-nao-lidas">
+              Não foi possível contar agora as AEC previstas de currículo de cada tipo: o diálogo de
+              Editar não avisa se elas impedem a troca da classificação — a gravação confere de
+              novo.
             </p>
           ) : null}
           <div className="mt-2 overflow-x-auto">
@@ -199,6 +250,11 @@ export default async function TiposDeAtividade() {
                               classificacao={tipo.categoria}
                               ativo={tipo.ativo}
                               contagem={contagem}
+                              previstasAtivas={
+                                previstasPorTipo === null
+                                  ? null
+                                  : (previstasPorTipo.get(tipo.id) ?? 0)
+                              }
                             />
                           ) : (
                             <span className="text-texto-suave text-xs" data-slot="tipo-so-leitura">

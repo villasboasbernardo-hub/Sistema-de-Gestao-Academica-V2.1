@@ -13,9 +13,10 @@
 import { CardKpi } from "@/components/ciaara/card-kpi";
 import { GraficoPizza } from "@/components/graficos/grafico-pizza";
 import type { Serie } from "@/components/graficos/tipos";
-import type {
-  NumerosDaApoinst,
-  NumerosDasPalestras,
+import {
+  fraseDosTaDasAvulsas,
+  type NumerosDaApoinst,
+  type NumerosDasPalestras,
 } from "@/lib/dominio/atividades/palestras-e-apoinst-na-tela";
 
 const CARTAO =
@@ -50,7 +51,7 @@ export function EstatisticasDePalestras({
         <CardKpi
           rotulo="Fora do currículo"
           valor={numeros.avulsas}
-          detalhe={`${numeros.taDasAvulsas} TA — contam no limite de AEC`}
+          detalhe={fraseDosTaDasAvulsas(numeros)}
         />
       </div>
       <div className="grid gap-4 lg:grid-cols-2">

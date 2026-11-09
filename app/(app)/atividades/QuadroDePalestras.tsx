@@ -11,7 +11,9 @@
  * ⚠️ **ELE NÃO CALCULA NADA**: as linhas chegam prontas (`quadroDasPrevistas` + `linhasDePalestras`), com a situação, os
  *    TA, as datas, o palestrante, o local e o histórico da marcação.
  * ⚠️ **A AVULSA FICA EM BLOCO PRÓPRIO** (*"fora do currículo — contam no limite de AEC"*): não tem situação, e quem a
- *    soma no limite é a categoria (a view), não este quadro.
+ *    soma no limite é a categoria (a view), não este quadro. ⚠️ **SÓ A QUE CONTA COMO AEC ENTRA NO LIMITE** (achado da
+ *    revisão do Bloco 18): a coluna *Conta como* diz como cada uma conta; e o lançamento vinculado a AEC prevista que
+ *    saiu do quadro (desativada) aparece aqui com a marca, em vez de sumir.
  * ⚠️ **AS AÇÕES SÃO DO TRIO E DA TURMA FORA DO ARQUIVO**: `podeMarcar` decide no servidor; a linha da turma arquivada
  *    não ganha ícone (RT-8: ela conta, mas não grava).
  * ⚠️ **A CONFIRMAÇÃO**: na ficha, pela URL (`?gravada=`, que sobrevive à remontagem); no módulo, acima do quadro.
@@ -25,10 +27,12 @@ import { useRouter } from "next/navigation";
 import { BadgeStatus } from "@/components/ciaara/badge-status";
 import { TabelaDensa, type Coluna } from "@/components/ciaara/tabela-densa";
 import { ROTULO_DA_SITUACAO_DA_PREVISTA, ehCumprida } from "@/lib/dominio/atividades/previstas";
-import type {
-  AvulsaDaAba,
-  LinhaDePalestra,
+import {
+  MARCA_DO_VINCULO_DA_AVULSA,
+  type AvulsaDaAba,
+  type LinhaDePalestra,
 } from "@/lib/dominio/atividades/palestras-e-apoinst-na-tela";
+import { rotuloDeComoConta } from "@/lib/dominio/categoria-pelo-tipo";
 import { dataParaLeitura, instanteComHoraParaLeitura, intervaloDeDatas } from "@/lib/formato/data";
 import {
   enderecoDaAbaDaTurma,
@@ -183,8 +187,25 @@ export function QuadroDePalestras({
       chave: "descricao",
       titulo: "Descrição",
       celula: (a) => (
-        <span className="whitespace-normal" data-avulsa={a.codigo}>
+        <span className="whitespace-normal" data-avulsa={a.codigo} data-vinculo={a.vinculo}>
           {a.descricao ?? "—"}
+          {MARCA_DO_VINCULO_DA_AVULSA[a.vinculo] ? (
+            <span
+              className="text-atrasado-tinta block text-xs"
+              data-slot="vinculo-fora-do-quadro"
+            >
+              {MARCA_DO_VINCULO_DA_AVULSA[a.vinculo]}
+            </span>
+          ) : null}
+        </span>
+      ),
+    },
+    {
+      chave: "conta-como",
+      titulo: "Conta como",
+      celula: (a) => (
+        <span data-conta-como={a.comoConta ?? ""}>
+          {a.comoConta === null ? "—" : rotuloDeComoConta(a.comoConta)}
         </span>
       ),
     },
@@ -227,8 +248,9 @@ export function QuadroDePalestras({
         <header className="flex flex-col">
           <h2 className="text-texto text-sm font-semibold">Fora do currículo</h2>
           <p className="text-texto-suave text-xs">
-            Palestras lançadas sem vínculo com uma AEC prevista — contam no limite de AEC do
-            currículo.
+            Palestras lançadas sem vínculo com uma AEC prevista nem APOINST — as que contam como
+            AEC entram no limite de AEC do currículo (a coluna «Conta como» diz como cada uma
+            conta). O lançamento vinculado a uma AEC prevista desativada também aparece aqui.
           </p>
         </header>
         {avulsas.length === 0 ? (

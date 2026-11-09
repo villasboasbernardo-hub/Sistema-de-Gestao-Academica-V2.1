@@ -11,7 +11,7 @@
 -- ⚠️ 2049 e códigos próprios (`T156-…`): vale na base limpa e na carregada.
 -- =================================================================================
 begin;
-select plan(46);
+select plan(52);
 
 create function pg_temp.recusa(p_sql text) returns jsonb
 language plpgsql as $f$
@@ -238,6 +238,34 @@ select is(
   array['TAD', 'TR'],
   'RA-1 · trocar a classificação padrão do tipo recategoriza a linha sem escolha e preserva a escolhida'
 );
+select ok(
+  (select editado_em is null from public.atividades_nao_letivas where codigo = 'T156-A5'),
+  'RA-1 · a recategorização nem toca a linha com escolha (o filtro da M2, não o gatilho, a preserva)'
+);
+
+-- a recategorização pula a linha da turma ARQUIVADA (revisão do Bloco 18): sem o filtro, a trava da arquivada recusaria a
+-- linha e a troca inteira do catálogo seria desfeita
+insert into public.turmas (id, codigo, curso_id, turma, ano_letivo, status, modalidade, data_inicio, data_termino)
+values ('a1565000-0000-0000-0000-000000000009', 'T156-CUR T9 2049', 'a1562000-0000-0000-0000-000000000001',
+        'T9', 2049, 'concluida', 'presencial', '2049-03-01', '2049-06-30');
+insert into public.atividades_nao_letivas (id, codigo, turma_id, escopo, data, ta_inicial, tempos_consumidos,
+                                           tipo_atividade_id, categoria_normativa, descricao)
+select 'a1566000-0000-0000-0000-000000000009', 'T156-A9', 'a1565000-0000-0000-0000-000000000009', 'turma',
+       '2049-03-13', 1, 1, teste, 'TAD', 'Na turma que vai ser arquivada' from _t;
+insert into public.turma_arquivamentos (turma_id, acao, observacao)
+values ('a1565000-0000-0000-0000-000000000009', 'arquivar', 'Encerrada (T156)');
+select is(
+  pg_temp.recusa($$update public.config_listas set metadados = '{"categoria": "TR"}'
+                    where lista = 'tipos_atividade' and valor = 'T156 Tipo'$$) ->> 'recusou',
+  'false',
+  'RA-1 · trocar a classificação de um tipo com lançamento em turma arquivada passa'
+);
+select is(
+  (select array_agg(categoria_normativa::text order by codigo) from public.atividades_nao_letivas
+    where codigo in ('T156-A4', 'T156-A9')),
+  array['TR', 'TAD'],
+  'RT-8 · a linha da turma sem arquivo segue o tipo; a da arquivada fica com a categoria que tinha'
+);
 
 -- ── as AEC previstas do currículo (RA-2) ──────────────────────────────────────────
 create temporary table _c as
@@ -320,6 +348,18 @@ select ok(
 );
 select set_config('request.jwt.claim.sub', '', true);
 
+-- a AEC prevista cujo tipo o Admin reclassificou depois continua editável (revisão do Bloco 18)
+update public.config_listas set metadados = '{"categoria": "AEC"}' where lista = 'tipos_atividade' and valor = 'T156 Tipo';
+insert into public.aec_previstas_curriculo (id, curso_id, nome, tipo_atividade_id)
+select 'a1567000-0000-0000-0000-000000000009', 'a1562000-0000-0000-0000-000000000002', 'Do tipo de teste', teste from _t;
+update public.config_listas set metadados = '{"categoria": "TAD"}' where lista = 'tipos_atividade' and valor = 'T156 Tipo';
+select is(
+  pg_temp.recusa($$update public.aec_previstas_curriculo set nome = 'Renomeada'
+                    where id = 'a1567000-0000-0000-0000-000000000009'$$) ->> 'recusou',
+  'false',
+  'RA-2 · a classificação do tipo só se confere quando o tipo nasce ou muda — editar o nome passa'
+);
+
 -- ── o vínculo do lançamento (RA-4) ────────────────────────────────────────────────
 insert into public.atividades_nao_letivas (id, codigo, turma_id, escopo, data, ta_inicial, tempos_consumidos,
                                            tipo_atividade_id, categoria_normativa, descricao, atividade_prevista_id,
@@ -359,6 +399,30 @@ select is(
     ->> 'restricao',
   'ativ_om_so_do_externo',
   'RA-4 · a OM é só do responsável de fora'
+);
+
+-- desativada a AEC prevista, o vínculo NOVO é recusado, mas a SOMBRA do rascunho do lançamento já ligado passa (revisão
+-- do Bloco 18: sem isso, o lançamento ficaria sem edição nem exclusão no DSA)
+update public.aec_previstas_curriculo set status = 'inativo' where id = 'a1567000-0000-0000-0000-000000000001';
+select is(
+  pg_temp.recusa($$insert into public.atividades_nao_letivas (codigo, turma_id, escopo, data, ta_inicial,
+                    tempos_consumidos, tipo_atividade_id, categoria_normativa, descricao, atividade_prevista_id)
+                    select 'T156-X7', 'a1565000-0000-0000-0000-000000000001', 'turma', '2049-03-16', 1, 1, palestra,
+                           'AEC', 'Vínculo novo com desativada', 'a1567000-0000-0000-0000-000000000001' from _t$$)
+    ->> 'hint',
+  'vinculo_fora_do_curriculo_da_turma',
+  'RA-4 · vínculo NOVO com AEC prevista desativada é recusado'
+);
+select is(
+  pg_temp.recusa($$insert into public.atividades_nao_letivas (codigo, turma_id, escopo, data, ta_inicial,
+                    tempos_consumidos, tipo_atividade_id, categoria_normativa, descricao, atividade_prevista_id,
+                    responsavel_externo, responsavel_externo_om, salvo, rascunho_de)
+                    select 'T156-A6-S', turma_id, escopo, data, ta_inicial, tempos_consumidos, tipo_atividade_id,
+                           categoria_normativa, descricao, atividade_prevista_id, responsavel_externo,
+                           responsavel_externo_om, false, id
+                      from public.atividades_nao_letivas where codigo = 'T156-A6'$$) ->> 'recusou',
+  'false',
+  'RA-4 · a sombra do rascunho que mantém o vínculo do salvo passa, com a AEC prevista desativada'
 );
 
 -- ── a APOINST planejada (RA-6) ─────────────────────────────────────────────────────

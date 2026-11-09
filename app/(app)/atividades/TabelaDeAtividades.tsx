@@ -9,6 +9,10 @@
  *    como tal, e não como a categoria do tipo — e o `data-categoria` da célula também (os percursos o leem).
  * ⚠️ **O TIPO PELO RÓTULO** (decisão 4): «Atividade Extraclasse», nunca o valor da chave.
  * ⚠️ **AS AÇÕES SÓ PARA QUEM LANÇA** (`atividades_nao_letivas.editar`), e indisponíveis na turma arquivada (D-COR-5).
+ * ⚠️ **E INDISPONÍVEIS NA ATIVIDADE DE TODAS AS TURMAS** (achados da revisão do Bloco 18): a global não passa pelo
+ *    rascunho da semana — o DSA a muda NA HORA, para todas as turmas, inclusive em semana publicada (D-14 da spec 024).
+ *    O *Desativar* daqui prometeria um rascunho que não existe; o caminho é o DSA de uma turma ou o Calendário, que dizem
+ *    o efeito imediato.
  * ⚠️ **O ENDEREÇO DO DSA SAI DE `enderecoDoDsa`** (gotcha 12): o código da turma tem espaços.
  * ⚠️ SEM MARCADOR DE CLIENTE: só as ações da linha são folha.
  */
@@ -34,6 +38,18 @@ export type AcoesDaTabela = {
 };
 
 const MOTIVO_DA_ARQUIVADA = "turma arquivada: somente leitura";
+/** A global muda na hora, para todas as turmas: a lista não oferece o rascunho que ela não tem. */
+const MOTIVO_DA_GLOBAL =
+  "atividade de todas as turmas: muda na hora para todas — edite ou desfaça pelo DSA de uma turma ou pelo Calendário";
+
+/** O motivo de as ações da linha estarem indisponíveis, ou nulo quando valem. */
+function motivoDaLinhaIndisponivel(
+  turmaId: string | null,
+  arquivadas: ReadonlySet<string>,
+): string | null {
+  if (turmaId === null) return MOTIVO_DA_GLOBAL;
+  return arquivadas.has(turmaId) ? MOTIVO_DA_ARQUIVADA : null;
+}
 
 function resumoDaLinha(l: AtividadeDaLista): string {
   const tipo = l.tipoRotulo ?? l.tipoValor ?? "Atividade";
@@ -131,11 +147,7 @@ export function TabelaDeAtividades({
                       resumo={resumoDaLinha(l)}
                       dataLegivel={dataParaLeitura(l.data)}
                       hrefDoDsa={enderecoParaEditar(l)}
-                      indisponivel={
-                        l.turmaId !== null && acoes.arquivadas.has(l.turmaId)
-                          ? MOTIVO_DA_ARQUIVADA
-                          : null
-                      }
+                      indisponivel={motivoDaLinhaIndisponivel(l.turmaId, acoes.arquivadas)}
                       pendente={pendente}
                       excluir={acoes.excluir}
                     />

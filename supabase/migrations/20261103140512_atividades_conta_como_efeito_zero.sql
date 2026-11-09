@@ -141,7 +141,12 @@ begin
      where tipo_atividade_id = new.id
        and status = 'ativo'
        -- Bloco 18 (RA-1, decisão 1): a linha em que o OPERADOR escolheu AEC/TAD/TR fica com a escolha dele.
-       and (conta_como is null or conta_como = 'CHD');
+       and (conta_como is null or conta_como = 'CHD')
+       -- ⚠️ E A DA TURMA ARQUIVADA FICA COMO ESTÁ (achado da revisão do Bloco 18; RT-8: ela conta com a situação que
+       --    tinha): a trava `trg_atividades_nao_letivas_turma_arquivada` recusaria a linha, e a troca do catálogo inteira
+       --    seria desfeita. Medido na cópia `remoto-20261103-103124.sql`: 21 turmas arquivadas, com Palestra, Visita
+       --    Técnica, Atividade Extracurricular e Administração lançadas.
+       and (turma_id is null or not coalesce(app.turma_arquivada(turma_id), false));
   end if;
   return new;
 end;

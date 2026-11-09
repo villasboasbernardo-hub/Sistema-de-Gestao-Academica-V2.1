@@ -153,7 +153,10 @@ select is(
         --   permissões (`app.pode`), como `registrar_evento_do_dsa`; a semana salva ele lê de `vw_ocupacao_ta`.
         'porteiro_do_regime_do_dsa',
         -- · spec 031 (Bloco 16, ajuste D): o gatilho do ajuste manual só confere a TURMA da avaliação ajustada.
-        'guardar_ajuste_de_avaliacao')),
+        'guardar_ajuste_de_avaliacao',
+        -- · spec 033 (Bloco 18): o porteiro do vínculo só lê o VÍNCULO da linha de origem da sombra do rascunho (para não
+        --   conferir de novo o vínculo copiado); não soma nem cruza o que conta.
+        'conferir_vinculo_da_atividade')),
   '',
   'RP-8: todo objeto que lê uma tabela de lançamento filtra «salvo» (ou está na lista nominal)');
 

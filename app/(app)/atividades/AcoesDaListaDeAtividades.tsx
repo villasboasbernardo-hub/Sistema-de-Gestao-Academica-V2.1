@@ -14,6 +14,9 @@
  *    criava um só para esta lista, e a guarda o acusou — o canônico é o da lista de usuários, que guarda a resposta de
  *    uma ação, e não recorte. Depois do pedido, a página relê, e a linha ganha a marca «desativação pendente».
  * ⚠️ **O EXCLUIR É SEMPRE INDISPONÍVEL**: lançamento é registro (regra 4); a dica diz o caminho.
+ * ⚠️ **NA ATIVIDADE DE TODAS AS TURMAS, EDITAR E DESATIVAR TAMBÉM** (achados da revisão do Bloco 18): a global não tem
+ *    rascunho — o DSA a muda na hora, para todas as turmas (D-14 da spec 024) —, e a confirmação daqui prometeria o
+ *    contrário. Quem decide é a tabela (`indisponivel`, com o motivo); esta folha só não oferece o diálogo.
  */
 "use client";
 
@@ -45,7 +48,7 @@ export function AcoesDaAtividade({
   readonly dataLegivel: string;
   /** O DSA da turma na semana do lançamento; nulo na atividade de todas as turmas. */
   readonly hrefDoDsa: string | null;
-  /** O motivo de nada estar disponível (a turma arquivada); nulo, as ações valem. */
+  /** O motivo de nada estar disponível (a turma arquivada, a atividade de todas as turmas); nulo, as ações valem. */
   readonly indisponivel: string | null;
   /** A desativação já foi pedida como rascunho e espera o *Salvar a semana*. */
   readonly pendente: boolean;

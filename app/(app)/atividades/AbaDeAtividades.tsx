@@ -112,11 +112,18 @@ export async function AbaDeAtividades({ contexto }: { readonly contexto: Context
       (filtro.turma === "" || t.codigo === filtro.turma) &&
       (filtro.curso === "" || t.cursoCodigo === filtro.curso),
   );
-  const planejado = turmasDoRecorte.map((t) => ({
-    id: t.id,
-    codigo: t.codigo,
-    curriculoId: t.curriculoId,
-  }));
+  /*
+   * ⚠️ SEM A TURMA EAD PURA (achado da revisão do Bloco 18), como as abas Palestras e APOINST e os Avisos: ela não tem
+   *    DSA, e as AEC previstas dela ficariam «a cumprir» para sempre, inflando o M do «N de M» — dois «N de M» diferentes
+   *    para o mesmo ano e o mesmo recorte. O uso do limite continua com ela (`lerLimitesDasTurmas` recebe a marca `ead`).
+   */
+  const planejado = turmasDoRecorte
+    .filter((t) => !ehEadPuro(t.modalidade))
+    .map((t) => ({
+      id: t.id,
+      codigo: t.codigo,
+      curriculoId: t.curriculoId,
+    }));
 
   const [leitura, universo, limites, palestras, apoinst] = await Promise.all([
     lerAtividades(

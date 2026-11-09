@@ -8,7 +8,8 @@
  * ⚠️ **A TURMA EAD PURA FICA DE FORA**: ela não tem DSA (spec 024, FR-018), e as previstas dela ficariam «a cumprir» para
  *    sempre, contando contra o N de M. Dito na tela, com o número.
  * ⚠️ **FILTROS E ESTATÍSTICAS SÃO ÍCONES NA BARRA** (RT-4): os números saem das MESMAS linhas que a tabela mostra.
- * ⚠️ **«NÃO HÁ» × «VOCÊ NÃO VÊ» × «NÃO FOI POSSÍVEL LER»** (gotcha 4).
+ * ⚠️ **«NÃO HÁ» × «VOCÊ NÃO VÊ» × «NÃO FOI POSSÍVEL LER»** (gotcha 4): ao perfil de alcance RECORTADO, sem turma, a
+ *    frase é «nenhuma ao seu alcance» — as turmas existem, a RLS é que não as mostra (achado da revisão do Bloco 18).
  * ⚠️ Sem marcador de cliente: as folhas são o quadro, os filtros e os painéis.
  */
 import { BarraDeAcoes } from "@/components/ciaara/barra-de-acoes";
@@ -81,6 +82,12 @@ export async function AbaDePalestras({ contexto }: { readonly contexto: Contexto
       motivo="sem-permissao"
       titulo="Não foi possível ler as palestras agora"
       detalhe={erro}
+    />
+  ) : comDsa.length === 0 && contexto.alcance === "recortado" ? (
+    <EstadoVazio
+      motivo="sem-permissao"
+      titulo={`Nenhuma turma ao seu alcance com DSA em ${ano}`}
+      detalhe="O seu perfil vê só as turmas dos cursos sob a sua responsabilidade."
     />
   ) : comDsa.length === 0 ? (
     <EstadoVazio

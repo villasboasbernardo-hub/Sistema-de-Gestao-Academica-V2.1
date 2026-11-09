@@ -14,7 +14,11 @@
  *    fica fora da CHT e não é escolha do catálogo.
  * ⚠️ **TROCAR A CLASSIFICAÇÃO PADRÃO RECATEGORIZA OS LANÇAMENTOS ATIVOS QUE SEGUEM O TIPO** — é o gatilho de sempre
  *    (`app.recategorizar_pelo_tipo`, D-AA-3 da spec 014), que desde a M2 do Bloco 18 PULA a linha em que o operador
- *    escolheu AEC, TAD ou TR no «Conta como». O diálogo diz QUANTOS mudam antes de gravar; quem decide é o banco.
+ *    escolheu AEC, TAD ou TR no «Conta como» — e a de turma ARQUIVADA, que fica como estava (RT-8; achado da revisão).
+ *    O diálogo diz QUANTOS mudam antes de gravar; quem decide é o banco.
+ * ⚠️ **A TROCA QUE TIRA O TIPO DA AEC TEM DOIS IMPEDIMENTOS** (`impedimentoDaTroca`, achados da revisão): AEC prevista
+ *    ativa de currículo com o tipo, e lançamento que segue o tipo com disciplina. A ação os confere antes de gravar, e o
+ *    diálogo os avisa.
  * ⚠️ **NÃO HÁ EXCLUSÃO** (regra 4; nenhuma exceção nominal cobre `tipos_atividade`): o ícone fica indisponível, com o
  *    motivo — *"tem registros"* quando há lançamento, *"sem exceção à regra 4"* quando não há.
  *
@@ -28,6 +32,7 @@ import {
   type CategoriaDeAtividade,
   type TipoDeAtividade,
 } from "@/lib/dominio/categoria-pelo-tipo";
+import { dataParaLeitura } from "@/lib/formato/data";
 
 import { rotuloDoTipo } from "./grupos";
 
@@ -109,25 +114,80 @@ export type ContagemDoTipo = {
   readonly taDaDisciplina: number;
   /** «Conta como» AEC, TAD ou TR escolhido no lançamento: o gatilho os pula. */
   readonly comEscolha: number;
+  /**
+   * Os de turma ARQUIVADA, qualquer que seja o «Conta como»: o gatilho também os pula (RT-8 — a arquivada conta com a
+   * situação que tinha, e a trava da arquivada recusaria a linha). Ficam FORA de `seguemOTipo`, `taDaDisciplina` e
+   * `comEscolha`, e o «mudam» do diálogo não os promete.
+   */
+  readonly emTurmaArquivada: number;
+  /**
+   * Os que seguem o tipo («Conta como» vazio) e TÊM DISCIPLINA, fora de turma arquivada — salvos OU em rascunho, porque
+   * o gatilho toca os dois. Contados por lançamento: a sombra do rascunho não soma ao salvo de que é sombra. Com a
+   * classificação nova fora de AEC, cada um viola `ativ_disciplina_so_aec_da_turma` e a troca inteira é recusada.
+   */
+  readonly comDisciplina: number;
 };
 
-const ZERO: ContagemDoTipo = { total: 0, seguemOTipo: 0, taDaDisciplina: 0, comEscolha: 0 };
+const ZERO: ContagemDoTipo = {
+  total: 0,
+  seguemOTipo: 0,
+  taDaDisciplina: 0,
+  comEscolha: 0,
+  emTurmaArquivada: 0,
+  comDisciplina: 0,
+};
 
-/** A contagem de cada tipo, a partir dos lançamentos (ativos e salvos, filtrados por quem lê). */
+/** Um lançamento ATIVO com tipo, como a contagem o precisa ver. */
+export type LancamentoDoTipo = {
+  readonly tipoId: string | null;
+  readonly contaComo: string | null;
+  /** O id da linha — o que separa um lançamento do outro na contagem dos que têm disciplina. */
+  readonly id?: string;
+  /** A turma da linha está arquivada (`vw_turmas_arquivadas`). Ausente = não. */
+  readonly turmaArquivada?: boolean;
+  /** A linha tem disciplina. Ausente = não. */
+  readonly comDisciplina?: boolean;
+  /** Salvo (RP-8). Ausente = salvo: só o salvo entra no «total» e no «mudam»; o rascunho, só em `comDisciplina`. */
+  readonly salvo?: boolean;
+  /** A linha salva de que este rascunho é sombra (nulo no salvo e no rascunho novo). */
+  readonly rascunhoDe?: string | null;
+};
+
+/** A contagem de cada tipo, a partir dos lançamentos (ativos, filtrados por quem lê). */
 export function contagemPorTipo(
-  lancamentos: readonly { readonly tipoId: string | null; readonly contaComo: string | null }[],
+  lancamentos: readonly LancamentoDoTipo[],
 ): ReadonlyMap<string, ContagemDoTipo> {
   const mapa = new Map<string, ContagemDoTipo>();
-  for (const l of lancamentos) {
-    if (l.tipoId === null) continue;
+  const comDisciplina = new Map<string, Set<string>>();
+  lancamentos.forEach((l, indice) => {
+    if (l.tipoId === null) return;
     const atual = mapa.get(l.tipoId) ?? ZERO;
     const como = contaComoDoBanco(l.contaComo);
+    const arquivada = l.turmaArquivada === true;
+    const salvo = l.salvo !== false;
+    if (!arquivada && como === null && l.comDisciplina === true) {
+      /* A sombra conta pelo salvo de que é sombra: o mesmo lançamento não soma duas vezes. */
+      const chave = l.rascunhoDe ?? l.id ?? `#${indice}`;
+      const conjunto = comDisciplina.get(l.tipoId) ?? new Set<string>();
+      conjunto.add(chave);
+      comDisciplina.set(l.tipoId, conjunto);
+    }
+    if (!salvo) {
+      if (!mapa.has(l.tipoId)) mapa.set(l.tipoId, atual);
+      return;
+    }
     mapa.set(l.tipoId, {
+      ...atual,
       total: atual.total + 1,
-      seguemOTipo: atual.seguemOTipo + (como === null ? 1 : 0),
-      taDaDisciplina: atual.taDaDisciplina + (como === "CHD" ? 1 : 0),
-      comEscolha: atual.comEscolha + (como !== null && como !== "CHD" ? 1 : 0),
+      seguemOTipo: atual.seguemOTipo + (!arquivada && como === null ? 1 : 0),
+      taDaDisciplina: atual.taDaDisciplina + (!arquivada && como === "CHD" ? 1 : 0),
+      comEscolha: atual.comEscolha + (!arquivada && como !== null && como !== "CHD" ? 1 : 0),
+      emTurmaArquivada: atual.emTurmaArquivada + (arquivada ? 1 : 0),
     });
+  });
+  for (const [tipoId, conjunto] of comDisciplina) {
+    const atual = mapa.get(tipoId) ?? ZERO;
+    mapa.set(tipoId, { ...atual, comDisciplina: conjunto.size });
   }
   return mapa;
 }
@@ -147,12 +207,14 @@ export type EfeitoDaTroca = {
   readonly taDaDisciplina: number;
   /** Os de «Conta como» escolhido: ficam como estão. */
   readonly ficamPelaEscolha: number;
+  /** Os de turma arquivada: o gatilho os pula, e ficam como estão (RT-8). */
+  readonly ficamNaArquivada: number;
 };
 
 /**
  * O que a troca da classificação padrão faz com os lançamentos — o espelho de `app.recategorizar_pelo_tipo`: as linhas
- * ativas do tipo com «Conta como» vazio ou «TA da disciplina» recebem a categoria nova; as com AEC/TAD/TR escolhido não.
- * `null` quando a classificação não muda (o gatilho não roda).
+ * ativas do tipo com «Conta como» vazio ou «TA da disciplina» recebem a categoria nova; as com AEC/TAD/TR escolhido não,
+ * e as de turma arquivada também não. `null` quando a classificação não muda (o gatilho não roda).
  */
 export function efeitoDaTroca(
   atual: CategoriaDeAtividade,
@@ -164,10 +226,81 @@ export function efeitoDaTroca(
     mudam: contagem.seguemOTipo,
     taDaDisciplina: contagem.taDaDisciplina,
     ficamPelaEscolha: contagem.comEscolha,
+    ficamNaArquivada: contagem.emTurmaArquivada,
   };
 }
 
 const lancamentos = (n: number) => `${n} ${n === 1 ? "lançamento" : "lançamentos"}`;
+
+/** O que impede a troca da classificação padrão — o que a ação confere ANTES de gravar e o diálogo avisa. */
+export type ImpedimentosDaTroca = {
+  /** As AEC previstas ATIVAS de currículo com o tipo. */
+  readonly previstasAtivas: number;
+  /** As siglas dos cursos dessas previstas (para a frase; pode vir vazia). */
+  readonly cursosDasPrevistas?: readonly string[];
+  /** Os lançamentos que seguem o tipo e têm disciplina, fora de turma arquivada (`ContagemDoTipo.comDisciplina`). */
+  readonly comDisciplina: number;
+  /** Um deles, para a frase dizer onde procurar: a turma (código) e a data (ISO). */
+  readonly exemploComDisciplina?: { readonly turma: string | null; readonly data: string | null } | null;
+};
+
+/** Até três nomes, e «e mais N». */
+function algunsNomes(nomes: readonly string[]): string {
+  const unicos = [...new Set(nomes.filter((n) => n.trim() !== ""))].sort((a, b) =>
+    a.localeCompare(b, "pt-BR"),
+  );
+  if (unicos.length === 0) return "";
+  const mostrados = unicos.slice(0, 3).join(", ");
+  return unicos.length > 3 ? `${mostrados} e mais ${unicos.length - 3}` : mostrados;
+}
+
+/**
+ * A recusa da troca da classificação padrão, ou `null` quando ela pode ir ao banco. São DUAS, e as duas são da troca que
+ * TIRA o tipo da AEC:
+ *
+ * 1. **AEC prevista ativa de currículo com o tipo.** A AEC prevista só aceita tipo de classificação AEC, e o «Novo
+ *    currículo» (RC-7) a copia por INSERT, que o porteiro do banco confere: com o tipo reclassificado, o currículo novo do
+ *    curso falharia inteiro, numa tela que não tem nada a ver com o catálogo. ⚠️ O banco NÃO recusa esta troca (a recusa
+ *    é desta conferência) — está registrado como pendência.
+ * 2. **Lançamento que segue o tipo e tem disciplina.** A disciplina só vale na AEC e no «TA da disciplina»
+ *    (`ativ_disciplina_so_aec_da_turma`): a recategorização violaria o CHECK, e o banco desfaria a troca inteira com uma
+ *    frase que não fala do tipo. Aqui ela sai com o número e onde procurar.
+ */
+export function impedimentoDaTroca(
+  atual: CategoriaDeAtividade,
+  nova: ClassificacaoDoCatalogo,
+  impedimentos: ImpedimentosDaTroca,
+): string | null {
+  if (atual === nova) return null;
+  const frases: string[] = [];
+  if (atual === "AEC" && impedimentos.previstasAtivas > 0) {
+    const n = impedimentos.previstasAtivas;
+    const cursos = algunsNomes(impedimentos.cursosDasPrevistas ?? []);
+    frases.push(
+      `Este tipo é usado por ${n} ${n === 1 ? "AEC prevista ativa" : "AEC previstas ativas"} de currículo` +
+        `${cursos ? ` (${cursos})` : ""}, e a AEC prevista só aceita tipo de classificação AEC: troque o tipo ` +
+        `${n === 1 ? "dela" : "delas"} ou ${n === 1 ? "desative-a" : "desative-as"} em Editar curso → Currículo → ` +
+        `Atividades e limites antes de tirar o tipo da AEC.`,
+    );
+  }
+  if (nova !== "AEC" && impedimentos.comDisciplina > 0) {
+    const n = impedimentos.comDisciplina;
+    const exemplo = impedimentos.exemploComDisciplina;
+    const onde =
+      exemplo && (exemplo.turma || exemplo.data)
+        ? ` (por exemplo, ${[exemplo.turma, exemplo.data ? `em ${dataParaLeitura(exemplo.data)}` : null]
+            .filter((p): p is string => p !== null && p !== "")
+            .join(" ")})`
+        : "";
+    frases.push(
+      `${lancamentos(n)} deste tipo (contando os rascunhos) ${n === 1 ? "tem" : "têm"} disciplina e ` +
+        `${n === 1 ? "segue" : "seguem"} a classificação do tipo${onde}: só a AEC e o «TA da disciplina» levam ` +
+        `disciplina. No DSA, tire a disciplina ${n === 1 ? "dele" : "deles"} ou troque o «Conta como» para TA da ` +
+        `disciplina antes de mudar a classificação.`,
+    );
+  }
+  return frases.length === 0 ? null : frases.join(" ");
+}
 
 /** A frase do diálogo de *Editar* — o número antes de gravar (FR-001.3). */
 export function fraseDoEfeito(
@@ -183,7 +316,10 @@ export function fraseDoEfeito(
     );
   }
   const efeito = efeitoDaTroca(atual, nova, contagem);
-  if (efeito === null || efeito.mudam + efeito.taDaDisciplina + efeito.ficamPelaEscolha === 0) {
+  if (
+    efeito === null ||
+    efeito.mudam + efeito.taDaDisciplina + efeito.ficamPelaEscolha + efeito.ficamNaArquivada === 0
+  ) {
     return "Nenhum lançamento muda de categoria: este tipo não tem lançamento ativo.";
   }
   const partes = [
@@ -200,6 +336,12 @@ export function fraseDoEfeito(
   if (efeito.ficamPelaEscolha > 0) {
     partes.push(
       `${lancamentos(efeito.ficamPelaEscolha)} com «Conta como» escolhido no lançamento ${efeito.ficamPelaEscolha === 1 ? "fica" : "ficam"} como ${efeito.ficamPelaEscolha === 1 ? "está" : "estão"}.`,
+    );
+  }
+  if (efeito.ficamNaArquivada > 0) {
+    /* RT-8: a turma arquivada conta com a situação que tinha — a recategorização a pula. */
+    partes.push(
+      `${lancamentos(efeito.ficamNaArquivada)} em turma arquivada ${efeito.ficamNaArquivada === 1 ? "fica" : "ficam"} como ${efeito.ficamNaArquivada === 1 ? "está" : "estão"}.`,
     );
   }
   return partes.join(" ");

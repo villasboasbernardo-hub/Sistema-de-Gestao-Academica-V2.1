@@ -6,6 +6,11 @@
  *    do módulo Atividades, as estatísticas e os avisos do sininho leem daqui — o veredito (cumprida, atrasada…) sai das
  *    funções puras de `lib/dominio/atividades/`, nunca de uma conta na tela.
  * ⚠️ **SÓ O SALVO CONTA** (RP-8): o rascunho vinculado não cumpre (`.eq("salvo", true)`).
+ * ⚠️ **AVULSA É A PALESTRA SEM VÍNCULO NENHUM** (`apoinst_id` nulo também — achado da revisão do Bloco 18), e leva
+ *    como conta (`categoria_normativa`, `conta_como`): só a que conta como AEC entra no limite de AEC.
+ * ⚠️ **O VINCULADO A AEC PREVISTA FORA DO QUADRO NÃO SOME** (achado da revisão): a prevista DESATIVADA (ou de outro
+ *    currículo) não entra no quadro da turma, e o lançamento salvo vinculado a ela vai para as avulsas com a marca
+ *    (`vinculo`) — ele continua contando no limite e na lista de Atividades, e a aba não pode perdê-lo.
  * ⚠️ **«NÃO LI» NÃO É «NÃO HÁ»** (gotcha 4, RN-DEG-01): a falha de leitura volta em `erro`, e quem chama a mostra.
  * ⚠️ **SEM AWAIT EM LAÇO**: uma rodada de `Promise.all`, e o resto em memória.
  * ⚠️ **SEM `server-only`, E O CLIENTE PODE VIR DE QUEM CHAMA** (frente E do Bloco 18): a leitura dos Avisos
@@ -21,6 +26,11 @@ import {
 } from "@/lib/dominio/atividades/apoinst";
 import { VALOR_DO_TIPO_PALESTRA, rotuloDoTipo } from "@/lib/dominio/atividades/grupos";
 import type { MarcacaoDeAtividade } from "@/lib/dominio/atividades/marcacoes";
+import {
+  comoContaDaLinha,
+  vinculoForaDoQuadro,
+  type AvulsaNaTela,
+} from "@/lib/dominio/atividades/palestras-e-apoinst-na-tela";
 import {
   quadroDasPrevistas,
   type AecPrevista,
@@ -44,23 +54,17 @@ export type TurmaDoPlanejado = {
   readonly curriculoId: string | null;
 };
 
-/** A palestra lançada SEM vínculo (fora do currículo, RA-3): conta no limite de AEC e aparece como avulsa. */
-export type PalestraAvulsa = {
-  readonly codigo: string;
-  readonly turmaId: string;
-  readonly turmaCodigo: string;
-  readonly data: string;
-  readonly ta: number;
-  readonly responsavel: string | null;
-  readonly local: string | null;
-  readonly descricao: string | null;
-};
+/**
+ * A palestra lançada SEM vínculo (fora do currículo, RA-3) — ou o lançamento vinculado a AEC prevista fora do quadro,
+ * com a marca. Conta no limite de AEC quando conta como AEC (`comoConta`). O formato é o do módulo puro.
+ */
+export type PalestraAvulsa = AvulsaNaTela;
 
 const FRASE_DA_FALHA =
   "Não foi possível ler as atividades previstas agora. Recarregue a página; se persistir, procure o suporte.";
 
 const COLUNAS_DO_LANCAMENTO =
-  "codigo, turma_id, data, tempos_consumidos, atividade_prevista_id, apoinst_id, instrutor_id, responsavel_externo, responsavel_externo_om, local, descricao, subtipo";
+  "codigo, turma_id, data, tempos_consumidos, atividade_prevista_id, apoinst_id, instrutor_id, responsavel_externo, responsavel_externo_om, local, descricao, subtipo, categoria_normativa, conta_como";
 
 /** Os nomes dos instrutores do cadastro que os lançamentos citam (por id). */
 async function nomesDosInstrutores(
@@ -136,11 +140,14 @@ export async function lerPalestrasDasTurmas(
       ? Promise.resolve({ data: [] as Linha[], error: null })
       : supabase
           .from("aec_previstas_curriculo")
+          /*
+           * TODAS as situações: a ativa vai para o quadro; a desativada só serve para dizer por que o lançamento salvo
+           * vinculado a ela saiu do quadro (ele vai para as avulsas, com a marca).
+           */
           .select(
-            "id, codigo, curriculo_id, nome, ta_previstos, obrigatoria, ordem, tipo:config_listas!aec_previstas_curriculo_tipo_atividade_id_fkey(valor, rotulo_exibicao), disciplina:disciplinas!aec_previstas_curriculo_disciplina_id_fkey(id, codigo, cod_disciplina, nome_disciplina)",
+            "id, codigo, curriculo_id, nome, ta_previstos, obrigatoria, ordem, status, tipo:config_listas!aec_previstas_curriculo_tipo_atividade_id_fkey(valor, rotulo_exibicao), disciplina:disciplinas!aec_previstas_curriculo_disciplina_id_fkey(id, codigo, cod_disciplina, nome_disciplina)",
           )
           .in("curriculo_id", curriculos)
-          .eq("status", "ativo")
           .order("ordem"),
     lerTodasAsPaginas((f) =>
       supabase
@@ -162,7 +169,9 @@ export async function lerPalestrasDasTurmas(
         .eq("status", "ativo")
         .eq("salvo", true)
         .eq("subtipo", VALOR_DO_TIPO_PALESTRA)
+        /* Avulsa é SEM VÍNCULO NENHUM: a palestra que cumpre uma APOINST não é «fora do currículo». */
         .is("atividade_prevista_id", null)
+        .is("apoinst_id", null)
         .order("data")
         .order("codigo")
         .range(f.de, f.ate),
@@ -192,7 +201,12 @@ export async function lerPalestrasDasTurmas(
   );
 
   const previstasPorCurriculo = new Map<string, AecPrevista[]>();
+  const desativadas = new Set<string>();
   for (const p of (previstas.data ?? []) as Linha[]) {
+    if (p.status !== "ativo") {
+      desativadas.add(p.id as string);
+      continue;
+    }
     const tipo = p.tipo as { valor: string; rotulo_exibicao: string | null } | null;
     const disciplina = p.disciplina as {
       id: string;
@@ -221,11 +235,38 @@ export async function lerPalestrasDasTurmas(
     previstasPorCurriculo.set(p.curriculo_id as string, lista);
   }
 
+  const codigoDaTurma = new Map(turmas.map((t) => [t.id, t.codigo]));
+  const paraAvulsa = (l: Linha, vinculo: AvulsaNaTela["vinculo"]): PalestraAvulsa => ({
+    codigo: l.codigo as string,
+    turmaId: l.turma_id as string,
+    turmaCodigo: codigoDaTurma.get(l.turma_id as string) ?? "",
+    data: l.data as string,
+    ta: Number(l.tempos_consumidos ?? 0),
+    responsavel: responsavelDaLinha(l, nomes),
+    local: (l.local as string | null) ?? null,
+    descricao: (l.descricao as string | null) ?? null,
+    comoConta: comoContaDaLinha(
+      l.categoria_normativa as string | null,
+      l.conta_como as string | null,
+    ),
+    vinculo,
+  });
+
   const todasAsMarcacoes = ((marcacoes.data ?? []) as Linha[]).map(marcacaoDaLinha);
   const quadros = new Map<string, QuadroDasPrevistas>();
+  /* Os vinculados a AEC prevista fora do quadro da turma: vão para as avulsas, com a marca (não somem). */
+  const foraDoQuadro: PalestraAvulsa[] = [];
   for (const t of turmas) {
-    const lancamentos: LancamentoVinculado[] = linhasVinculadas
-      .filter((l) => l.turma_id === t.id)
+    const previstasDaTurma =
+      t.curriculoId === null ? [] : (previstasPorCurriculo.get(t.curriculoId) ?? []);
+    const ativasDaTurma = new Set(previstasDaTurma.map((p) => p.id));
+    const daTurma = linhasVinculadas.filter((l) => l.turma_id === t.id);
+    for (const l of daTurma) {
+      const fora = vinculoForaDoQuadro(l.atividade_prevista_id as string, ativasDaTurma, desativadas);
+      if (fora !== null) foraDoQuadro.push(paraAvulsa(l, fora));
+    }
+    const lancamentos: LancamentoVinculado[] = daTurma
+      .filter((l) => ativasDaTurma.has(l.atividade_prevista_id as string))
       .map((l) => ({
         codigo: l.codigo as string,
         alvoId: l.atividade_prevista_id as string,
@@ -237,26 +278,16 @@ export async function lerPalestrasDasTurmas(
     quadros.set(
       t.id,
       quadroDasPrevistas({
-        previstas: t.curriculoId === null ? [] : (previstasPorCurriculo.get(t.curriculoId) ?? []),
+        previstas: previstasDaTurma,
         lancamentos,
         marcacoes: todasAsMarcacoes.filter((m) => m.turmaId === t.id),
       }),
     );
   }
 
-  const codigoDaTurma = new Map(turmas.map((t) => [t.id, t.codigo]));
   return {
     quadros,
-    avulsas: linhasAvulsas.map((l) => ({
-      codigo: l.codigo as string,
-      turmaId: l.turma_id as string,
-      turmaCodigo: codigoDaTurma.get(l.turma_id as string) ?? "",
-      data: l.data as string,
-      ta: Number(l.tempos_consumidos ?? 0),
-      responsavel: responsavelDaLinha(l, nomes),
-      local: (l.local as string | null) ?? null,
-      descricao: (l.descricao as string | null) ?? null,
-    })),
+    avulsas: [...linhasAvulsas.map((l) => paraAvulsa(l, "nenhum")), ...foraDoQuadro],
     erro: null,
   };
 }

@@ -19,7 +19,9 @@
  *    AEC e o Reforço na TR — o mesmo lançamento daria `ta_aec + 1` e `ta_tr + 2`. E antes do Salvar nada muda (RP-0).
  * ⚠️ **A SEMANA É A DE REFERÊNCIA DA SEMENTE** (2026-W15) e as células são da SEXTA (coluna 4), livre na semente; a turma
  *    é a do processo (`semearDsa`), que outro arquivo do mesmo processo também usa — por isso a CH é medida por
- *    DIFERENÇA contra o retrato tirado no começo, e não por número absoluto.
+ *    DIFERENÇA contra o retrato tirado no começo, e não por número absoluto. E SEM as atividades de todas as turmas,
+ *    que outros processos criam e apagam no meio do caso (`cargaPropria`): a comparação da AEC, da TAD e da TR vale
+ *    sempre, em vez de ser pulada quando elas mudavam (achado 25 da revisão, 03/11/2026).
  * ⚠️ **NÃO HÁ NOME REAL AQUI** (repositório público): o palestrante é «Palestrante convidado».
  */
 import { expect, test, type Page } from "@playwright/test";
@@ -56,8 +58,11 @@ type CargaDaTurma = {
   readonly chd_executada: number;
   readonly ta_atividade_na_disciplina: number;
 };
+/** A CH PRÓPRIA da turma no começo — sem as atividades de todas as turmas (`cargaPropria`). */
 let ANTES: CargaDaTurma;
 let ANTES_NA_DISCIPLINA = 0;
+/** O número do processo — é por ele que o instrutor sem habilitação DESTE processo se acha (`DSA-E2D<p>-SEMV`). */
+let PROCESSO = -1;
 
 let servico: SupabaseClient | undefined;
 const banco = (): SupabaseClient =>
@@ -83,26 +88,95 @@ async function cargaDaTurma(): Promise<CargaDaTurma> {
   };
 }
 
+/** O que as atividades de TODAS as turmas somam na AEC, na TAD e na TR desta turma. */
+type GlobaisNaTurma = { readonly aec: number; readonly tad: number; readonly tr: number };
+
 /**
- * O retrato das atividades de TODAS as turmas, salvas e ativas.
+ * A contribuição das atividades de TODAS as turmas na CH desta turma, pela MESMA regra da view.
  *
  * ⚠️ **ELAS ENTRAM NA AEC/TAD/TR DE TODA TURMA COM DSA NA DATA** (`vw_carga_horaria_turma`, ramo global), e outros
- *    arquivos as criam e apagam em paralelo (`cursos-de-teste.ts`, `dsa-tipo-e-global.spec.ts`) — a turma da semente cobre
- *    o ano inteiro. Com o retrato igual nas duas leituras, a AEC, a TAD e a TR se comparam EXATAS; com ele diferente, só
- *    as colunas que são só da turma (a CHD e o «TA da disciplina»), e a anotação diz por quê. Nunca uma tolerância.
+ *    arquivos as criam e apagam em paralelo (`cursos-de-teste.ts` grava uma em 10/05/2026, `dsa-tipo-e-global.spec.ts`
+ *    cria outra pela tela) — a turma da semente cobre o ano inteiro. Até o achado 25 da revisão do Bloco 18
+ *    (03/11/2026), o caso PULAVA a comparação da AEC, da TAD e da TR quando o retrato delas mudava, e passava verde
+ *    provando só a CHD: o caso que discrimina sumia justamente no CI, com dois processos. Agora a contribuição delas é
+ *    DESCONTADA da CH da turma, e a comparação vale sempre — exata, nunca uma tolerância.
+ * ⚠️ **A REGRA É A DE `app.turma_tem_dsa_na_data`** (que a `service_role` não alcança: ela não tem `usage` em `app`):
+ *    turma ativa, não EAD, a data no período dela e, na semipresencial com a etapa cadastrada, na etapa presencial. E a
+ *    da view: ativa, salva, e fora da coluna quem conta como «TA da disciplina».
  */
-async function globaisSalvas(): Promise<string> {
-  const { data, error } = await banco()
-    .from("atividades_nao_letivas")
-    .select("id, categoria_normativa, conta_como, tempos_consumidos, data")
-    .is("turma_id", null)
-    .eq("status", "ativo")
-    .eq("salvo", true)
-    .order("id");
-  if (error) throw new Error(`as atividades de todas as turmas não foram lidas: ${error.message}`);
-  return JSON.stringify(data ?? []);
+async function globaisDaTurma(): Promise<GlobaisNaTurma> {
+  const [turma, globais] = await Promise.all([
+    banco()
+      .from("turmas")
+      .select(
+        "status, modalidade, data_inicio, data_termino, inicio_etapa_presencial, termino_etapa_presencial",
+      )
+      .eq("codigo", S.turmaComRelogio)
+      .single(),
+    banco()
+      .from("atividades_nao_letivas")
+      .select("categoria_normativa, conta_como, tempos_consumidos, data")
+      .is("turma_id", null)
+      .eq("status", "ativo")
+      .eq("salvo", true),
+  ]);
+  if (turma.error) throw new Error(`a janela da turma não foi lida: ${turma.error.message}`);
+  if (globais.error) {
+    throw new Error(`as atividades de todas as turmas não foram lidas: ${globais.error.message}`);
+  }
+  const t = turma.data as {
+    status: string;
+    modalidade: string;
+    data_inicio: string | null;
+    data_termino: string | null;
+    inicio_etapa_presencial: string | null;
+    termino_etapa_presencial: string | null;
+  };
+  const temDsaNaData = (dia: string): boolean =>
+    t.status === "ativa" &&
+    t.modalidade !== "ead" &&
+    t.data_inicio !== null &&
+    t.data_termino !== null &&
+    dia >= t.data_inicio &&
+    dia <= t.data_termino &&
+    (t.modalidade !== "semipresencial" ||
+      t.inicio_etapa_presencial === null ||
+      t.termino_etapa_presencial === null ||
+      (dia >= t.inicio_etapa_presencial && dia <= t.termino_etapa_presencial));
+  const soma = { aec: 0, tad: 0, tr: 0 };
+  for (const g of (globais.data ?? []) as {
+    categoria_normativa: string;
+    conta_como: string | null;
+    tempos_consumidos: number | null;
+    data: string;
+  }[]) {
+    if (g.conta_como === "CHD" || !temDsaNaData(g.data)) continue;
+    const ta = Number(g.tempos_consumidos ?? 0);
+    if (g.categoria_normativa === "AEC") soma.aec += ta;
+    else if (g.categoria_normativa === "TAD") soma.tad += ta;
+    else if (g.categoria_normativa === "TR") soma.tr += ta;
+  }
+  return soma;
 }
-let GLOBAIS_ANTES = "";
+
+/** A CH da turma SEM a contribuição das atividades de todas as turmas — o que só esta turma lançou. */
+async function cargaPropria(): Promise<CargaDaTurma> {
+  const [c, g] = await Promise.all([cargaDaTurma(), globaisDaTurma()]);
+  return { ...c, ta_aec: c.ta_aec - g.aec, ta_tad: c.ta_tad - g.tad, ta_tr: c.ta_tr - g.tr };
+}
+
+/**
+ * O retrato do começo: duas leituras seguidas IGUAIS. ⚠️ As duas metades de `cargaPropria` são consultas separadas, e
+ * uma global criada ENTRE elas desalinharia o retrato do começo — que não teria como se corrigir depois.
+ */
+async function retratoProprio(): Promise<CargaDaTurma> {
+  for (let tentativa = 0; tentativa < 10; tentativa += 1) {
+    const a = await cargaPropria();
+    const b = await cargaPropria();
+    if (JSON.stringify(a) === JSON.stringify(b)) return a;
+  }
+  throw new Error("a CH própria da turma não ficou estável em dez leituras seguidas");
+}
 
 /** Os TA de atividade que contam NA disciplina da semente (`vw_disciplinas_execucao`). */
 async function atividadeNaDisciplina(): Promise<number> {
@@ -147,26 +221,13 @@ async function atividadeGravada(descricao: string): Promise<AtividadeGravada | n
 
 test.beforeAll(async ({}, info) => {
   const p = info.workerIndex;
+  PROCESSO = p;
   EMAIL = emailDeTeste("dsaconta", p);
   await criarConta(EMAIL, `USR-DSACC-${p}`);
   S = await semearDsa(p, EMAIL);
-  GLOBAIS_ANTES = await globaisSalvas();
-  ANTES = await cargaDaTurma();
+  ANTES = await retratoProprio();
   ANTES_NA_DISCIPLINA = await atividadeNaDisciplina();
 });
-
-/** As globais mudaram desde o retrato do começo? (ver `globaisSalvas`). */
-async function globaisMudaram(): Promise<boolean> {
-  const mudaram = (await globaisSalvas()) !== GLOBAIS_ANTES;
-  if (mudaram) {
-    test.info().annotations.push({
-      type: "atividade-de-todas-as-turmas",
-      description:
-        "Outra suíte criou ou apagou atividade de todas as turmas no meio do caso: AEC, TAD e TR não se comparam exatas nesta rodada; a CHD e o «TA da disciplina», só da turma, sim.",
-    });
-  }
-  return mudaram;
-}
 
 test.afterAll(async () => {
   await banco().from("atividades_nao_letivas").delete().like("descricao", `%${MARCA}%`);
@@ -300,11 +361,14 @@ test("RA-4 · Reforço que conta como TA da disciplina, com instrutor sem habili
   /*
    * ⚠️ D-2 da spec 033: «TA da disciplina» NÃO exige instrutor habilitado — é atividade, não aula (a RD-1 é da aula).
    *    O instrutor escolhido é o da semente SEM vínculo com a disciplina, que a aula recusaria.
+   * ⚠️ O DESTE PROCESSO (achado 28): o seletor da atividade mostra o cadastro ativo inteiro, com os sem vínculo de todo
+   *    processo de semente de pé. O nome leva o sufixo do processo, e o `(?!\d)` impede que o `E2D1` case o `E2D10` —
+   *    o número do processo cresce quando o Playwright troca um processo que falhou.
    */
   await page.locator(`${FORMULARIO} [data-slot="seletor-instrutor"]`).first().click();
   await page
     .locator('[data-slot="popover-content"]')
-    .getByRole("option", { name: new RegExp(S.nomeSemHabilitacao, "i") })
+    .getByRole("option", { name: new RegExp(`${S.nomeSemHabilitacao}(?!\\d)`, "i") })
     .first()
     .click();
   /* Com o instrutor do cadastro, o nome livre e a OM somem. */
@@ -327,10 +391,15 @@ test("RA-4 · Reforço que conta como TA da disciplina, com instrutor sem habili
     .eq("cod_disciplina", S.codDisciplina)
     .like("codigo", "DSA-%")
     .maybeSingle();
-  const { data: semVinculo } = await banco()
+  /* O instrutor sem habilitação DESTE processo, pelo código (achado 28) — nunca qualquer um com o mesmo nome. */
+  const { data: semVinculo, error: erroSemVinculo } = await banco()
     .from("instrutores")
     .select("id")
-    .eq("nome_completo", S.nomeSemHabilitacao);
+    .eq("codigo", `DSA-E2D${PROCESSO}-SEMV`)
+    .single();
+  if (erroSemVinculo) {
+    throw new Error(`o instrutor sem habilitação não foi lido: ${erroSemVinculo.message}`);
+  }
   const gravada = await atividadeGravada(DESCRICAO_DO_REFORCO);
   expect(gravada).toMatchObject({
     conta_como: "CHD",
@@ -344,9 +413,9 @@ test("RA-4 · Reforço que conta como TA da disciplina, com instrutor sem habili
   });
   expect(gravada?.disciplina_id).toBe((disciplina as { id: string } | null)?.id);
   expect(
-    ((semVinculo ?? []) as { id: string }[]).map((i) => i.id),
-    "o instrutor gravado não é o sem habilitação",
-  ).toContain(gravada?.instrutor_id);
+    gravada?.instrutor_id,
+    "o instrutor gravado não é o sem habilitação deste processo",
+  ).toBe((semVinculo as { id: string }).id);
 });
 
 test("RA-4 · o cartão reabre com o «Conta como» e a OM gravados, e a OM se edita ali", async ({
@@ -383,33 +452,29 @@ test("RA-4 · só depois de «Salvar a semana» a CH muda: TAD +1, CHD +2; AEC e
   page,
 }) => {
   test.setTimeout(180_000);
-  /* RP-0: os dois lançamentos ainda são rascunho — nada mudou na CH. */
-  const aindaRascunho = await cargaDaTurma();
-  expect(aindaRascunho.chd_executada).toBe(ANTES.chd_executada);
-  expect(aindaRascunho.ta_atividade_na_disciplina).toBe(ANTES.ta_atividade_na_disciplina);
-  if (!(await globaisMudaram())) expect(aindaRascunho).toEqual(ANTES);
+  /*
+   * RP-0: os dois lançamentos ainda são rascunho — nada mudou na CH própria da turma, nas CINCO colunas.
+   * ⚠️ `expect.poll` sobre a CH PRÓPRIA (achado 25): uma atividade de todas as turmas criada ou apagada por outro
+   *    processo entre as duas metades da leitura desalinharia uma rodada — a seguinte relê as duas. Sem tolerância.
+   */
+  await expect.poll(cargaPropria, { timeout: 30_000 }).toEqual(ANTES);
 
   await abrirASemana(page);
   await salvarASemana(page);
 
-  /* O que é só da turma: a CHD e o «TA da disciplina» sobem os 2 TA do Reforço. */
-  await expect
-    .poll(async () => (await cargaDaTurma()).ta_atividade_na_disciplina, { timeout: 30_000 })
-    .toBe(ANTES.ta_atividade_na_disciplina + 2);
-  const depois = await cargaDaTurma();
-  expect(depois.chd_executada).toBe(ANTES.chd_executada + 2);
+  /*
+   * ⚠️ O caso que discrimina, SEMPRE conferido: sem o «Conta como», a Palestra somaria na AEC (+1) e o Reforço na TR
+   *    (+2). Com ele, a TAD sobe 1, a CHD e o «TA da disciplina» sobem 2, e a AEC e a TR não mudam.
+   */
+  await expect.poll(cargaPropria, { timeout: 30_000 }).toEqual({
+    ta_aec: ANTES.ta_aec,
+    ta_tad: ANTES.ta_tad + 1,
+    ta_tr: ANTES.ta_tr,
+    chd_executada: ANTES.chd_executada + 2,
+    ta_atividade_na_disciplina: ANTES.ta_atividade_na_disciplina + 2,
+  });
   /* E na CH da disciplina escolhida, como aula (FR-003.2). */
   expect(await atividadeNaDisciplina()).toBe(ANTES_NA_DISCIPLINA + 2);
-  if (!(await globaisMudaram())) {
-    expect(depois).toEqual({
-      /* ⚠️ O caso que discrimina: sem o «Conta como», a Palestra somaria aqui (+1) e o Reforço na TR (+2). */
-      ta_aec: ANTES.ta_aec,
-      ta_tad: ANTES.ta_tad + 1,
-      ta_tr: ANTES.ta_tr,
-      chd_executada: ANTES.chd_executada + 2,
-      ta_atividade_na_disciplina: ANTES.ta_atividade_na_disciplina + 2,
-    });
-  }
 
   /* Os dois salvos, com as escolhas de antes. */
   expect(await atividadeGravada(DESCRICAO_DA_PALESTRA)).toMatchObject({

@@ -14,11 +14,26 @@
  *    de turma (`opcoesDeTurma`), e quem desliga as ações dela é a tela.
  * ⚠️ **A AVULSA NÃO TEM SITUAÇÃO** (RA-3): é palestra dada fora do currículo — com o filtro de situação, ela sai; com o
  *    de vínculo «do currículo», também. Ela conta no limite de AEC pela categoria, não aqui.
+ * ⚠️ **AVULSA É A PALESTRA SEM VÍNCULO NENHUM** — nem AEC prevista, nem APOINST (achado da revisão do Bloco 18; a mesma
+ *    regra de `vinculoDaLinha` da lista de Atividades). E o lançamento vinculado a uma AEC prevista que SAIU do quadro
+ *    (desativada, ou de outro currículo) entra aqui também, com a marca `vinculo` — sem isso ele sumia da aba, embora
+ *    continue contando no limite e na lista de Atividades.
+ * ⚠️ **SÓ A QUE CONTA COMO AEC ENTRA NO LIMITE DE AEC** (`comoConta`, o mesmo predicado da view: categoria AEC e «Conta
+ *    como» diferente de «TA da disciplina»): a palestra que o operador fez contar como TAD, TR ou TA da disciplina é
+ *    mostrada com o como conta, e fica fora de `taDasAvulsasNaAec`.
  * ⚠️ **A APOINST DESATIVADA APARECE, MAS NÃO CONTA** (o `porSituacao` de `quadroDaApoinst` já é só das ativas); com
  *    filtro de situação, ela sai.
  *
  * Função pura: nada de `supabase`, `next` nem `react` (imposto por ESLint).
  */
+import {
+  CATEGORIAS_DE_ATIVIDADE,
+  comoConta,
+  contaComoDoBanco,
+  type CategoriaDeAtividade,
+  type ComoConta,
+} from "@/lib/dominio/categoria-pelo-tipo";
+
 import {
   ROTULO_DA_SITUACAO_DA_APOINST,
   SITUACOES_DA_APOINST,
@@ -52,6 +67,19 @@ export type LinhaDePalestra = LinhaDaPrevista & {
   readonly turmaArquivada: boolean;
 };
 
+/**
+ * Por que a linha está FORA do quadro das previstas: sem vínculo nenhum (a avulsa de verdade), ou vinculada a uma AEC
+ * prevista que não está no quadro da turma — desativada, ou de outro currículo (a turma trocou de currículo).
+ */
+export type VinculoDaAvulsa = "nenhum" | "prevista_desativada" | "prevista_de_outro_curriculo";
+
+/** A marca que a tela mostra ao lado da avulsa vinculada; `null` na avulsa sem vínculo. */
+export const MARCA_DO_VINCULO_DA_AVULSA: Readonly<Record<VinculoDaAvulsa, string | null>> = {
+  nenhum: null,
+  prevista_desativada: "vinculada a AEC prevista desativada",
+  prevista_de_outro_curriculo: "vinculada a AEC prevista de outro currículo",
+};
+
 /** A palestra lançada sem vínculo (fora do currículo) — o formato do leitor compartilhado. */
 export type AvulsaNaTela = {
   readonly codigo: string;
@@ -62,7 +90,33 @@ export type AvulsaNaTela = {
   readonly responsavel: string | null;
   readonly local: string | null;
   readonly descricao: string | null;
+  /** Como a linha conta (AEC, TAD, TR, TA da disciplina); `null` quando a categoria gravada não é de atividade. */
+  readonly comoConta: ComoConta | null;
+  /** Sem vínculo, ou vinculada a AEC prevista fora do quadro (`MARCA_DO_VINCULO_DA_AVULSA`). */
+  readonly vinculo: VinculoDaAvulsa;
 };
+
+/** Como a linha conta, a partir do que o banco gravou (`categoria_normativa`, `conta_como`). */
+export function comoContaDaLinha(
+  categoria: string | null | undefined,
+  contaComo: string | null | undefined,
+): ComoConta | null {
+  if (!(CATEGORIAS_DE_ATIVIDADE as readonly string[]).includes(categoria ?? "")) return null;
+  return comoConta(categoria as CategoriaDeAtividade, contaComoDoBanco(contaComo ?? null));
+}
+
+/**
+ * O lançamento vinculado a uma AEC prevista: `null` quando ela está no quadro da turma (as ATIVAS do currículo dela);
+ * senão, por que está fora — e ele vai para as avulsas com a marca, em vez de sumir.
+ */
+export function vinculoForaDoQuadro(
+  previstaId: string,
+  ativasDaTurma: ReadonlySet<string>,
+  desativadas: ReadonlySet<string>,
+): Exclude<VinculoDaAvulsa, "nenhum"> | null {
+  if (ativasDaTurma.has(previstaId)) return null;
+  return desativadas.has(previstaId) ? "prevista_desativada" : "prevista_de_outro_curriculo";
+}
 
 export type AvulsaDaAba = AvulsaNaTela & { readonly cursoCodigo: string };
 
@@ -209,7 +263,10 @@ export type NumerosDasPalestras = {
   readonly aCumprir: number;
   readonly obrigatoriasPendentes: number;
   readonly avulsas: number;
+  /** Os TA de TODAS as avulsas, como quer que contem. */
   readonly taDasAvulsas: number;
+  /** Só os das que contam como AEC — os que entram no limite de AEC do currículo. */
+  readonly taDasAvulsasNaAec: number;
   /** A pizza por situação: só as fatias com valor (a de zero não tem área), na ordem da situação. */
   readonly porSituacao: readonly Fatia[];
 };
@@ -231,8 +288,25 @@ export function numerosDasPalestras(
     obrigatoriasPendentes: linhas.filter((l) => l.obrigatoria && !ehCumprida(l.situacao)).length,
     avulsas: avulsas.length,
     taDasAvulsas: avulsas.reduce((s, a) => s + a.ta, 0),
+    taDasAvulsasNaAec: avulsas.reduce((s, a) => s + (a.comoConta === "AEC" ? a.ta : 0), 0),
     porSituacao,
   };
+}
+
+/**
+ * O detalhe do cartão «Fora do currículo»: os TA que contam no limite de AEC — e, quando há, os das que contam de outro
+ * jeito (o «Conta como» do lançamento), para o cartão não prometer ao limite o que a view soma em TAD, TR ou CHD.
+ */
+export function fraseDosTaDasAvulsas(numeros: {
+  readonly taDasAvulsas: number;
+  readonly taDasAvulsasNaAec: number;
+}): string {
+  const outros = numeros.taDasAvulsas - numeros.taDasAvulsasNaAec;
+  if (outros <= 0) return `${numeros.taDasAvulsasNaAec} TA — contam no limite de AEC`;
+  return (
+    `${numeros.taDasAvulsasNaAec} TA contam no limite de AEC · ${outros} TA contam como TAD, TR ou TA da ` +
+    `disciplina`
+  );
 }
 
 export type NumerosDaApoinst = {
