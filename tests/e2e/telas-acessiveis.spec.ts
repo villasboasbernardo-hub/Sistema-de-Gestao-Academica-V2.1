@@ -33,6 +33,14 @@ test.afterAll(async () => {
   await apagarConta(EMAIL);
 });
 
+/**
+ * O prazo dos dois casos que percorrem TODAS as rotas: cresce com a lista. Com 21 telas, o prazo padrão de 30 s
+ * estourou uma vez no CI sob carga (PR #113, Bloco 18) — o caso não reprovava por defeito de tela, e sim por tempo.
+ */
+function prazoDaVarredura(): number {
+  return 15_000 + rotas().length * 4_000;
+}
+
 /** As rotas desta fatia, com o que cada uma precisa da amostra. */
 function rotas(): { readonly nome: string; readonly caminho: string }[] {
   const sigla = encodeURIComponent(SEMEADO.porClassificacao.regular);
@@ -104,6 +112,7 @@ async function semNomeAcessivel(page: Page): Promise<string[]> {
 
 test.describe("`FR-030` (a) · nome acessível em todo controle, tela por tela", () => {
   test("nenhuma tela do PR 2 tem controle sem nome", async ({ page }) => {
+    test.setTimeout(prazoDaVarredura());
     await entrar(page, EMAIL, "/cursos");
 
     for (const { nome, caminho } of rotas()) {
@@ -149,6 +158,7 @@ test.describe("`FR-030` (c) · um `main`, um `h1`, e a ordem do documento", () =
   test("cada tela tem um marco só, e os títulos saem na ordem em que aparecem", async ({
     page,
   }) => {
+    test.setTimeout(prazoDaVarredura());
     await entrar(page, EMAIL, "/cursos");
 
     for (const { nome, caminho } of rotas()) {
