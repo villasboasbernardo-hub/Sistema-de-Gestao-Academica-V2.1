@@ -41,7 +41,11 @@ export type ApoinstAtrasada = {
 };
 
 /** A turma entra no aviso da AEC obrigatória? */
-export function dentroDoPrazoDeAviso(termino: string | null, hoje: string, semanas: number | null): boolean {
+export function dentroDoPrazoDeAviso(
+  termino: string | null,
+  hoje: string,
+  semanas: number | null,
+): boolean {
   if (termino === null || semanas === null) return false;
   return diasAte(termino, hoje) <= semanas * 7;
 }
@@ -49,7 +53,10 @@ export function dentroDoPrazoDeAviso(termino: string | null, hoje: string, seman
 export function avisosDeAtividades(entrada: {
   readonly turmas: readonly TurmaParaAviso[];
   /** Por id da turma: as AEC obrigatórias AINDA NÃO cumpridas (de `quadroDasPrevistas`). */
-  readonly obrigatoriasPendentes: ReadonlyMap<string, ReadonlyArray<{ readonly codigo: string; readonly nome: string }>>;
+  readonly obrigatoriasPendentes: ReadonlyMap<
+    string,
+    ReadonlyArray<{ readonly codigo: string; readonly nome: string }>
+  >;
   /** Por id da turma: as APOINST ativas em situação «atrasada» (de `quadroDaApoinst`). */
   readonly apoinstAtrasadas: ReadonlyMap<
     string,
@@ -57,12 +64,18 @@ export function avisosDeAtividades(entrada: {
   >;
   readonly hoje: string;
   readonly semanasDeAviso: number | null;
-}): { readonly aecPendentes: readonly AecPendente[]; readonly apoinstAtrasadas: readonly ApoinstAtrasada[] } {
+}): {
+  readonly aecPendentes: readonly AecPendente[];
+  readonly apoinstAtrasadas: readonly ApoinstAtrasada[];
+} {
   const aecPendentes: AecPendente[] = [];
   const apoinstAtrasadas: ApoinstAtrasada[] = [];
   for (const t of entrada.turmas) {
     if (!t.ativa || t.arquivada || t.eadPura) continue;
-    if (t.termino !== null && dentroDoPrazoDeAviso(t.termino, entrada.hoje, entrada.semanasDeAviso)) {
+    if (
+      t.termino !== null &&
+      dentroDoPrazoDeAviso(t.termino, entrada.hoje, entrada.semanasDeAviso)
+    ) {
       for (const p of entrada.obrigatoriasPendentes.get(t.id) ?? []) {
         aecPendentes.push({
           turmaCodigo: t.codigo,
@@ -74,7 +87,12 @@ export function avisosDeAtividades(entrada: {
       }
     }
     for (const a of entrada.apoinstAtrasadas.get(t.id) ?? []) {
-      apoinstAtrasadas.push({ turmaCodigo: t.codigo, codigo: a.codigo, nome: a.nome, fimPrevisto: a.fimPrevisto });
+      apoinstAtrasadas.push({
+        turmaCodigo: t.codigo,
+        codigo: a.codigo,
+        nome: a.nome,
+        fimPrevisto: a.fimPrevisto,
+      });
     }
   }
   return { aecPendentes, apoinstAtrasadas };

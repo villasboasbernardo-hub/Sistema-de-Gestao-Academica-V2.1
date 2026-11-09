@@ -19,10 +19,17 @@ import {
   type ApoinstPlanejada,
 } from "@/lib/dominio/atividades/apoinst";
 import { avisosDeAtividades, dentroDoPrazoDeAviso } from "@/lib/dominio/atividades/avisos";
-import { estatisticasDeAtividades, type AtividadeParaEstatistica } from "@/lib/dominio/atividades/estatisticas";
+import {
+  estatisticasDeAtividades,
+  type AtividadeParaEstatistica,
+} from "@/lib/dominio/atividades/estatisticas";
 import { grupoNaEstatistica, rotuloDoTipo } from "@/lib/dominio/atividades/grupos";
 import type { MarcacaoDeAtividade } from "@/lib/dominio/atividades/marcacoes";
-import { quadroDasPrevistas, situacaoDaPrevista, type AecPrevista } from "@/lib/dominio/atividades/previstas";
+import {
+  quadroDasPrevistas,
+  situacaoDaPrevista,
+  type AecPrevista,
+} from "@/lib/dominio/atividades/previstas";
 
 describe("RA-1/RA-4 — o «Conta como» (espelho do gatilho app.categoria_pelo_tipo)", () => {
   it("AEC/TAD/TR escolhidos viram a categoria; CHD e nulo ficam com a do tipo", () => {
@@ -51,23 +58,33 @@ describe("RA-1/RA-4 — o «Conta como» (espelho do gatilho app.categoria_pelo_
   });
 
   it("«TA da disciplina» exige a disciplina e a aceita em tipo de TR (Reforço)", () => {
-    const base = { categoria: "TR" as const, turmaId: "t", quantidadeAlunos: null, descricao: "Reforço" };
-    expect(recusaPelaCategoria({ ...base, disciplinaId: null, contaComo: "CHD" })?.campo).toBe("disciplinaId");
+    const base = {
+      categoria: "TR" as const,
+      turmaId: "t",
+      quantidadeAlunos: null,
+      descricao: "Reforço",
+    };
+    expect(recusaPelaCategoria({ ...base, disciplinaId: null, contaComo: "CHD" })?.campo).toBe(
+      "disciplinaId",
+    );
     expect(recusaPelaCategoria({ ...base, disciplinaId: "d", contaComo: "CHD" })).toBeNull();
     // Sem a escolha, a regra de antes: só a AEC leva disciplina, com a mesma frase.
-    expect(recusaPelaCategoria({ ...base, disciplinaId: "d" })?.mensagem).toBe("Só a AEC leva disciplina.");
+    expect(recusaPelaCategoria({ ...base, disciplinaId: "d" })?.mensagem).toBe(
+      "Só a AEC leva disciplina.",
+    );
     // A AEC que passa a contar como TAD perde o direito à disciplina.
     expect(
-      recusaPelaCategoria({ ...base, categoria: "AEC", disciplinaId: "d", contaComo: "TAD" })?.campo,
+      recusaPelaCategoria({ ...base, categoria: "AEC", disciplinaId: "d", contaComo: "TAD" })
+        ?.campo,
     ).toBe("disciplinaId");
   });
 });
 
 describe("RA-1/RA-9 — o rótulo e o grupo do tipo", () => {
   it("o rótulo vence o valor (decisão 4) e os três agrupam (decisão 3)", () => {
-    expect(rotuloDoTipo({ valor: "Atividade Extracurricular", rotulo: "Atividade Extraclasse" })).toBe(
-      "Atividade Extraclasse",
-    );
+    expect(
+      rotuloDoTipo({ valor: "Atividade Extracurricular", rotulo: "Atividade Extraclasse" }),
+    ).toBe("Atividade Extraclasse");
     expect(grupoNaEstatistica({ valor: "Visita Técnica" })).toBe("Visita");
     expect(grupoNaEstatistica({ valor: "Apoio à Instrução" })).toBe("APOINST/Prática");
     expect(grupoNaEstatistica({ valor: "Evento/Cerimônia" })).toBe("Cerimônia");
@@ -76,7 +93,12 @@ describe("RA-1/RA-9 — o rótulo e o grupo do tipo", () => {
   });
 });
 
-const prevista = (id: string, taPrevistos: number | null, obrigatoria = true, ordem = 0): AecPrevista => ({
+const prevista = (
+  id: string,
+  taPrevistos: number | null,
+  obrigatoria = true,
+  ordem = 0,
+): AecPrevista => ({
   id,
   codigo: `AEP-${id}`,
   nome: `Palestra ${id}`,
@@ -88,7 +110,11 @@ const prevista = (id: string, taPrevistos: number | null, obrigatoria = true, or
   ordem,
 });
 
-const marcacao = (alvo: { prevista?: string; apoinst?: string }, situacao: "cumprida" | "a_cumprir", em: string) =>
+const marcacao = (
+  alvo: { prevista?: string; apoinst?: string },
+  situacao: "cumprida" | "a_cumprir",
+  em: string,
+) =>
   ({
     turmaId: "t",
     atividadePrevistaId: alvo.prevista ?? null,
@@ -102,19 +128,34 @@ const marcacao = (alvo: { prevista?: string; apoinst?: string }, situacao: "cump
 
 describe("RA-2/RA-3/RA-5 — a AEC prevista na turma", () => {
   it("a cumprir → em andamento (parte dos TA) → cumprida (soma os previstos)", () => {
-    expect(situacaoDaPrevista({ taPrevistos: 8, taLancados: 0, lancamentos: 0, marcacao: null })).toBe("a_cumprir");
-    expect(situacaoDaPrevista({ taPrevistos: 8, taLancados: 4, lancamentos: 1, marcacao: null })).toBe(
-      "em_andamento",
-    );
-    expect(situacaoDaPrevista({ taPrevistos: 8, taLancados: 8, lancamentos: 2, marcacao: null })).toBe("cumprida");
+    expect(
+      situacaoDaPrevista({ taPrevistos: 8, taLancados: 0, lancamentos: 0, marcacao: null }),
+    ).toBe("a_cumprir");
+    expect(
+      situacaoDaPrevista({ taPrevistos: 8, taLancados: 4, lancamentos: 1, marcacao: null }),
+    ).toBe("em_andamento");
+    expect(
+      situacaoDaPrevista({ taPrevistos: 8, taLancados: 8, lancamentos: 2, marcacao: null }),
+    ).toBe("cumprida");
     // Sem TA previsto («não definido»): ao primeiro lançamento.
-    expect(situacaoDaPrevista({ taPrevistos: null, taLancados: 2, lancamentos: 1, marcacao: null })).toBe("cumprida");
+    expect(
+      situacaoDaPrevista({ taPrevistos: null, taLancados: 2, lancamentos: 1, marcacao: null }),
+    ).toBe("cumprida");
   });
 
   it("a marcação à mão mais recente vale; «a_cumprir» a desfaz", () => {
     const q = quadroDasPrevistas({
       previstas: [prevista("a", 2), prevista("b", 4, false, 1)],
-      lancamentos: [{ codigo: "L1", alvoId: "b", data: "2027-03-02", ta: 4, responsavel: "Cap X (DHN)", local: "Auditório" }],
+      lancamentos: [
+        {
+          codigo: "L1",
+          alvoId: "b",
+          data: "2027-03-02",
+          ta: 4,
+          responsavel: "Cap X (DHN)",
+          local: "Auditório",
+        },
+      ],
       marcacoes: [
         marcacao({ prevista: "a" }, "cumprida", "2027-03-01T10:00:00Z"),
         marcacao({ prevista: "a" }, "a_cumprir", "2027-03-05T10:00:00Z"),
@@ -128,7 +169,11 @@ describe("RA-2/RA-3/RA-5 — a AEC prevista na turma", () => {
   });
 
   it("os sem TA previsto são nomeados, nunca somados como zero (RN-DEG-01)", () => {
-    const q = quadroDasPrevistas({ previstas: [prevista("a", null), prevista("b", 3)], lancamentos: [], marcacoes: [] });
+    const q = quadroDasPrevistas({
+      previstas: [prevista("a", null), prevista("b", 3)],
+      lancamentos: [],
+      marcacoes: [],
+    });
     expect(q.taPrevistos).toBe(3);
     expect(q.semTaPrevisto).toEqual(["Palestra a"]);
   });
@@ -152,7 +197,10 @@ describe("RA-6 — a APOINST planejada", () => {
   it("as quatro situações, com Concluída antes de Atrasada", () => {
     const hoje = "2027-05-10";
     const s = (taLancados: number, lancamentos: number, fim: string) =>
-      situacaoDaApoinst({ taPrevistos: 10, taLancados, lancamentos, fimPrevisto: fim, marcacao: null }, hoje);
+      situacaoDaApoinst(
+        { taPrevistos: 10, taLancados, lancamentos, fimPrevisto: fim, marcacao: null },
+        hoje,
+      );
     expect(s(0, 0, "2027-06-01")).toBe("planejada");
     expect(s(4, 1, "2027-06-01")).toBe("em_andamento");
     expect(s(4, 1, "2027-05-09")).toBe("atrasada"); // passou o fim sem concluir
@@ -200,8 +248,20 @@ describe("RA-9 — as estatísticas", () => {
       atividades: [
         atividade({ ta: 2 }),
         atividade({ ta: 3, contaComo: "CHD" }),
-        atividade({ ta: 4, tipoValor: "Visita Técnica", tipoRotulo: "Visita Técnica", local: "CHM" }),
-        atividade({ ta: 1, categoria: "TR", tipoValor: "Reforço", tipoRotulo: "Reforço", turmaCodigo: "C-Ap-FR 2027", cursoCodigo: "C-Ap-FR" }),
+        atividade({
+          ta: 4,
+          tipoValor: "Visita Técnica",
+          tipoRotulo: "Visita Técnica",
+          local: "CHM",
+        }),
+        atividade({
+          ta: 1,
+          categoria: "TR",
+          tipoValor: "Reforço",
+          tipoRotulo: "Reforço",
+          turmaCodigo: "C-Ap-FR 2027",
+          cursoCodigo: "C-Ap-FR",
+        }),
       ],
       palestras: { cumpridas: 1, previstas: 4 },
     });
@@ -219,12 +279,24 @@ describe("RA-9 — as estatísticas", () => {
       { nome: "CAHO", valor: 9 },
       { nome: "C-Ap-FR", valor: 1 },
     ]);
-    expect(e.apoinstPorSituacao).toEqual({ planejada: 0, em_andamento: 0, concluida: 0, atrasada: 0 });
+    expect(e.apoinstPorSituacao).toEqual({
+      planejada: 0,
+      em_andamento: 0,
+      concluida: 0,
+      atrasada: 0,
+    });
   });
 });
 
 describe("RA-8 — os avisos", () => {
-  const turma = { id: "t", codigo: "CAHO 2027", termino: "2027-06-30", ativa: true, arquivada: false, eadPura: false };
+  const turma = {
+    id: "t",
+    codigo: "CAHO 2027",
+    termino: "2027-06-30",
+    ativa: true,
+    arquivada: false,
+    eadPura: false,
+  };
   const pendentes = new Map([["t", [{ codigo: "AEP-000001", nome: "Amazônia Azul" }]]]);
   it("a AEC obrigatória pendente entra a partir de 4 semanas do término (inclusive)", () => {
     expect(dentroDoPrazoDeAviso("2027-06-30", "2027-06-02", 4)).toBe(true); // 28 dias
@@ -241,9 +313,14 @@ describe("RA-8 — os avisos", () => {
   });
   it("sem a turma arquivada nem a EAD pura", () => {
     const a = avisosDeAtividades({
-      turmas: [{ ...turma, arquivada: true }, { ...turma, id: "u", eadPura: true }],
+      turmas: [
+        { ...turma, arquivada: true },
+        { ...turma, id: "u", eadPura: true },
+      ],
       obrigatoriasPendentes: new Map([...pendentes, ["u", [{ codigo: "AEP-2", nome: "X" }]]]),
-      apoinstAtrasadas: new Map([["t", [{ codigo: "APO-1", nome: "P", fimPrevisto: "2027-05-01" }]]]),
+      apoinstAtrasadas: new Map([
+        ["t", [{ codigo: "APO-1", nome: "P", fimPrevisto: "2027-05-01" }]],
+      ]),
       hoje: "2027-06-10",
       semanasDeAviso: 4,
     });

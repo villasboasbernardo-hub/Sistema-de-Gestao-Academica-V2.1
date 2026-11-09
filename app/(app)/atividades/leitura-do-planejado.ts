@@ -262,7 +262,11 @@ export async function lerPalestrasDasTurmas(
     const ativasDaTurma = new Set(previstasDaTurma.map((p) => p.id));
     const daTurma = linhasVinculadas.filter((l) => l.turma_id === t.id);
     for (const l of daTurma) {
-      const fora = vinculoForaDoQuadro(l.atividade_prevista_id as string, ativasDaTurma, desativadas);
+      const fora = vinculoForaDoQuadro(
+        l.atividade_prevista_id as string,
+        ativasDaTurma,
+        desativadas,
+      );
       if (fora !== null) foraDoQuadro.push(paraAvulsa(l, fora));
     }
     const lancamentos: LancamentoVinculado[] = daTurma

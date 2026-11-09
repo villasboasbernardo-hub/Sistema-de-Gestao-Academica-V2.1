@@ -54,7 +54,9 @@ export function historicoPorAlvo(
 }
 
 /** A marcação que vale (a mais recente marca «cumprida»), ou `null`. */
-export function marcadaAMao(historico: readonly MarcacaoNoHistorico[] | undefined): MarcacaoNoHistorico | null {
+export function marcadaAMao(
+  historico: readonly MarcacaoNoHistorico[] | undefined,
+): MarcacaoNoHistorico | null {
   const ultima = historico?.[0];
   return ultima !== undefined && ultima.situacao === "cumprida" ? ultima : null;
 }

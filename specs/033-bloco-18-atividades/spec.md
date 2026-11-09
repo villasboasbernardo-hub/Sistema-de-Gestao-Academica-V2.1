@@ -181,6 +181,16 @@ cumpridas N de M, com data, palestrante e local; visitas com local; APOINST por 
 | D-12 | O aviso de limite (RA-8 c) | fica o aviso de teto que já existe | um aviso novo no módulo Atividades |
 | D-13 | Trilha da carga das AEC previstas (item 6) | o script roda com a **sessão do Admin** (`USR-ADMIN-001`) e a justificativa autorizada, e o próprio gatilho grava a trilha — `autor_id` da trilha é obrigatório; o relatório diz que quem gravou foi o script | trilha sem autor (o banco não aceita) |
 | D-14 | Ordem das abas do módulo | Atividades · Palestras · APOINST · Calendário (a do pedido) | — |
+| D-15 | «Conta como» igual à classificação do tipo | grava **nulo** (a recategorização do catálogo continua valendo para quem não trocou nada) | gravar sempre o valor escolhido |
+| D-16 | O tipo da AEC prevista | todo tipo de classificação AEC do catálogo, inclusive *Apoio à Instrução* e *Orientação de TFM* | tirar o *Apoio à Instrução*, que é planejado por turma (RA-6) |
+| D-17 | A turma EAD pura nas abas Palestras e APOINST e no «N de M» | **fora** (não tem DSA: as previstas ficariam «a cumprir» para sempre); a tela diz quantas ficaram de fora | contá-las |
+| D-18 | Quem vê as ações da linha da lista | quem tem `atividades_nao_letivas.editar` **e** `registros_aula.criar` (quem lança o DSA; hoje os mesmos quatro perfis) | só `atividades_nao_letivas.editar` |
+| D-19 | A atividade de todas as turmas na lista do módulo | *Editar* e *Desativar* indisponíveis, com o motivo — ela vale na hora para todas e se desfaz pelo DSA (achado da revisão) | o *Desativar* com aviso de efeito imediato |
+| D-20 | A aba Atividades da turma | sem a atividade de todas as turmas (como o filtro de turma do módulo sempre fez); o uso do limite no painel de Estatísticas | incluir as globais do período da turma |
+| D-21 | Trocar a classificação de um tipo com lançamento em turma **arquivada** | a recategorização **pula** a linha da arquivada, que fica com a categoria que tinha (RT-8); antes, a troca inteira abortava (achado da revisão) | recategorizar também a arquivada |
+| D-22 | Trocar a classificação de um tipo usado por AEC prevista, ou de AEC para TAD/TR com lançamento que tem disciplina | a ação **recusa** e diz quantos e onde (`PEND-033-3`, `PEND-033-9`) | recusar também no banco (portão) |
+| D-23 | O acompanhamento do DSA (Palestras e APOINST) | a situação de **hoje**, como a ficha (era o último dia da semana mostrada, e a frase mentia; achado da revisão) | cortar os lançamentos pela semana |
+| D-24 | Palestra vinculada a AEC prevista desativada | aparece entre as **avulsas**, com a marca do vínculo, em vez de sumir; e só a que conta como AEC soma no «contam no limite de AEC» (achado da revisão) | — |
 
 ## 6. Banco
 
@@ -220,7 +230,20 @@ PARAR**.
 
 ### 6.4 Medições
 
-[pendente — §6.4 é preenchida depois da medição na cópia do remoto]
+- **Efeito zero da M2** — [`medicao-efeito-zero.md`](medicao-efeito-zero.md): na cópia `remoto-20261103-103124.sql`, os
+  **dez** objetos (as seis views, `vw_conformidade_tetos`, `chd_da_turma_ate`, `execucao_por_disciplina_ate` e a tabela de
+  atividades) com o **mesmo md5** antes e depois da M1 e da M2; as colunas novas das views valem 0 em todas as linhas.
+  As três correções da revisão (o porteiro do vínculo, a recategorização e a guarda da AEC prevista) mexem só em
+  função de gatilho que nenhuma migration executa — o efeito sobre o dado continua zero, e a remedição sobre o backup do
+  rito confirma (§ relatório do PR).
+- **Semana publicada:** nenhum retrato em `dsa_eventos_da_semana` contém «Atividade Extracurricular» (0) — mostrar o rótulo
+  novo não faz semana publicada acusar «alterado» (RP-4).
+- **As cargas, ensaiadas na cópia local:** 48 AEC previstas incluídas, todas com trilha, e a segunda rodada 0 (48 puladas);
+  24 PDFs no balde e nos currículos, a segunda rodada pulou os 24, e o arquivo baixado por link assinado tem o **mesmo md5**
+  do disco (CAHO, C-Espc-HN, EST-QF-APOC).
+- **A revisão adversarial** (5 dimensões, cada achado verificado por um segundo leitor): 28 achados confirmados (4 refutados), que
+  eram **18 defeitos** distintos — 13 de código e banco e 5 de teste. Corrigidos no PR; a parte que exigiria portão ou
+  decisão virou pendência (`PEND-033-3`, `PEND-033-6`, `PEND-033-8`, `PEND-033-9`).
 
 ## 7. Fora do escopo (e por quê)
 

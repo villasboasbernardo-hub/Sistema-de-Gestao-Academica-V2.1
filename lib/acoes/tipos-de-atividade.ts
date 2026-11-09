@@ -171,7 +171,28 @@ async function conferirImpedimentos(
   if (!lerPrevistas && !lerLancamentos) return { recusa: null, erro: false };
 
   const vazio = { data: [] as unknown[], error: null };
-  const [previstasRes, lancamentosRes, arquivadasRes] = await Promise.all([
+  /*
+   * Os que seguem o tipo e têm disciplina — o SALVO e o RASCUNHO, cada um na sua leitura e DE PROPÓSITO: o gatilho da
+   * recategorização toca os dois, e um só basta para o CHECK desfazer a troca. Nada aqui soma lançamento (RP-8).
+   */
+  const lerComDisciplina = (salvo: boolean) =>
+    lerTodasAsPaginas((f) =>
+      supabase
+        .from("atividades_nao_letivas")
+        .select(
+          "id, data, turma_id, rascunho_de, turma:turmas!atividades_nao_letivas_turma_id_fkey(codigo)",
+          contagemNaPrimeira(f),
+        )
+        .eq("tipo_atividade_id", tipoId)
+        .eq("status", "ativo")
+        .eq("salvo", salvo)
+        .is("conta_como", null)
+        .not("disciplina_id", "is", null)
+        .order("data", { ascending: false })
+        .order("id")
+        .range(f.de, f.ate),
+    );
+  const [previstasRes, salvosRes, rascunhosRes, arquivadasRes] = await Promise.all([
     lerPrevistas
       ? supabase
           .from("aec_previstas_curriculo")
@@ -179,29 +200,13 @@ async function conferirImpedimentos(
           .eq("tipo_atividade_id", tipoId)
           .eq("status", "ativo")
       : Promise.resolve(vazio),
-    lerLancamentos
-      ? lerTodasAsPaginas((f) =>
-          supabase
-            .from("atividades_nao_letivas")
-            .select(
-              "id, data, turma_id, rascunho_de, turma:turmas!atividades_nao_letivas_turma_id_fkey(codigo)",
-              contagemNaPrimeira(f),
-            )
-            .eq("tipo_atividade_id", tipoId)
-            .eq("status", "ativo")
-            /* O gatilho toca o salvo E o rascunho: os dois entram (sem filtro de `salvo`). */
-            .is("conta_como", null)
-            .not("disciplina_id", "is", null)
-            .order("data", { ascending: false })
-            .order("id")
-            .range(f.de, f.ate),
-        )
-      : Promise.resolve(vazio),
+    lerLancamentos ? lerComDisciplina(true) : Promise.resolve(vazio),
+    lerLancamentos ? lerComDisciplina(false) : Promise.resolve(vazio),
     lerLancamentos
       ? supabase.from("vw_turmas_arquivadas").select("turma_id")
       : Promise.resolve(vazio),
   ]);
-  if (previstasRes.error || lancamentosRes.error || arquivadasRes.error) {
+  if (previstasRes.error || salvosRes.error || rascunhosRes.error || arquivadasRes.error) {
     return { recusa: null, erro: true };
   }
 
@@ -212,10 +217,11 @@ async function conferirImpedimentos(
   const arquivadas = idsArquivados(
     (arquivadasRes.data ?? []) as unknown as { turma_id: string | null }[],
   );
-  /* A turma arquivada a recategorização pula (RT-8): ela não impede. */
-  const naoArquivados = ((lancamentosRes.data ?? []) as unknown as LancamentoComDisciplina[]).filter(
-    (l) => l.turma_id === null || !arquivadas.has(l.turma_id),
-  );
+  /* A turma arquivada a recategorização pula (RT-8): ela não impede. O salvo primeiro, para o exemplo da frase. */
+  const naoArquivados = [
+    ...((salvosRes.data ?? []) as unknown as LancamentoComDisciplina[]),
+    ...((rascunhosRes.data ?? []) as unknown as LancamentoComDisciplina[]),
+  ].filter((l) => l.turma_id === null || !arquivadas.has(l.turma_id));
   const contagem = contagemDoTipo(
     contagemPorTipo(
       naoArquivados.map((l) => ({

@@ -412,10 +412,9 @@ test("RA-4 · Reforço que conta como TA da disciplina, com instrutor sem habili
     salvo: false,
   });
   expect(gravada?.disciplina_id).toBe((disciplina as { id: string } | null)?.id);
-  expect(
-    gravada?.instrutor_id,
-    "o instrutor gravado não é o sem habilitação deste processo",
-  ).toBe((semVinculo as { id: string }).id);
+  expect(gravada?.instrutor_id, "o instrutor gravado não é o sem habilitação deste processo").toBe(
+    (semVinculo as { id: string }).id,
+  );
 });
 
 test("RA-4 · o cartão reabre com o «Conta como» e a OM gravados, e a OM se edita ali", async ({

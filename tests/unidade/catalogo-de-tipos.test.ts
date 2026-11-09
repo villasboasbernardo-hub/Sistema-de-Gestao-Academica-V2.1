@@ -19,6 +19,7 @@ import {
   efeitoDaTroca,
   ehClassificacaoDoCatalogo,
   fraseDoEfeito,
+  impedimentoDaTroca,
   proximaOrdem,
   tipoComOMesmoNome,
   tiposDoCatalogo,
@@ -120,6 +121,8 @@ describe("FR-001.3 · quantos lançamentos mudam quando a classificação padrã
       seguemOTipo: 2,
       taDaDisciplina: 1,
       comEscolha: 1,
+      emTurmaArquivada: 0,
+      comDisciplina: 0,
     });
     expect(contagemDoTipo(contagens, "q").total).toBe(1);
     expect(contagemDoTipo(contagens, "sem-lancamento")).toEqual({
@@ -127,12 +130,19 @@ describe("FR-001.3 · quantos lançamentos mudam quando a classificação padrã
       seguemOTipo: 0,
       taDaDisciplina: 0,
       comEscolha: 0,
+      emTurmaArquivada: 0,
+      comDisciplina: 0,
     });
   });
 
   it("⚠️ o caso que discrimina: o «Conta como» escolhido NÃO muda — é a linha que o gatilho pula", () => {
     const efeito = efeitoDaTroca("AEC", "TAD", contagemDoTipo(contagens, "p"));
-    expect(efeito).toEqual({ mudam: 2, taDaDisciplina: 1, ficamPelaEscolha: 1 });
+    expect(efeito).toEqual({
+      mudam: 2,
+      taDaDisciplina: 1,
+      ficamPelaEscolha: 1,
+      ficamNaArquivada: 0,
+    });
   });
 
   it("sem troca de classificação, nada muda (o gatilho não roda)", () => {
@@ -164,6 +174,158 @@ describe("FR-001.3 · quantos lançamentos mudam quando a classificação padrã
     const frase = fraseDoEfeito("AEC", "TR", null);
     expect(frase).toContain("Não foi possível contar");
     expect(frase).not.toContain("Nenhum lançamento");
+  });
+});
+
+describe("FR-001.3 · a turma ARQUIVADA fica como está (RT-8; achado da revisão)", () => {
+  const contagens = contagemPorTipo([
+    { tipoId: "p", contaComo: null },
+    { tipoId: "p", contaComo: null, turmaArquivada: true },
+    { tipoId: "p", contaComo: "CHD", turmaArquivada: true },
+    { tipoId: "p", contaComo: "TAD", turmaArquivada: true },
+    { tipoId: "p", contaComo: "CHD" },
+  ]);
+
+  it("⚠️ o caso que discrimina: a linha de turma arquivada NÃO entra no «mudam» — a recategorização a pula", () => {
+    const c = contagemDoTipo(contagens, "p");
+    expect(c.total).toBe(5);
+    expect(c.seguemOTipo).toBe(1);
+    expect(c.taDaDisciplina).toBe(1);
+    expect(c.comEscolha).toBe(0);
+    expect(c.emTurmaArquivada).toBe(3);
+    expect(efeitoDaTroca("AEC", "TR", c)).toEqual({
+      mudam: 1,
+      taDaDisciplina: 1,
+      ficamPelaEscolha: 0,
+      ficamNaArquivada: 3,
+    });
+  });
+
+  it("o diálogo diz à parte os que ficam na turma arquivada", () => {
+    const frase = fraseDoEfeito("AEC", "TR", contagemDoTipo(contagens, "p"));
+    expect(frase).toContain("1 lançamento passa de AEC para TR.");
+    expect(frase).toContain("3 lançamentos em turma arquivada ficam como estão.");
+  });
+
+  it("tipo só com lançamento em turma arquivada: o diálogo NÃO diz «não tem lançamento ativo»", () => {
+    const so = contagemPorTipo([{ tipoId: "x", contaComo: null, turmaArquivada: true }]);
+    const frase = fraseDoEfeito("AEC", "TAD", contagemDoTipo(so, "x"));
+    expect(frase).not.toContain("não tem lançamento ativo");
+    expect(frase).toContain("1 lançamento em turma arquivada fica como está.");
+  });
+});
+
+describe("FR-001.3 · os lançamentos com disciplina e o rascunho na contagem (achados da revisão)", () => {
+  it("conta quem segue o tipo E tem disciplina, fora da turma arquivada — o que o CHECK recusaria", () => {
+    const c = contagemDoTipo(
+      contagemPorTipo([
+        { tipoId: "p", contaComo: null, id: "a", comDisciplina: true },
+        { tipoId: "p", contaComo: null, id: "b", comDisciplina: false },
+        // «TA da disciplina» pode ter disciplina: o CHECK a aceita.
+        { tipoId: "p", contaComo: "CHD", id: "c", comDisciplina: true },
+        // A escolha AEC fica AEC: o gatilho a pula.
+        { tipoId: "p", contaComo: "AEC", id: "d", comDisciplina: true },
+        // A da turma arquivada o gatilho também pula.
+        { tipoId: "p", contaComo: null, id: "e", comDisciplina: true, turmaArquivada: true },
+      ]),
+      "p",
+    );
+    expect(c.comDisciplina).toBe(1);
+  });
+
+  it("⚠️ o rascunho entra no impedimento (o gatilho o toca), mas não no total nem no «mudam» (RP-8)", () => {
+    const c = contagemDoTipo(
+      contagemPorTipo([
+        { tipoId: "p", contaComo: null, id: "salvo", comDisciplina: true },
+        // A sombra do rascunho do MESMO lançamento: não soma duas vezes.
+        {
+          tipoId: "p",
+          contaComo: null,
+          id: "sombra",
+          comDisciplina: true,
+          salvo: false,
+          rascunhoDe: "salvo",
+        },
+        // Um rascunho NOVO (sem salvo de que seja sombra): é outro lançamento.
+        { tipoId: "p", contaComo: null, id: "novo", comDisciplina: true, salvo: false },
+      ]),
+      "p",
+    );
+    expect(c.comDisciplina).toBe(2);
+    expect(c.total).toBe(1);
+    expect(c.seguemOTipo).toBe(1);
+  });
+
+  it("tipo só com rascunho: o total é zero, mas o impedimento aparece", () => {
+    const c = contagemDoTipo(
+      contagemPorTipo([
+        { tipoId: "r", contaComo: null, id: "x", comDisciplina: true, salvo: false },
+      ]),
+      "r",
+    );
+    expect(c.total).toBe(0);
+    expect(c.comDisciplina).toBe(1);
+  });
+});
+
+describe("FR-001.3 · o que IMPEDE a troca da classificação (achados da revisão)", () => {
+  const nada = { previstasAtivas: 0, comDisciplina: 0 };
+
+  it("sem troca, nada impede", () => {
+    expect(impedimentoDaTroca("AEC", "AEC", { previstasAtivas: 3, comDisciplina: 2 })).toBeNull();
+  });
+
+  it("sem previstas nem lançamento com disciplina, a troca vai ao banco", () => {
+    expect(impedimentoDaTroca("AEC", "TAD", nada)).toBeNull();
+    expect(impedimentoDaTroca("TAD", "TR", nada)).toBeNull();
+  });
+
+  it("⚠️ AEC prevista ATIVA com o tipo: tirar o tipo da AEC é recusado, com a contagem e os cursos", () => {
+    const frase = impedimentoDaTroca("AEC", "TAD", {
+      previstasAtivas: 4,
+      cursosDasPrevistas: ["C-Ap-HN", "CAHO", "C-Ap-HN", "C-Ap-FR", "C-Esp-ME", ""],
+      comDisciplina: 0,
+    });
+    expect(frase).toContain("Este tipo é usado por 4 AEC previstas ativas de currículo");
+    // Os nomes, sem repetir e sem o vazio, até três — e «e mais N».
+    expect(frase).toContain("e mais 1)");
+    expect(frase).toContain("Editar curso → Currículo → Atividades e limites");
+  });
+
+  it("uma prevista só: a frase no singular", () => {
+    const frase = impedimentoDaTroca("AEC", "TR", { previstasAtivas: 1, comDisciplina: 0 });
+    expect(frase).toContain("Este tipo é usado por 1 AEC prevista ativa de currículo,");
+    expect(frase).toContain("troque o tipo dela ou desative-a");
+  });
+
+  it("⚠️ o caso que discrimina: a prevista só impede a troca que TIRA o tipo da AEC (TAD → TR passa, TR → AEC também)", () => {
+    expect(impedimentoDaTroca("TAD", "TR", { previstasAtivas: 2, comDisciplina: 0 })).toBeNull();
+    expect(impedimentoDaTroca("TR", "AEC", { previstasAtivas: 2, comDisciplina: 0 })).toBeNull();
+  });
+
+  it("⚠️ lançamento que segue o tipo com disciplina: a troca para fora da AEC é recusada, dizendo onde procurar", () => {
+    const frase = impedimentoDaTroca("AEC", "TAD", {
+      previstasAtivas: 0,
+      comDisciplina: 2,
+      exemploComDisciplina: { turma: "C-Ap-HN 2048", data: "2048-05-10" },
+    });
+    expect(frase).toContain(
+      "2 lançamentos deste tipo (contando os rascunhos) têm disciplina e seguem",
+    );
+    expect(frase).toContain("(por exemplo, C-Ap-HN 2048 em 10/05/2048)");
+    expect(frase).toContain("troque o «Conta como» para TA da disciplina");
+  });
+
+  it("a troca PARA a AEC não esbarra na disciplina (a AEC a aceita)", () => {
+    expect(impedimentoDaTroca("TAD", "AEC", { previstasAtivas: 0, comDisciplina: 5 })).toBeNull();
+  });
+
+  it("os dois impedimentos juntos saem numa frase só", () => {
+    const frase = impedimentoDaTroca("AEC", "TR", { previstasAtivas: 1, comDisciplina: 1 });
+    expect(frase).toContain("AEC prevista ativa");
+    expect(frase).toContain(
+      "1 lançamento deste tipo (contando os rascunhos) tem disciplina e segue",
+    );
   });
 });
 

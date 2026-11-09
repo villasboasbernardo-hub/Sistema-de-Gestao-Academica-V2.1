@@ -57,6 +57,15 @@ export function AcoesDaAtividade({
   const { avisar } = useAvisoDaLista();
   const router = useRouter();
   const [ocupado, iniciar] = React.useTransition();
+  /*
+   * A global (sem DSA de turma) nunca ganha o diálogo de rascunho, mesmo se quem chama não mandar o motivo: a exclusão
+   * dela vale NA HORA, para todas as turmas (D-14 da spec 024), e a confirmação daqui diria o contrário.
+   */
+  const motivo =
+    indisponivel ??
+    (hrefDoDsa === null
+      ? "atividade de todas as turmas: muda na hora para todas — edite ou desfaça pelo DSA de uma turma ou pelo Calendário"
+      : null);
 
   const desativar = () =>
     iniciar(async () => {
@@ -78,18 +87,15 @@ export function AcoesDaAtividade({
         acao="editar"
         rotulo={`Editar no DSA: ${resumo}`}
         variante="fantasma"
-        indisponivel={
-          indisponivel ??
-          (hrefDoDsa === null ? "atividade de todas as turmas: edite pelo DSA de uma turma" : null)
-        }
-        {...(hrefDoDsa === null || indisponivel !== null ? {} : { href: hrefDoDsa })}
+        indisponivel={motivo}
+        {...(hrefDoDsa === null || motivo !== null ? {} : { href: hrefDoDsa })}
       />
-      {indisponivel !== null || pendente ? (
+      {motivo !== null || pendente ? (
         <BotaoDeIcone
           acao="desativar"
           rotulo={`Desativar: ${resumo}`}
           variante="fantasma"
-          indisponivel={indisponivel ?? "desativação já pedida: salve a semana no DSA"}
+          indisponivel={motivo ?? "desativação já pedida: salve a semana no DSA"}
         />
       ) : (
         <DialogoConfirmacao

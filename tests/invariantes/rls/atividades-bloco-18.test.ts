@@ -82,18 +82,31 @@ async function criarConta(c: Conta): Promise<void> {
   const cliente = createClient(URL_SUPABASE, CHAVE_ANON, {
     auth: { persistSession: false, autoRefreshToken: false },
   });
-  conferir(`login ${c}`, (await cliente.auth.signInWithPassword({ email: email(c), password: SENHA })).error);
+  conferir(
+    `login ${c}`,
+    (await cliente.auth.signInWithPassword({ email: email(c), password: SENHA })).error,
+  );
   sessoes.set(c, cliente);
 }
 
 async function curso(lado: Lado): Promise<string> {
   const { codigo, classificacao } = CURSOS[lado];
-  const { data: existe } = await servico.from("cursos").select("id").eq("codigo", codigo).maybeSingle();
+  const { data: existe } = await servico
+    .from("cursos")
+    .select("id")
+    .eq("codigo", codigo)
+    .maybeSingle();
   if (existe) return (existe as { id: string }).id;
   const { data, error } = await servico.rpc(
     "criar_curso_com_regime" as never,
     {
-      p_curso: { codigo, nome_curso: `Curso ${codigo}`, classificacao, modalidade: "presencial", duracao_dias: 200 },
+      p_curso: {
+        codigo,
+        nome_curso: `Curso ${codigo}`,
+        classificacao,
+        modalidade: "presencial",
+        duracao_dias: 200,
+      },
       p_regime: {
         regime_tempos: 8,
         ta_duracao_min: 45,
@@ -114,33 +127,64 @@ async function limpar(): Promise<void> {
     const { data, error } = await servico.auth.admin.listUsers({ page: pagina, perPage: 200 });
     if (error || !data.users.length) break;
     for (const u of data.users) {
-      if ((u.email ?? "").endsWith(`@${DOMINIO}`)) await servico.auth.admin.deleteUser(u.id).catch(() => undefined);
+      if ((u.email ?? "").endsWith(`@${DOMINIO}`))
+        await servico.auth.admin.deleteUser(u.id).catch(() => undefined);
     }
     if (data.users.length < 200) break;
   }
   conferir("usuarios", (await servico.from("usuarios").delete().like("codigo", "USR-B18-%")).error);
   for (const lado of Object.keys(CURSOS) as Lado[]) {
-    const { data: c } = await servico.from("cursos").select("id").eq("codigo", CURSOS[lado].codigo).maybeSingle();
+    const { data: c } = await servico
+      .from("cursos")
+      .select("id")
+      .eq("codigo", CURSOS[lado].codigo)
+      .maybeSingle();
     if (!c) continue;
     const cursoId = (c as { id: string }).id;
     const { data: turmas } = await servico.from("turmas").select("id").eq("curso_id", cursoId);
     for (const t of (turmas ?? []) as { id: string }[]) {
-      conferir("marcações", (await servico.from("marcacoes_de_atividade").delete().eq("turma_id", t.id)).error);
-      conferir("atividades", (await servico.from("atividades_nao_letivas").delete().eq("turma_id", t.id)).error);
-      conferir("apoinst", (await servico.from("apoinst_planejadas").delete().eq("turma_id", t.id)).error);
-      const { data: linhas } = await servico.from("turma_disciplina").select("id").eq("turma_id", t.id);
+      conferir(
+        "marcações",
+        (await servico.from("marcacoes_de_atividade").delete().eq("turma_id", t.id)).error,
+      );
+      conferir(
+        "atividades",
+        (await servico.from("atividades_nao_letivas").delete().eq("turma_id", t.id)).error,
+      );
+      conferir(
+        "apoinst",
+        (await servico.from("apoinst_planejadas").delete().eq("turma_id", t.id)).error,
+      );
+      const { data: linhas } = await servico
+        .from("turma_disciplina")
+        .select("id")
+        .eq("turma_id", t.id);
       for (const l of (linhas ?? []) as { id: string }[]) {
         conferir(
           "designações",
-          (await servico.from("turma_disciplina_instrutor").delete().eq("turma_disciplina_id", l.id)).error,
+          (
+            await servico
+              .from("turma_disciplina_instrutor")
+              .delete()
+              .eq("turma_disciplina_id", l.id)
+          ).error,
         );
       }
-      conferir("linhas", (await servico.from("turma_disciplina").delete().eq("turma_id", t.id)).error);
+      conferir(
+        "linhas",
+        (await servico.from("turma_disciplina").delete().eq("turma_id", t.id)).error,
+      );
       conferir("turma", (await servico.from("turmas").delete().eq("id", t.id)).error);
     }
-    conferir("previstas", (await servico.from("aec_previstas_curriculo").delete().eq("curso_id", cursoId)).error);
+    conferir(
+      "previstas",
+      (await servico.from("aec_previstas_curriculo").delete().eq("curso_id", cursoId)).error,
+    );
   }
-  conferir("disciplinas", (await servico.from("disciplinas").delete().like("codigo", "B18-%")).error);
+  conferir(
+    "disciplinas",
+    (await servico.from("disciplinas").delete().like("codigo", "B18-%")).error,
+  );
   conferir("instrutor", (await servico.from("instrutores").delete().eq("codigo", "B18-INS")).error);
 }
 
@@ -171,7 +215,12 @@ beforeAll(async () => {
   for (const lado of Object.keys(CURSOS) as Lado[]) {
     const cursoId = await curso(lado);
     cursoDe.set(lado, cursoId);
-    const { data: cu } = await servico.from("curriculos").select("id").eq("curso_id", cursoId).eq("versao", 1).single();
+    const { data: cu } = await servico
+      .from("curriculos")
+      .select("id")
+      .eq("curso_id", cursoId)
+      .eq("versao", 1)
+      .single();
     curriculoDe.set(lado, (cu as { id: string }).id);
     const sufixo = lado.toUpperCase();
     const { data: d, error: eD } = await servico
@@ -253,22 +302,32 @@ describe("Bloco 18 · RA-6 — quem planeja a APOINST", () => {
     const linha = apoinst("regular", "APOINST do Encarregado");
     const { error } = await sessao("encarregado").from("apoinst_planejadas").insert(linha);
     expect(error, error?.message).toBeNull();
-    const { data } = await servico.from("apoinst_planejadas").select("codigo").eq("id", linha.id).single();
+    const { data } = await servico
+      .from("apoinst_planejadas")
+      .select("codigo")
+      .eq("id", linha.id)
+      .single();
     expect((data as { codigo: string }).codigo).toMatch(/^APO-\d{6}$/);
   });
 
   it("controle positivo: o Ajudante planeja na turma expedita (escopo geral)", async () => {
-    const { error } = await sessao("ajudante").from("apoinst_planejadas").insert(apoinst("expedito", "Do Ajudante"));
+    const { error } = await sessao("ajudante")
+      .from("apoinst_planejadas")
+      .insert(apoinst("expedito", "Do Ajudante"));
     expect(error, error?.message).toBeNull();
   });
 
   it("DISCRIMINA: o Operador, que lança o DSA, NÃO planeja — recusado pela RLS (42501)", async () => {
-    const { error } = await sessao("operador").from("apoinst_planejadas").insert(apoinst("regular", "Do Operador"));
+    const { error } = await sessao("operador")
+      .from("apoinst_planejadas")
+      .insert(apoinst("regular", "Do Operador"));
     expect(error?.code).toBe("42501");
   });
 
   it("(NEGATIVO) o Chefe de Departamento, que lê, não planeja (42501)", async () => {
-    const { error } = await sessao("chefe").from("apoinst_planejadas").insert(apoinst("regular", "Do Chefe"));
+    const { error } = await sessao("chefe")
+      .from("apoinst_planejadas")
+      .insert(apoinst("regular", "Do Chefe"));
     expect(error?.code).toBe("42501");
   });
 
@@ -290,16 +349,22 @@ describe("Bloco 18 · RA-5 — quem marca à mão", () => {
       .eq("turma_id", turmaDe.get("regular")!)
       .single();
     const id = randomUUID();
-    const { error } = await sessao("ajudante").from("marcacoes_de_atividade").insert({
-      id,
-      turma_id: turmaDe.get("regular")!,
-      apoinst_id: (a as { id: string }).id,
-      situacao: "cumprida",
-      justificativa: "Concluída em campo, conferida na ata.",
-      autor_nome: "Forjado",
-    });
+    const { error } = await sessao("ajudante")
+      .from("marcacoes_de_atividade")
+      .insert({
+        id,
+        turma_id: turmaDe.get("regular")!,
+        apoinst_id: (a as { id: string }).id,
+        situacao: "cumprida",
+        justificativa: "Concluída em campo, conferida na ata.",
+        autor_nome: "Forjado",
+      });
     expect(error, error?.message).toBeNull();
-    const { data } = await servico.from("marcacoes_de_atividade").select("autor_nome").eq("id", id).single();
+    const { data } = await servico
+      .from("marcacoes_de_atividade")
+      .select("autor_nome")
+      .eq("id", id)
+      .single();
     expect((data as { autor_nome: string }).autor_nome).toBe("Prova B18 ajudante");
   });
 
@@ -309,13 +374,15 @@ describe("Bloco 18 · RA-5 — quem marca à mão", () => {
       .select("id")
       .eq("turma_id", turmaDe.get("regular")!)
       .single();
-    const { error } = await sessao("operador").from("marcacoes_de_atividade").insert({
-      id: randomUUID(),
-      turma_id: turmaDe.get("regular")!,
-      apoinst_id: (a as { id: string }).id,
-      situacao: "cumprida",
-      justificativa: "Tentativa do Operador, sem o recurso.",
-    });
+    const { error } = await sessao("operador")
+      .from("marcacoes_de_atividade")
+      .insert({
+        id: randomUUID(),
+        turma_id: turmaDe.get("regular")!,
+        apoinst_id: (a as { id: string }).id,
+        situacao: "cumprida",
+        justificativa: "Tentativa do Operador, sem o recurso.",
+      });
     expect(error?.code).toBe("42501");
   });
 
@@ -359,7 +426,9 @@ describe("Bloco 18 · RA-2 — quem edita as AEC previstas do currículo (RC-6)"
   });
 
   it("(NEGATIVO) o Operador não edita currículo (42501)", async () => {
-    const { error } = await sessao("operador").from("aec_previstas_curriculo").insert(prevista("regular", "Do Operador"));
+    const { error } = await sessao("operador")
+      .from("aec_previstas_curriculo")
+      .insert(prevista("regular", "Do Operador"));
     expect(error?.code).toBe("42501");
   });
 
@@ -381,19 +450,28 @@ describe("Bloco 18 · RA-2 — quem edita as AEC previstas do currículo (RC-6)"
         })
       ).error,
     );
-    const sem = await sessao("ajudante").from("aec_previstas_curriculo").insert(prevista("regular", "Sem justificativa"));
+    const sem = await sessao("ajudante")
+      .from("aec_previstas_curriculo")
+      .insert(prevista("regular", "Sem justificativa"));
     expect(sem.error?.hint).toBe("justificativa_obrigatoria");
     const linha = prevista("regular", "Com justificativa");
     const com = await sessao("ajudante")
       .from("aec_previstas_curriculo")
       .insert(linha)
-      .setHeader("x-justificativa-de-correcao", Buffer.from("Correção de prova B18", "utf8").toString("base64"));
+      .setHeader(
+        "x-justificativa-de-correcao",
+        Buffer.from("Correção de prova B18", "utf8").toString("base64"),
+      );
     expect(com.error, com.error?.message).toBeNull();
     const { data } = await servico
       .from("correcoes_de_curriculo")
       .select("acao, tabela, justificativa")
       .eq("registro_id", linha.id)
       .single();
-    expect(data).toEqual({ acao: "incluir", tabela: "aec_previstas_curriculo", justificativa: "Correção de prova B18" });
+    expect(data).toEqual({
+      acao: "incluir",
+      tabela: "aec_previstas_curriculo",
+      justificativa: "Correção de prova B18",
+    });
   });
 });

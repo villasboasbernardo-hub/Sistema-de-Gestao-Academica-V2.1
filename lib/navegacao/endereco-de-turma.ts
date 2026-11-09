@@ -231,7 +231,10 @@ export function enderecoDasAvaliacoesDaTurma(codigo: string): string {
  * Bloco 18 (spec 033): as abas «Atividades», «Palestras» e «APOINST» da ficha da turma — destino dos avisos do sininho
  * (RA-8) e dos links do módulo Atividades. A mesma âncora das Avaliações (as abas abertas E à vista).
  */
-export function enderecoDaAbaDaTurma(codigo: string, aba: "atividades" | "palestras" | "apoinst"): string {
+export function enderecoDaAbaDaTurma(
+  codigo: string,
+  aba: "atividades" | "palestras" | "apoinst",
+): string {
   return `${enderecoDaTurma(codigo)}?aba=${aba}#${ANCORA_DAS_ABAS_DA_TURMA}`;
 }
 

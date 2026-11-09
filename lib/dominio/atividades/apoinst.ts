@@ -18,7 +18,12 @@
  */
 import { diasAte } from "@/lib/dominio/sinalizacao-de-disciplina";
 
-import { historicoPorAlvo, marcadaAMao, type MarcacaoDeAtividade, type MarcacaoNoHistorico } from "./marcacoes";
+import {
+  historicoPorAlvo,
+  marcadaAMao,
+  type MarcacaoDeAtividade,
+  type MarcacaoNoHistorico,
+} from "./marcacoes";
 
 export const SITUACOES_DA_APOINST = ["planejada", "em_andamento", "concluida", "atrasada"] as const;
 export type SituacaoDaApoinst = (typeof SITUACOES_DA_APOINST)[number];
@@ -124,7 +129,13 @@ export function quadroDaApoinst(entrada: {
       const historico = historicos.get(a.id) ?? [];
       const marcacao = marcadaAMao(historico);
       const situacao = situacaoDaApoinst(
-        { taPrevistos: a.taPrevistos, taLancados, lancamentos: lancs.length, fimPrevisto: a.fimPrevisto, marcacao },
+        {
+          taPrevistos: a.taPrevistos,
+          taLancados,
+          lancamentos: lancs.length,
+          fimPrevisto: a.fimPrevisto,
+          marcacao,
+        },
         entrada.hoje,
       );
       if (a.ativa) porSituacao[situacao] += 1;

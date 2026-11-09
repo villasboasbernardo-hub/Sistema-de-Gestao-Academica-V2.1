@@ -159,7 +159,10 @@ export const CATEGORIAS_DA_LISTA_DE_ATIVIDADES = CATEGORIAS_DE_ATIVIDADE.filter(
  * Bloco 18 (spec 033, RA-4): a CLASSIFICAÇÃO do filtro de Atividades é COMO a linha conta — as categorias da lista
  * mais a «CHD» (o «Conta como TA da disciplina», que não é valor do enum: mora em `conta_como`).
  */
-export const CLASSIFICACOES_DA_LISTA_DE_ATIVIDADES = [...CATEGORIAS_DA_LISTA_DE_ATIVIDADES, "CHD"] as const;
+export const CLASSIFICACOES_DA_LISTA_DE_ATIVIDADES = [
+  ...CATEGORIAS_DA_LISTA_DE_ATIVIDADES,
+  "CHD",
+] as const;
 
 /** Bloco 18 (RA-3): o vínculo do lançamento — com uma AEC prevista do currículo (ou APOINST), ou avulso. */
 export const VINCULOS_DE_ATIVIDADE = ["do_curriculo", "avulsa"] as const;
@@ -693,8 +696,20 @@ export const CONTRATO = {
        * vínculo (do currículo / avulsa), o responsável (texto contido no nome) e a situação das abas Palestras e APOINST.
        * O curso e a disciplina são texto: as opções vêm do servidor, que valida (como a turma).
        */
-      curso: { nome: "curso", tipo: "texto", padrao: "", historico: "substitui", avisaServidor: true },
-      disciplina: { nome: "disciplina", tipo: "texto", padrao: "", historico: "substitui", avisaServidor: true },
+      curso: {
+        nome: "curso",
+        tipo: "texto",
+        padrao: "",
+        historico: "substitui",
+        avisaServidor: true,
+      },
+      disciplina: {
+        nome: "disciplina",
+        tipo: "texto",
+        padrao: "",
+        historico: "substitui",
+        avisaServidor: true,
+      },
       vinculo: {
         nome: "vinculo",
         tipo: "escolha",
@@ -808,7 +823,13 @@ export const CONTRATO = {
       },
       de: { nome: "de", tipo: "texto", padrao: "", historico: "substitui", avisaServidor: true },
       ate: { nome: "ate", tipo: "texto", padrao: "", historico: "substitui", avisaServidor: true },
-      disciplina: { nome: "disciplina", tipo: "texto", padrao: "", historico: "substitui", avisaServidor: true },
+      disciplina: {
+        nome: "disciplina",
+        tipo: "texto",
+        padrao: "",
+        historico: "substitui",
+        avisaServidor: true,
+      },
       vinculo: {
         nome: "vinculo",
         tipo: "escolha",

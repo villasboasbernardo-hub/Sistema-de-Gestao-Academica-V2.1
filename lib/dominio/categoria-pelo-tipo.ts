@@ -70,7 +70,8 @@ export function categoriaEfetiva(
   categoriaDoTipo: CategoriaDeAtividade,
   contaComo: ContaComo | null,
 ): CategoriaDeAtividade {
-  if (contaComo !== null && contaComo !== "CHD" && aceitaContaComo(categoriaDoTipo)) return contaComo;
+  if (contaComo !== null && contaComo !== "CHD" && aceitaContaComo(categoriaDoTipo))
+    return contaComo;
   return categoriaDoTipo;
 }
 
@@ -184,11 +185,15 @@ export function recusaPelaCategoria(entrada: {
   if (contaComo !== null && !aceitaContaComo(entrada.categoria)) {
     return {
       campo: "contaComo",
-      mensagem: "Este tipo não conta como AEC, TAD, TR nem como TA da disciplina: a classificação dele não se troca.",
+      mensagem:
+        "Este tipo não conta como AEC, TAD, TR nem como TA da disciplina: a classificação dele não se troca.",
     };
   }
   const efetiva = categoriaEfetiva(entrada.categoria, contaComo);
-  if (descricaoObrigatoria(efetiva) && (entrada.descricao === null || entrada.descricao.trim() === "")) {
+  if (
+    descricaoObrigatoria(efetiva) &&
+    (entrada.descricao === null || entrada.descricao.trim() === "")
+  ) {
     return { campo: "descricao", mensagem: FRASE_DA_DESCRICAO_OBRIGATORIA };
   }
   if (contaComo === "CHD" && (entrada.disciplinaId === null || entrada.turmaId === null)) {
@@ -198,7 +203,9 @@ export function recusaPelaCategoria(entrada: {
     return {
       campo: "disciplinaId",
       mensagem:
-        contaComo === null ? "Só a AEC leva disciplina." : "Só a AEC e o «TA da disciplina» levam disciplina.",
+        contaComo === null
+          ? "Só a AEC leva disciplina."
+          : "Só a AEC e o «TA da disciplina» levam disciplina.",
     };
   }
   const categoria = efetiva;

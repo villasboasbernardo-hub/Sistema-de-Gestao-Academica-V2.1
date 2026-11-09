@@ -599,9 +599,7 @@ async function abrirPalestrasDaTurma(page: Page): Promise<void> {
 /** No DSA: a aba Palestras do acompanhamento, abaixo da grade (FR-008.1). */
 async function abrirPalestrasDoDsa(page: Page): Promise<void> {
   await page.locator('[data-acompanhamento="palestras"]').click();
-  await expect
-    .poll(() => new URL(page.url()).searchParams.get("acompanhamento"))
-    .toBe("palestras");
+  await expect.poll(() => new URL(page.url()).searchParams.get("acompanhamento")).toBe("palestras");
   await expect(page.locator('[data-slot="acompanhamento-de-palestras"]')).toBeVisible({
     timeout: 15_000,
   });
@@ -716,9 +714,7 @@ test("SC-005 · o «Cumpre» do DSA: a Palestra vinculada é rascunho e não cum
   }
 
   /* ── 3. No banco: a linha VINCULADA à prevista, e RASCUNHO (RP-0) — a prova é a linha, não o campo (PEND-016-2) ── */
-  await expect
-    .poll(() => lancamentoVinculado(previstaId), { timeout: 30_000 })
-    .not.toBeNull();
+  await expect.poll(() => lancamentoVinculado(previstaId), { timeout: 30_000 }).not.toBeNull();
   expect(await lancamentoVinculado(previstaId)).toMatchObject({
     atividade_prevista_id: previstaId,
     apoinst_id: null,

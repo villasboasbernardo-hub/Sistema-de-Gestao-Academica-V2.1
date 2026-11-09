@@ -15,7 +15,8 @@
  * ⚠️ **A CONTAGEM É DOS LANÇAMENTOS ATIVOS E SALVOS** (RP-8) que a pessoa alcança (a RLS recorta), e é ela que o diálogo
  *    de *Editar* usa para dizer quantos mudam de categoria. Leitura que falha é dita — nunca vira zero (gotcha 4).
  *    ⚠️ Os de TURMA ARQUIVADA ficam fora do «mudam» (a recategorização os pula, RT-8), e o RASCUNHO entra só no
- *    impedimento da disciplina (o gatilho toca o rascunho também) — por isso a leitura não filtra `salvo`.
+ *    impedimento da disciplina (o gatilho toca o rascunho também) — por isso há uma SEGUNDA leitura, `salvo = false`,
+ *    só dos rascunhos que impedem, de propósito; a dos salvos continua com o filtro do RP-8.
  * ⚠️ **O DIÁLOGO AVISA O QUE IMPEDE A TROCA** (`impedimentoDaTroca`): AEC prevista ativa de currículo com o tipo e
  *    lançamento que segue o tipo com disciplina. Quem recusa é a ação, que confere de novo ao gravar.
  * ⚠️ **SEM MARCADOR DE CLIENTE.** O cadastro e as ações da linha são folhas.
@@ -48,34 +49,53 @@ export default async function TiposDeAtividade() {
   const permissoes = await permissoesDoPerfil(usuario?.perfil ?? null);
   const supabase = await criarClienteDeServidor();
 
-  const [catalogoRes, lancamentosRes, arquivadasRes, previstasRes] = await Promise.all([
-    supabase
-      .from("config_listas")
-      .select("id, valor, rotulo_exibicao, ativo, ordem, metadados")
-      .eq("lista", "tipos_atividade")
-      .order("ordem"),
-    lerTodasAsPaginas((f) =>
+  const [catalogoRes, lancamentosRes, rascunhosRes, arquivadasRes, previstasRes] =
+    await Promise.all([
       supabase
-        .from("atividades_nao_letivas")
-        .select(
-          "id, tipo_atividade_id, conta_como, turma_id, disciplina_id, salvo, rascunho_de",
-          contagemNaPrimeira(f),
-        )
-        .eq("status", "ativo")
-        .not("tipo_atividade_id", "is", null)
-        .order("id")
-        .range(f.de, f.ate),
-    ),
-    supabase.from("vw_turmas_arquivadas").select("turma_id"),
-    lerTodasAsPaginas((f) =>
-      supabase
-        .from("aec_previstas_curriculo")
-        .select("id, tipo_atividade_id", contagemNaPrimeira(f))
-        .eq("status", "ativo")
-        .order("id")
-        .range(f.de, f.ate),
-    ),
-  ]);
+        .from("config_listas")
+        .select("id, valor, rotulo_exibicao, ativo, ordem, metadados")
+        .eq("lista", "tipos_atividade")
+        .order("ordem"),
+      /* Os SALVOS (RP-8): são eles que o diálogo conta e promete. */
+      lerTodasAsPaginas((f) =>
+        supabase
+          .from("atividades_nao_letivas")
+          .select(
+            "id, tipo_atividade_id, conta_como, turma_id, disciplina_id, rascunho_de",
+            contagemNaPrimeira(f),
+          )
+          .eq("status", "ativo")
+          .eq("salvo", true)
+          .not("tipo_atividade_id", "is", null)
+          .order("id")
+          .range(f.de, f.ate),
+      ),
+      /*
+       * Os RASCUNHOS, de propósito e só os que impedem: seguem o tipo e têm disciplina. Não entram em contagem nenhuma — o
+       * gatilho da recategorização os toca também, e um deles basta para o CHECK desfazer a troca.
+       */
+      lerTodasAsPaginas((f) =>
+        supabase
+          .from("atividades_nao_letivas")
+          .select("id, tipo_atividade_id, turma_id, rascunho_de", contagemNaPrimeira(f))
+          .eq("status", "ativo")
+          .eq("salvo", false)
+          .not("tipo_atividade_id", "is", null)
+          .is("conta_como", null)
+          .not("disciplina_id", "is", null)
+          .order("id")
+          .range(f.de, f.ate),
+      ),
+      supabase.from("vw_turmas_arquivadas").select("turma_id"),
+      lerTodasAsPaginas((f) =>
+        supabase
+          .from("aec_previstas_curriculo")
+          .select("id, tipo_atividade_id", contagemNaPrimeira(f))
+          .eq("status", "ativo")
+          .order("id")
+          .range(f.de, f.ate),
+      ),
+    ]);
 
   const tipos = tiposDoCatalogo(
     (
@@ -101,17 +121,16 @@ export default async function TiposDeAtividade() {
       ? idsArquivados((arquivadasRes.data ?? []) as { turma_id: string | null }[])
       : null;
   const contagens =
-    lancamentosRes.error || arquivadas === null
+    lancamentosRes.error || rascunhosRes.error || arquivadas === null
       ? null
-      : contagemPorTipo(
-          (
+      : contagemPorTipo([
+          ...(
             (lancamentosRes.data ?? []) as {
               id: string;
               tipo_atividade_id: string | null;
               conta_como: string | null;
               turma_id: string | null;
               disciplina_id: string | null;
-              salvo: boolean | null;
               rascunho_de: string | null;
             }[]
           ).map((l) => ({
@@ -120,10 +139,26 @@ export default async function TiposDeAtividade() {
             id: l.id,
             turmaArquivada: l.turma_id !== null && arquivadas.has(l.turma_id),
             comDisciplina: l.disciplina_id !== null,
-            salvo: l.salvo !== false,
+            salvo: true,
             rascunhoDe: l.rascunho_de,
           })),
-        );
+          ...(
+            (rascunhosRes.data ?? []) as {
+              id: string;
+              tipo_atividade_id: string | null;
+              turma_id: string | null;
+              rascunho_de: string | null;
+            }[]
+          ).map((l) => ({
+            tipoId: l.tipo_atividade_id,
+            contaComo: null,
+            id: l.id,
+            turmaArquivada: l.turma_id !== null && arquivadas.has(l.turma_id),
+            comDisciplina: true,
+            salvo: false,
+            rascunhoDe: l.rascunho_de,
+          })),
+        ]);
   /* As AEC previstas ATIVAS de currículo por tipo — o impedimento (a) da troca. `null` quando não foram lidas. */
   const previstasPorTipo = previstasRes.error
     ? null

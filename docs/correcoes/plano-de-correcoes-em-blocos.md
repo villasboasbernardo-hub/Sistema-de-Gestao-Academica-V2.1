@@ -44,6 +44,7 @@ _Decisão de Bernardo Villas Boas, 19/10/2026._ Todo pedido de correção ou mud
 | **15** | Início (tela cheia, setas), ano no cabeçalho e ajustes do DSA (EI só lançado, abas de versão, barra única, cabeçalho numa linha) e a `PEND-029-1` — ✅ **concluído em 30/10/2026** | não | 030 |
 | **16** | Lançamento no DSA (ícones, *Início*, avaliação sem técnica, EI sem instrutor), mais de um instrutor por aula (RD-9), papel (Apoio, ORIGINAL/ALT, instrutor e local na mesma linha) e abas de acompanhamento; e os ajustes de 31/10 (EI, papel sem os tempos finais vazios, cartão adaptável, Editar nas avaliações) — ✅ **concluído em 01/11/2026** | duas migrations, que só acrescentam (a recriação da view de carga com efeito zero medido) | 031 |
 | **17** | Página da turma (cartões compactos, situação num cartão, CH restante, dias úteis, CH disponível), saldo de CH em três níveis (`RN-SALDO-01`), abas APOINST e Palestras, e Atividades (aba Palestras, Estudo Individual fora da lista) — ✅ **concluído em 01/11/2026** | não | 032 |
+| **18** | O módulo de Atividades: catálogo de tipos, «Conta como», AEC previstas do currículo, palestras, APOINST, filtros, estatísticas e avisos (RA-1 a RA-9) — 🟨 **em conferência** | sim (M1 acrescenta; M2 recria com efeito zero medido) | 033 |
 
 ---
 
@@ -830,6 +831,34 @@ riscadas lá):
   `PEND-017-4` (*Nome no DSA* das disciplinas acima de 19 caracteres); `PEND-023-1` (as 33 linhas antigas do calendário
   sem tipo); `PEND-023-2` (o 12/11/2026, `FER-000023`); `PEND-024-1` (marcar as disciplinas *Presencial* das
   semipresenciais); `PEND-024-2` (a etapa presencial das 4 semipresenciais sem ela).
+
+---
+
+## Bloco 18 — O módulo de Atividades (spec 033) — 🟨 EM CONFERÊNCIA
+
+_Pedido de Bernardo Villas Boas, 03/11/2026, pelo `/corrigir`, com a parada do passo 0 conferida no mesmo dia
+(«recomendações, com estes detalhes»)._ Regras novas **RA-1 a RA-9** em
+[`regras-de-atividades.md`](regras-de-atividades.md), apontadas no `CLAUDE.md` e no documento 04 (nota datada, nenhuma
+`RN-` muda). Spec, plano, tarefas, medição do efeito zero, reversão e roteiro em `specs/033-bloco-18-atividades/`.
+
+**Pendências novas** (achadas no bloco e não corrigidas — portão, decisão ou cadastro):
+
+| # | Pendência | Bloqueia |
+|---|---|---|
+| **PEND-033-1** | **Cadastro de Bernardo:** o EST-QF-APOC não tem a linha de **1 h de TR** que o PDF declara (passo 0, §1) | Nada |
+| **PEND-033-2** | **A grafia dos currículos de 2027** (APOINST, «Prática Oceanográfica / Topogeodésica / Hidrográfica») só se confere quando os PDFs de 2027 chegarem; nos de 2026, nenhuma ocorre como nome (passo 0, §4) | Nada |
+| **PEND-033-3** | **O banco não recusa trocar a classificação de um tipo usado por AEC prevista** quando a escrita em `config_listas` é direta (PostgREST, `parametros.editar`): só a Server Action recusa. Fechar é um gatilho em tabela existente — portão 9.4 | Nada |
+| **PEND-033-4** | **«Admin edita» o catálogo (RA-1):** no banco vale a policy de sempre de `config_listas` (`parametros.*`, Admin **e** Encarregado), como as salas (D-6). Só o Admin = mudar policy, portão 9.4 | Nada |
+| **PEND-033-5** | **`app.impedimentos_de_exclusao_da_disciplina` não conhece `aec_previstas_curriculo.disciplina_id`**: a exclusão permanente de uma disciplina sem histórico mas citada por AEC prevista recusa com o `23503` cru da FK, em vez do impedimento nomeado. Ensinar o porteiro é recriar função — portão 9.4 | Nada |
+| **PEND-033-6** | **A APOINST fica na disciplina do currículo antigo se a turma trocar de currículo** (`app.trocar_linhas_da_versao` não a leva pela linhagem). A troca só existe sem lançamento; mudar a função é portão 9.4 | Nada |
+| **PEND-033-7** | **Decisão:** o «TA da disciplina» deve disparar o alerta do recomendado semanal por disciplina (`vereditoDosTetos`), como a aula? Hoje não dispara | Nada |
+| **PEND-033-8** | **Curso fora de oferta:** *Registrar cumprimento* e *Nova APOINST* aparecem e a ação recusa com a frase do curso inativo; o botão não some (o mesmo vale para os ajustes de avaliação do Bloco 16) | Nada |
+| **PEND-033-9** | **Lançamento com disciplina que segue o tipo impede a troca AEC → TAD/TR** do catálogo: a ação recusa e aponta onde; marcá-lo como «Conta como AEC» automaticamente mexeria em dado do operador (decisão) | Nada |
+| **PEND-033-10** | **Cobertura que falta:** o aviso de APOINST atrasada contra o banco, o sininho dos avisos de Atividades por clique e o vínculo com APOINST pelo DSA (exigem turma de 2027 em diante com instrutor designado) | Nada |
+| **PEND-033-11** | **O cartão de edição do DSA** mantém o Local em texto livre, sem a lista de salas | Nada |
+| **PEND-033-12** | **`AvisoDaLista`** mora em `app/(app)/admin/usuarios/` e é importado pela lista de Atividades e pela aba da turma: mover para `components/ciaara/` | Nada |
+| **PEND-033-13** | **A parada do dia de uma turma** (`bloqueia_aula`) aparece na lista de Atividades com o *Desativar* como rascunho; pela D-2 ela vale na hora e se desfaz pelo *Desfazer* do DSA ou pelo Calendário | Nada |
+| **PEND-033-14** | **A colisão de termo volta à tela:** «Atividade Extraclasse» é o rótulo do tipo AEC (decisão 4) e é o nome que a `RN-CRONOS-02` dá ao lançamento vinculado a matéria. Registrada no documento 04, não corrigida (regra 1) | Nada |
 
 ---
 

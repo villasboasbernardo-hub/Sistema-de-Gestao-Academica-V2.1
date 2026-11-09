@@ -241,7 +241,10 @@ export type ImpedimentosDaTroca = {
   /** Os lançamentos que seguem o tipo e têm disciplina, fora de turma arquivada (`ContagemDoTipo.comDisciplina`). */
   readonly comDisciplina: number;
   /** Um deles, para a frase dizer onde procurar: a turma (código) e a data (ISO). */
-  readonly exemploComDisciplina?: { readonly turma: string | null; readonly data: string | null } | null;
+  readonly exemploComDisciplina?: {
+    readonly turma: string | null;
+    readonly data: string | null;
+  } | null;
 };
 
 /** Até três nomes, e «e mais N». */
@@ -288,7 +291,10 @@ export function impedimentoDaTroca(
     const exemplo = impedimentos.exemploComDisciplina;
     const onde =
       exemplo && (exemplo.turma || exemplo.data)
-        ? ` (por exemplo, ${[exemplo.turma, exemplo.data ? `em ${dataParaLeitura(exemplo.data)}` : null]
+        ? ` (por exemplo, ${[
+            exemplo.turma,
+            exemplo.data ? `em ${dataParaLeitura(exemplo.data)}` : null,
+          ]
             .filter((p): p is string => p !== null && p !== "")
             .join(" ")})`
         : "";

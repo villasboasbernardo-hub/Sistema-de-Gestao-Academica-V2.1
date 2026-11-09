@@ -9,7 +9,10 @@
  *
  * Função pura: nada de `supabase`, `next` nem `react` (imposto por ESLint).
  */
-export function externoComOm(nome: string | null | undefined, om: string | null | undefined): string | null {
+export function externoComOm(
+  nome: string | null | undefined,
+  om: string | null | undefined,
+): string | null {
   const n = nome?.trim() ?? "";
   if (n === "") return null;
   const o = om?.trim() ?? "";

@@ -16,7 +16,12 @@
  *
  * Função pura: nada de `supabase`, `next` nem `react` (imposto por ESLint).
  */
-import { historicoPorAlvo, marcadaAMao, type MarcacaoDeAtividade, type MarcacaoNoHistorico } from "./marcacoes";
+import {
+  historicoPorAlvo,
+  marcadaAMao,
+  type MarcacaoDeAtividade,
+  type MarcacaoNoHistorico,
+} from "./marcacoes";
 
 export type AecPrevista = {
   readonly id: string;
@@ -26,7 +31,11 @@ export type AecPrevista = {
   readonly tipoRotulo: string;
   /** Nulo = o currículo não diz («não definido»). */
   readonly taPrevistos: number | null;
-  readonly disciplina: { readonly id: string; readonly codigo: string; readonly nome: string } | null;
+  readonly disciplina: {
+    readonly id: string;
+    readonly codigo: string;
+    readonly nome: string;
+  } | null;
   readonly obrigatoria: boolean;
   readonly ordem: number;
 };
@@ -112,13 +121,20 @@ export function quadroDasPrevistas(entrada: {
   const linhas = [...entrada.previstas]
     .sort((a, b) => a.ordem - b.ordem || a.nome.localeCompare(b.nome, "pt-BR"))
     .map((p): LinhaDaPrevista => {
-      const lancamentos = [...(porAlvo.get(p.id) ?? [])].sort((a, b) => a.data.localeCompare(b.data));
+      const lancamentos = [...(porAlvo.get(p.id) ?? [])].sort((a, b) =>
+        a.data.localeCompare(b.data),
+      );
       const taLancados = lancamentos.reduce((s, l) => s + l.ta, 0);
       const historico = historicos.get(p.id) ?? [];
       const marcacao = marcadaAMao(historico);
       return {
         ...p,
-        situacao: situacaoDaPrevista({ taPrevistos: p.taPrevistos, taLancados, lancamentos: lancamentos.length, marcacao }),
+        situacao: situacaoDaPrevista({
+          taPrevistos: p.taPrevistos,
+          taLancados,
+          lancamentos: lancamentos.length,
+          marcacao,
+        }),
         taLancados,
         lancamentos,
         primeiraData: lancamentos[0]?.data ?? marcacao?.dataRealizada ?? null,

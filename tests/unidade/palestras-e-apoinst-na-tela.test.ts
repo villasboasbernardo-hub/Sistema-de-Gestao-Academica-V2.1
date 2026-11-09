@@ -12,7 +12,9 @@ import { quadroDaApoinst, type ApoinstPlanejada } from "@/lib/dominio/atividades
 import type { MarcacaoDeAtividade } from "@/lib/dominio/atividades/marcacoes";
 import {
   avulsasDaAba,
+  comoContaDaLinha,
   filtrarApoinst,
+  fraseDosTaDasAvulsas,
   filtrarPalestras,
   linhasDeApoinst,
   linhasDePalestras,
@@ -23,6 +25,8 @@ import {
   situacaoDeApoinstValida,
   situacaoDePalestraValida,
   situacaoNoFiltroDePalestras,
+  vinculoForaDoQuadro,
+  MARCA_DO_VINCULO_DA_AVULSA,
   type AvulsaNaTela,
   type TurmaDaAba,
 } from "@/lib/dominio/atividades/palestras-e-apoinst-na-tela";
@@ -123,6 +127,8 @@ const AVULSAS: readonly AvulsaNaTela[] = [
     responsavel: "Palestrante (OM externa)",
     local: null,
     descricao: "Palestra avulsa da B",
+    comoConta: "AEC",
+    vinculo: "nenhum",
   },
   {
     codigo: "AV-1",
@@ -133,6 +139,8 @@ const AVULSAS: readonly AvulsaNaTela[] = [
     responsavel: null,
     local: "Sala 1",
     descricao: "Palestra avulsa da A",
+    comoConta: "TAD",
+    vinculo: "prevista_desativada",
   },
   {
     codigo: "AV-9",
@@ -143,6 +151,8 @@ const AVULSAS: readonly AvulsaNaTela[] = [
     responsavel: null,
     local: null,
     descricao: "De turma fora do recorte",
+    comoConta: "AEC",
+    vinculo: "nenhum",
   },
 ];
 
@@ -246,6 +256,8 @@ describe("RA-9 — os números das palestras", () => {
       obrigatoriasPendentes: 2,
       avulsas: 2,
       taDasAvulsas: 5,
+      // AV-2 conta como AEC (3 TA); AV-1 o operador fez contar como TAD (2 TA) — fora do limite de AEC.
+      taDasAvulsasNaAec: 3,
     });
   });
 
@@ -266,6 +278,86 @@ describe("RA-9 — os números das palestras", () => {
       { nome: "Cumprida", valor: 1 },
     ]);
     expect(numerosDasPalestras([], []).porSituacao).toEqual([]);
+  });
+});
+
+describe("RA-3 · a avulsa: sem vínculo nenhum, e só a que conta como AEC entra no limite (achados da revisão)", () => {
+  it("como a linha conta sai do que o banco gravou — o mesmo predicado da view (categoria AEC e não «TA da disciplina»)", () => {
+    expect(comoContaDaLinha("AEC", null)).toBe("AEC");
+    // A categoria gravada JÁ é a efetiva (o gatilho a calcula); o «TA da disciplina» é o que tira a linha da AEC.
+    expect(comoContaDaLinha("AEC", "CHD")).toBe("CHD");
+    expect(comoContaDaLinha("TAD", "TAD")).toBe("TAD");
+    expect(comoContaDaLinha("TR", null)).toBe("TR");
+    expect(comoContaDaLinha("Estudo_Individual", null)).toBe("Estudo_Individual");
+    // Categoria que não é de atividade (ou ausente) não inventa como conta.
+    expect(comoContaDaLinha("CHD", null)).toBeNull();
+    expect(comoContaDaLinha(null, null)).toBeNull();
+    expect(comoContaDaLinha(undefined, "AEC")).toBeNull();
+    // «Conta como» desconhecido é ignorado: vale a categoria.
+    expect(comoContaDaLinha("AEC", "XYZ")).toBe("AEC");
+  });
+
+  it("⚠️ o caso que discrimina: a avulsa que conta como TAD fica FORA da soma do limite de AEC, e o total a mantém", () => {
+    const tad: AvulsaNaTela = { ...AVULSAS[0]!, codigo: "AV-T", comoConta: "TAD", ta: 4 };
+    const chd: AvulsaNaTela = { ...AVULSAS[0]!, codigo: "AV-C", comoConta: "CHD", ta: 1 };
+    const aec: AvulsaNaTela = { ...AVULSAS[0]!, codigo: "AV-A", comoConta: "AEC", ta: 2 };
+    const n = numerosDasPalestras([], avulsasDaAba(TURMAS, [tad, chd, aec]));
+    expect(n.taDasAvulsas).toBe(7);
+    expect(n.taDasAvulsasNaAec).toBe(2);
+    // Sem a separação, o cartão diria «7 TA — contam no limite de AEC», e a view soma só 2.
+    expect(fraseDosTaDasAvulsas(n)).toBe(
+      "2 TA contam no limite de AEC · 5 TA contam como TAD, TR ou TA da disciplina",
+    );
+  });
+
+  it("quando todas contam como AEC, a frase de sempre", () => {
+    expect(fraseDosTaDasAvulsas({ taDasAvulsas: 4, taDasAvulsasNaAec: 4 })).toBe(
+      "4 TA — contam no limite de AEC",
+    );
+    expect(fraseDosTaDasAvulsas({ taDasAvulsas: 0, taDasAvulsasNaAec: 0 })).toBe(
+      "0 TA — contam no limite de AEC",
+    );
+  });
+});
+
+describe("RA-5 · o vinculado a AEC prevista FORA do quadro não some (achado da revisão)", () => {
+  const ativas = new Set(["p1", "p2"]);
+  const desativadas = new Set(["p9"]);
+
+  it("vinculado a prevista ATIVA do currículo da turma: fica no quadro (nulo)", () => {
+    expect(vinculoForaDoQuadro("p1", ativas, desativadas)).toBeNull();
+  });
+
+  it("⚠️ vinculado a prevista DESATIVADA: vai para as avulsas com a marca (antes, sumia da aba)", () => {
+    expect(vinculoForaDoQuadro("p9", ativas, desativadas)).toBe("prevista_desativada");
+    expect(MARCA_DO_VINCULO_DA_AVULSA.prevista_desativada).toBe(
+      "vinculada a AEC prevista desativada",
+    );
+  });
+
+  it("vinculado a prevista que não é do currículo da turma (ela trocou de currículo): a outra marca", () => {
+    expect(vinculoForaDoQuadro("p-de-outro", ativas, desativadas)).toBe(
+      "prevista_de_outro_curriculo",
+    );
+    expect(MARCA_DO_VINCULO_DA_AVULSA.prevista_de_outro_curriculo).toBe(
+      "vinculada a AEC prevista de outro currículo",
+    );
+  });
+
+  it("a avulsa sem vínculo não tem marca", () => {
+    expect(MARCA_DO_VINCULO_DA_AVULSA.nenhum).toBeNull();
+  });
+
+  it("a vinculada a prevista desativada aparece como avulsa: com o filtro «avulsa» fica, com «do currículo» sai", () => {
+    const todas = {
+      linhas: linhasDePalestras(TURMAS, quadros()),
+      avulsas: avulsasDaAba(TURMAS, AVULSAS),
+    };
+    const sem = { turma: "", curso: "", situacao: "", vinculo: "" };
+    expect(
+      filtrarPalestras(todas, { ...sem, vinculo: "avulsa" }).avulsas.map((a) => a.vinculo),
+    ).toContain("prevista_desativada");
+    expect(filtrarPalestras(todas, { ...sem, vinculo: "do_curriculo" }).avulsas).toEqual([]);
   });
 });
 

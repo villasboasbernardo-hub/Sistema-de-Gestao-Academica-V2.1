@@ -256,11 +256,7 @@ function EdicaoDoTipo({
           {fraseDoEfeito(classificacao, escolhida, contagem)}
         </p>
         {impedimento ? (
-          <p
-            role="alert"
-            className="text-conflito-tinta text-xs"
-            data-slot="impedimento-da-troca"
-          >
+          <p role="alert" className="text-conflito-tinta text-xs" data-slot="impedimento-da-troca">
             A troca será recusada ao gravar. {impedimento}
           </p>
         ) : null}

@@ -68,9 +68,20 @@ export type EstatisticasDeAtividades = {
   readonly usoDoLimite: readonly UsoDoLimite[];
 };
 
-const ORDEM_DE_COMO_CONTA: readonly ComoConta[] = ["AEC", "TAD", "TR", "CHD", "Apoio_Individualizado", "Estudo_Individual"];
+const ORDEM_DE_COMO_CONTA: readonly ComoConta[] = [
+  "AEC",
+  "TAD",
+  "TR",
+  "CHD",
+  "Apoio_Individualizado",
+  "Estudo_Individual",
+];
 
-function somarPor<T>(itens: readonly T[], chave: (i: T) => string | null, valor: (i: T) => number): Fatia[] {
+function somarPor<T>(
+  itens: readonly T[],
+  chave: (i: T) => string | null,
+  valor: (i: T) => number,
+): Fatia[] {
   const soma = new Map<string, number>();
   for (const i of itens) {
     const k = chave(i);
@@ -122,7 +133,8 @@ export function estatisticasDeAtividades(entrada: {
   const apoinstPorSituacao = Object.fromEntries(
     SITUACOES_DA_APOINST.map((s) => [s, entrada.apoinstPorSituacao?.[s] ?? 0]),
   ) as Record<SituacaoDaApoinst, number>;
-  const decrescente = (f: Fatia[]) => f.sort((a, b) => b.valor - a.valor || a.nome.localeCompare(b.nome, "pt-BR"));
+  const decrescente = (f: Fatia[]) =>
+    f.sort((a, b) => b.valor - a.valor || a.nome.localeCompare(b.nome, "pt-BR"));
   return {
     totalAtividades: atividades.length,
     totalTa: atividades.reduce((s, a) => s + a.ta, 0),
@@ -134,10 +146,26 @@ export function estatisticasDeAtividades(entrada: {
       .sort((a, b) => a.data.localeCompare(b.data))
       .map((a) => ({ data: a.data, turmaCodigo: a.turmaCodigo, local: a.local })),
     porTipo: decrescente(
-      somarPor(atividades, (a) => grupoNaEstatistica({ valor: a.tipoValor, rotulo: a.tipoRotulo }), (a) => a.ta),
+      somarPor(
+        atividades,
+        (a) => grupoNaEstatistica({ valor: a.tipoValor, rotulo: a.tipoRotulo }),
+        (a) => a.ta,
+      ),
     ),
-    porCurso: decrescente(somarPor(atividades, (a) => a.cursoCodigo ?? "Todas as turmas", (a) => a.ta)),
-    porTurma: decrescente(somarPor(atividades, (a) => a.turmaCodigo ?? "Todas as turmas", (a) => a.ta)),
+    porCurso: decrescente(
+      somarPor(
+        atividades,
+        (a) => a.cursoCodigo ?? "Todas as turmas",
+        (a) => a.ta,
+      ),
+    ),
+    porTurma: decrescente(
+      somarPor(
+        atividades,
+        (a) => a.turmaCodigo ?? "Todas as turmas",
+        (a) => a.ta,
+      ),
+    ),
     usoDoLimite: usoDoLimitePorTurma(entrada.tetos ?? []),
   };
 }

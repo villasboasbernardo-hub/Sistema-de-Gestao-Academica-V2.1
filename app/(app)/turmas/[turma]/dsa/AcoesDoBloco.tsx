@@ -345,7 +345,11 @@ export function AcoesDoBloco({
       /* RA-4: o «Conta como», a disciplina que ele pede e o vínculo — só o que mudou. */
       if (categoriaDoTipo !== null) {
         /* Só o que a pessoa MEXEU: a escolha gravada igual ao padrão novo do tipo não vira «padrão» em silêncio. */
-        const conta = contaComoNaEdicao({ categoriaDoTipo, gravada: g.contaComo, campo: contaComo });
+        const conta = contaComoNaEdicao({
+          categoriaDoTipo,
+          gravada: g.contaComo,
+          campo: contaComo,
+        });
         if (conta.mandar) m["contaComo"] = conta.valor;
         const novaDisciplina =
           disciplinaDaAtividade === "nenhuma" || disciplinaId === "" ? null : disciplinaId;

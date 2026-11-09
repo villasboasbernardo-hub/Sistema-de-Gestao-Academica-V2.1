@@ -214,9 +214,12 @@ const MENSAGEM_DA_RESTRICAO: Readonly<Record<string, string>> = {
   ativ_conta_como_sem_bloqueio: "A parada do dia (bloqueio) não troca a classificação.",
   ativ_conta_como_com_tipo: "Escolha o tipo da atividade antes de dizer como ela conta.",
   ativ_um_vinculo: "A atividade cumpre uma AEC prevista OU uma APOINST, não as duas.",
-  ativ_vinculo_so_de_turma: "A atividade de todas as turmas não cumpre AEC prevista nem APOINST de uma turma.",
-  ativ_om_so_do_externo: "A OM é do responsável de fora (escreva o nome junto, até 120 letras na OM).",
-  ativ_disciplina_so_aec_da_turma: "Só a AEC e o «TA da disciplina» levam disciplina, e a disciplina da turma.",
+  ativ_vinculo_so_de_turma:
+    "A atividade de todas as turmas não cumpre AEC prevista nem APOINST de uma turma.",
+  ativ_om_so_do_externo:
+    "A OM é do responsável de fora (escreva o nome junto, até 120 letras na OM).",
+  ativ_disciplina_so_aec_da_turma:
+    "Só a AEC e o «TA da disciplina» levam disciplina, e a disciplina da turma.",
   apoinst_periodo_valido: "O fim previsto da APOINST tem de ser no início previsto ou depois.",
   apoinst_disciplina_da_turma: "A disciplina da APOINST tem de ser desta turma.",
   marcacoes_de_atividade_um_alvo: "Marque uma AEC prevista OU uma APOINST.",

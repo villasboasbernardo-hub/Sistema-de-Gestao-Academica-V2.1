@@ -190,10 +190,7 @@ export function QuadroDePalestras({
         <span className="whitespace-normal" data-avulsa={a.codigo} data-vinculo={a.vinculo}>
           {a.descricao ?? "—"}
           {MARCA_DO_VINCULO_DA_AVULSA[a.vinculo] ? (
-            <span
-              className="text-atrasado-tinta block text-xs"
-              data-slot="vinculo-fora-do-quadro"
-            >
+            <span className="text-atrasado-tinta block text-xs" data-slot="vinculo-fora-do-quadro">
               {MARCA_DO_VINCULO_DA_AVULSA[a.vinculo]}
             </span>
           ) : null}
@@ -248,9 +245,9 @@ export function QuadroDePalestras({
         <header className="flex flex-col">
           <h2 className="text-texto text-sm font-semibold">Fora do currículo</h2>
           <p className="text-texto-suave text-xs">
-            Palestras lançadas sem vínculo com uma AEC prevista nem APOINST — as que contam como
-            AEC entram no limite de AEC do currículo (a coluna «Conta como» diz como cada uma
-            conta). O lançamento vinculado a uma AEC prevista desativada também aparece aqui.
+            Palestras lançadas sem vínculo com uma AEC prevista nem APOINST — as que contam como AEC
+            entram no limite de AEC do currículo (a coluna «Conta como» diz como cada uma conta). O
+            lançamento vinculado a uma AEC prevista desativada também aparece aqui.
           </p>
         </header>
         {avulsas.length === 0 ? (

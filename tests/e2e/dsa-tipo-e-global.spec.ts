@@ -175,9 +175,11 @@ test("US3 · a AEC de TODAS AS TURMAS aparece no DSA de outra turma; o Operador 
   const descricao = `Palestra geral ${MARCA}`;
   await abrirASemana(page, ADMIN, S.turmaComRelogio, SEGUNDA_DA_GLOBAL, SEMANA_DA_GLOBAL);
   /*
-   * ⚠️ O 5º TEMPO, E NÃO O 1º (medido em 03/11/2026): a amostra do DSA lança a aula «à frente» DUAS semanas depois de hoje,
-   *    na segunda, tempos 1 e 2 (`DATA_A_FRENTE`, `dsa-de-teste.ts`). Entre 02 e 08/11/2026 essa semana é a 47, a desta
-   *    global, e a célula 0:0 abre o cartão da aula em vez do formulário — reprovação que depende do dia em que se roda.
+   * ⚠️ A SEXTA, E NÃO A SEGUNDA (medido em 03/11/2026): a amostra do DSA lança a aula «à frente» DUAS semanas depois de
+   *    hoje, na segunda, tempos 1 e 2 (`DATA_A_FRENTE`, `dsa-de-teste.ts`). Entre 02 e 08/11/2026 essa semana é a 47, a
+   *    desta global, e a célula 0:0 (1º tempo da segunda) abre o cartão da aula em vez do formulário — reprovação que
+   *    depende do dia em que se roda. A chave da célula é `<tempo>:<dia>` (`chaveDe`, `lista-navegavel.tsx`): «0:4» é o
+   *    1º tempo da SEXTA, que a semente não ocupa.
    */
   await abrirCelula(page, "0:4");
   await page.locator('[data-tipo="AEC"]').click();
