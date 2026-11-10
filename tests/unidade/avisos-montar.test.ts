@@ -139,6 +139,110 @@ describe("§6 · cada quadro de hoje, um módulo e um link", () => {
   });
 });
 
+describe("Bloco 18 (RA-8, FR-009.1) · Atividades — a AEC obrigatória e a APOINST atrasada", () => {
+  it("a AEC obrigatória pendente → Atividades, na aba Palestras da turma, com a turma E o código na chave", () => {
+    const avisos = um({
+      atividades: {
+        aecPendentes: [
+          {
+            turmaCodigo: "CAHO 2027",
+            codigo: "AEP-000001",
+            nome: "Palestra sobre a Amazônia Azul",
+            termino: "2027-06-30",
+            dias: 20,
+          },
+        ],
+        apoinstAtrasadas: [],
+      },
+    });
+    expect(avisos.map((a) => [a.modulo, a.chave, a.destino])).toEqual([
+      [
+        "atividades",
+        "atividades:aec_obrigatoria_pendente:CAHO 2027:AEP-000001",
+        "/turmas/CAHO%202027?aba=palestras#abas-da-turma",
+      ],
+    ]);
+    expect(avisos[0]?.titulo).toBe("CAHO 2027: AEC obrigatória não cumprida");
+    expect(avisos[0]?.detalhe).toContain("30/06/2027");
+    expect(avisos[0]?.detalhe).toContain("faltam 20 dias");
+  });
+
+  it("⚠️ a mesma AEC prevista em duas turmas do currículo são DOIS avisos (o código AEP- é do currículo)", () => {
+    const aec = { codigo: "AEP-000001", nome: "Visita", termino: "2027-06-30", dias: 0 };
+    const avisos = um({
+      atividades: {
+        aecPendentes: [
+          { ...aec, turmaCodigo: "C-Ap-FR T1 2027" },
+          { ...aec, turmaCodigo: "C-Ap-FR T2 2027" },
+        ],
+        apoinstAtrasadas: [],
+      },
+    });
+    expect(avisos.map((a) => a.chave)).toEqual([
+      "atividades:aec_obrigatoria_pendente:C-Ap-FR T1 2027:AEP-000001",
+      "atividades:aec_obrigatoria_pendente:C-Ap-FR T2 2027:AEP-000001",
+    ]);
+    expect(avisos[0]?.detalhe).toContain("termina hoje");
+  });
+
+  it("o término já passado (a turma continua ativa) é dito", () => {
+    const [aviso] = um({
+      atividades: {
+        aecPendentes: [
+          {
+            turmaCodigo: "T1 2027",
+            codigo: "AEP-000002",
+            nome: "Visita",
+            termino: "2027-06-30",
+            dias: -3,
+          },
+        ],
+        apoinstAtrasadas: [],
+      },
+    });
+    expect(aviso?.detalhe).toContain("o término já passou");
+  });
+
+  it("a APOINST atrasada → Atividades, na aba APOINST da turma, pelo código da APOINST", () => {
+    const [aviso] = um({
+      atividades: {
+        aecPendentes: [],
+        apoinstAtrasadas: [
+          {
+            turmaCodigo: "C-Espc-HN 2027",
+            codigo: "APO-000007",
+            nome: "Levantamento hidrográfico",
+            fimPrevisto: "2027-08-15",
+          },
+        ],
+      },
+    });
+    expect(aviso?.modulo).toBe("atividades");
+    expect(aviso?.chave).toBe("atividades:apoinst_atrasada:APO-000007");
+    expect(aviso?.destino).toBe("/turmas/C-Espc-HN%202027?aba=apoinst#abas-da-turma");
+    expect(aviso?.titulo).toBe("C-Espc-HN 2027: APOINST atrasada");
+    expect(aviso?.detalhe).toContain("15/08/2027");
+  });
+
+  it("⚠️ o aviso de teto de AEC/TAD/TR continua em Turmas, com a mesma chave (D-12): não se repete em Atividades", () => {
+    const avisos = um({
+      tetos: [
+        {
+          turmaCodigo: "CAHO 2027",
+          categoria: "aec",
+          alerta: "acima_do_maximo",
+          cumprido: 40,
+          referencia: 30,
+        },
+      ],
+      atividades: { aecPendentes: [], apoinstAtrasadas: [] },
+    });
+    expect(avisos.map((a) => [a.modulo, a.chave])).toEqual([
+      ["turmas", "turmas:teto_aec_acima_do_maximo:CAHO 2027"],
+    ]);
+  });
+});
+
 describe("o mesmo fato, um aviso só", () => {
   it("a janela incompleta dita pelo painel e pela ficha da turma aparece uma vez", () => {
     const avisos = um({

@@ -282,8 +282,19 @@ export type ConteudoDoFato = {
   readonly aplicadaEm?: string | null | undefined;
   /** O nome da técnica da vista (a do catálogo com sigla `EO`), ou nulo se o catálogo não a tem. */
   readonly tecnicaDaVista?: string | null | undefined;
-  /** `atividades_nao_letivas.responsavel_externo`. */
+  /** `atividades_nao_letivas.responsavel_externo` — o NOME do responsável de fora. */
   readonly externo?: string | null | undefined;
+  /** RA-4 (Bloco 18): `atividades_nao_letivas.responsavel_externo_om` — a grade e o papel mostram «Nome (OM)». */
+  readonly externoOm?: string | null | undefined;
+  /*
+   * RA-4 (Bloco 18): o que o cartão de edição da atividade reabre — o «Conta como» gravado, a classificação do TIPO (o
+   * padrão dele), o vínculo «Cumpre» e se a atividade é de todas as turmas.
+   */
+  readonly contaComo?: string | null | undefined;
+  readonly categoriaDoTipo?: string | null | undefined;
+  readonly atividadePrevistaId?: string | null | undefined;
+  readonly apoinstId?: string | null | undefined;
+  readonly global?: boolean | undefined;
   /** `avaliacoes.nome_fiscal_externo` — o fiscal que não é do cadastro (`RN-INST-01`). */
   readonly fiscalExterno?: string | null | undefined;
   /**
@@ -405,7 +416,7 @@ export function fatoDaOcupacao(
     .map((id) => nomes.instrutores.get(id) ?? null)
     .filter((n): n is string => n !== null && n.trim() !== "");
   const outros = [...nomesDosAdicionais, ...(extra?.outros ?? [])].filter((n) => n.trim() !== "");
-  const primeiro = responsavelDoFato(principal, extra?.externo);
+  const primeiro = responsavelDoFato(principal, extra?.externo, extra?.externoOm);
   const responsavel =
     outros.length === 0
       ? primeiro
@@ -455,6 +466,17 @@ export function fatoDaOcupacao(
       local: linha.local,
       /* `RN-RESP-1`: o nome livre da atividade, para o cartão reabrir com ele (e não o apagar sem querer). */
       responsavelExterno: linha.origem === "atividade_nao_letiva" ? (extra?.externo ?? null) : null,
+      /* RA-4 (Bloco 18): a OM, o «Conta como», a classificação do tipo e o vínculo da ATIVIDADE, para o cartão. */
+      ...(linha.origem === "atividade_nao_letiva"
+        ? {
+            responsavelExternoOm: extra?.externoOm ?? null,
+            contaComo: extra?.contaComo ?? null,
+            categoriaDoTipo: extra?.categoriaDoTipo ?? null,
+            atividadePrevistaId: extra?.atividadePrevistaId ?? null,
+            apoinstId: extra?.apoinstId ?? null,
+            global: extra?.global === true,
+          }
+        : {}),
       /* Bloco 16 (RD-9): os adicionais da AULA, para o cartão reabrir com eles. */
       ...(linha.origem === "aula" ? { instrutoresAdicionais: extra?.adicionais ?? [] } : {}),
       /* A2: o instrumento e o item da AVALIAÇÃO (a 1ª sessão) — só ela os edita. */

@@ -115,6 +115,11 @@ select * from (values
   -- Spec 031 (Bloco 16, ajuste D), 31/10/2026. REGRA DOS VALORES ESPERADOS: (a) — o ajuste manual da avaliação é dado
   -- da turma: gravar exige a turma em oferta. UMA policy só (criar): a tabela é só de acréscimo, sem UPDATE.
   ('ajustes_de_avaliacao',       'turma_em_oferta'),
+  -- Spec 033 (Bloco 18, M1), 03/11/2026. REGRA DOS VALORES ESPERADOS: (a) — a AEC prevista é dado do currículo (como o
+  -- limite: curso em oferta); a APOINST planejada e a marcação à mão são dado da turma (turma em oferta).
+  ('aec_previstas_curriculo',    'curso_em_oferta'),
+  ('apoinst_planejadas',         'turma_em_oferta'),
+  ('marcacoes_de_atividade',     'turma_em_oferta'),
   ('instrutor_disciplina',       'disciplina_em_oferta')
 ) as v(tabela, chave);
 
@@ -160,8 +165,10 @@ select is(
   -- Spec 018 (Bloco 3, 20/10/2026): + `regimes_de_horario`, duas (criar e editar) — 44 + 2 = 46, em 23.
   -- Spec 021 (Bloco 6, 21/10/2026): + `curriculos`, UMA (editar; o currículo nasce com o curso ou pela cópia) — 46 + 1 = 47, em 24.
   -- Spec 031 (Bloco 16, ajuste D, 31/10/2026): + `ajustes_de_avaliacao`, UMA (criar; só de acréscimo) — 47 + 1 = 48, em 25.
-  48,
-  'FR-017.5 · sao 48 policies de escrita em 25 tabelas — duas por tabela (criar e editar), menos o curriculo, que so se edita, e o ajuste da avaliacao, que so se cria'
+  -- Spec 033 (Bloco 18, M1, 03/11/2026): + `aec_previstas_curriculo` e `apoinst_planejadas`, duas cada (criar e editar),
+  -- e `marcacoes_de_atividade`, UMA (criar; só de acréscimo) — 48 + 5 = 53, em 28.
+  53,
+  'FR-017.5 · sao 53 policies de escrita em 28 tabelas — duas por tabela (criar e editar), menos o curriculo, que so se edita, e o ajuste da avaliacao e a marcacao a mao, que so se criam'
 );
 
 -- ---------------------------------------------------------------- a exclusao DECLARADA, nao ausente

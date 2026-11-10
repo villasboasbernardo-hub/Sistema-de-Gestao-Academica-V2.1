@@ -395,6 +395,21 @@ garantia do motor. Cite-a quando precisar do exemplo.
 >
 > ⚠️ O `.docx` **não** recebeu esta emenda (regra de precedência do `.md`, 17/09/2026).
 
+> ### ✅ Emenda de 03/11/2026 — três tabelas novas, do Bloco 18 do plano de correções (spec 033, RA-2, RA-5 e RA-6)
+>
+> - **`aec_previstas_curriculo`** — as **AEC previstas** do currículo (as palestras e visitas que ele nomeia): nome, tipo
+>   do catálogo (classificação AEC), TA previstos (vazio quando o currículo não diz), disciplina opcional do mesmo
+>   currículo, obrigatória sim/não e a fonte no PDF. É conteúdo do currículo (RC-1): no currículo em uso, mudar é
+>   correção RC-6, com justificativa e trilha; o currículo novo as copia (RC-7). Lê quem lê cursos; grava quem edita cursos.
+> - **`apoinst_planejadas`** — a **APOINST planejada** da turma: nome, disciplina da turma, instrutor designado nela,
+>   período e TA previstos, só nas turmas do ano `apoinst.ano_inicial` em diante. A situação é **derivada** dos lançamentos
+>   do DSA vinculados, nunca gravada. Lê quem lê atividades; grava o recurso `planejamento_de_atividades` (o trio).
+> - **`marcacoes_de_atividade`** — a **marcação à mão** pelo trio: a AEC prevista da turma cumprida (ou desfeita) e a
+>   APOINST concluída (ou reaberta), com justificativa de 10 caracteres ou mais e o autor carimbado pelo banco. **Só de
+>   acréscimo**: a mais recente vale. Não muda a CH.
+>
+> ⚠️ O `.docx` **não** recebeu esta emenda (regra de precedência do `.md`, 17/09/2026).
+
 > **Achado D-6 — resolvido aqui.** Três destas quatro (`unidades_ensino`,
 > `turma_disciplina_instrutor`, `configuracoes_horario`) **não constam do dicionário de entidades
 > do documento 05 §4**, porque nasceram depois dele: as duas primeiras de decisões de 26/08, a

@@ -17,7 +17,6 @@
  * acontece quando o aviso vai junto está medido: *"VERIFICAR Nº DE TA"* saiu **impresso** em 10 das
  * 15 planilhas (`D-2`).
  */
-import { EmBreve } from "@/components/ciaara/em-breve";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 
@@ -100,6 +99,7 @@ import {
   semanaEscolhida,
 } from "./consulta";
 import { lerExtrasDaImpressao, lerSemanaDoDsa } from "./leitura";
+import { lerOpcoesDaAtividade } from "./leitura-do-lancamento";
 import { BotaoImprimir, EdicaoDasAssinaturasNaTela } from "./AssinaturasEditaveis";
 import { RodapeDaSemana } from "./DocumentoNaTela";
 import { NavegacaoDaSemana } from "./NavegacaoDaSemana";
@@ -112,6 +112,9 @@ import { NotasDaPublicacao } from "./NotasDaPublicacao";
 import { PapelDaVersao } from "./PapelDaVersao";
 import { lerPublicacaoDaSemana } from "./publicacao";
 import { PainelDeSituacao } from "./PainelDeSituacao";
+import { AcompanhamentoDeApoinst } from "./AcompanhamentoDeApoinst";
+import { AcompanhamentoDePalestras } from "./AcompanhamentoDePalestras";
+import type { ContextoDaTurmaNasAbas } from "../contexto-das-abas";
 import { AbasDeAcompanhamento, type AbaDeAcompanhamento } from "./AbasDeAcompanhamento";
 import { AcompanhamentoDeAvaliacoes } from "./AcompanhamentoDeAvaliacoes";
 import { lerAvaliacoesDaTurma } from "../consulta-de-avaliacoes";
@@ -270,43 +273,58 @@ export default async function SemanaDoDsa({
   const diasADistancia = diasForaDaEtapa(paraEtapa, diasDaSemanaIso);
 
   /* ⚠️ As duas leituras são independentes: uma rodada só, nenhum `await` em sequência inútil. */
-  const [lida, extras, tiposDeParadaRes, arquivamentoRes, publicacao] = await Promise.all([
-    lerSemanaDoDsa(supabase, {
-      comRascunho: true,
-      turmaId,
-      cursoId,
-      ano: escolha.ano,
-      numero: escolha.numero,
-      sabadoPedido: valores.sabado === "sim",
-      hoje,
-    }),
-    lerExtrasDaImpressao(supabase, { turmaId, cursoId }),
-    /* Spec 014: os tipos de parada (FR, LA, LP, NT, RC, PF) para «Parar dia». */
-    supabase
-      .from("config_listas")
-      .select("id, valor, rotulo_exibicao, metadados")
-      .eq("lista", "tipos_parada")
-      .eq("ativo", true)
-      .order("ordem"),
-    /* D-COR-5 (spec 017): a turma arquivada abre o DSA só para ler. */
-    supabase
-      .from("vw_turmas_arquivadas")
-      .select("arquivada_em")
-      .eq("turma_id", turmaId)
-      .maybeSingle(),
-    /* Spec 024 (RP-3): a trilha da semana e o número de rascunhos dela. */
-    lerPublicacaoDaSemana(supabase, {
-      turmaId,
-      ano: escolha.ano,
-      numero: escolha.numero,
-      de: diasDaSemanaIso[0] ?? hoje,
+  const [lida, extras, tiposDeParadaRes, arquivamentoRes, publicacao, opcoesDaAtividade] =
+    await Promise.all([
+      lerSemanaDoDsa(supabase, {
+        comRascunho: true,
+        turmaId,
+        cursoId,
+        ano: escolha.ano,
+        numero: escolha.numero,
+        sabadoPedido: valores.sabado === "sim",
+        hoje,
+      }),
+      lerExtrasDaImpressao(supabase, { turmaId, cursoId }),
+      /* Spec 014: os tipos de parada (FR, LA, LP, NT, RC, PF) para «Parar dia». */
+      supabase
+        .from("config_listas")
+        .select("id, valor, rotulo_exibicao, metadados")
+        .eq("lista", "tipos_parada")
+        .eq("ativo", true)
+        .order("ordem"),
+      /* D-COR-5 (spec 017): a turma arquivada abre o DSA só para ler. */
+      supabase
+        .from("vw_turmas_arquivadas")
+        .select("arquivada_em")
+        .eq("turma_id", turmaId)
+        .maybeSingle(),
+      /* Spec 024 (RP-3): a trilha da semana e o número de rascunhos dela. */
+      lerPublicacaoDaSemana(supabase, {
+        turmaId,
+        ano: escolha.ano,
+        numero: escolha.numero,
+        de: diasDaSemanaIso[0] ?? hoje,
+        /*
+         * ⚠️ **A SEMANA VAI ATÉ O SÁBADO** (Bloco 11, FR-005.3): a lista tem SEIS datas (segunda a sábado), e o índice 6
+         *    caía no «?? hoje» — o rascunho de uma semana passada era contado até hoje, e o de uma semana futura não era.
+         */
+        ate: diasDaSemanaIso.at(-1) ?? hoje,
+      }),
       /*
-       * ⚠️ **A SEMANA VAI ATÉ O SÁBADO** (Bloco 11, FR-005.3): a lista tem SEIS datas (segunda a sábado), e o índice 6
-       *    caía no «?? hoje» — o rascunho de uma semana passada era contado até hoje, e o de uma semana futura não era.
+       * RA-4 (Bloco 18, spec 033): as salas do «Local» e as AEC previstas e APOINST do «Cumpre» — SÓ da tela, fora de
+       * `lerPeriodoDoDsa` (a planilha de contingência a usa, e erro ali recusa a planilha). Só para quem lança.
        */
-      ate: diasDaSemanaIso.at(-1) ?? hoje,
-    }),
-  ]);
+      pode(permissoes, "registros_aula", "criar")
+        ? lerOpcoesDaAtividade(supabase, {
+            turmaId,
+            turmaCodigo: codigo,
+            curriculoId: (turma.curriculo_id as string | null) ?? null,
+            salaDaTurma: (turma.sala_alocada as string | null) ?? null,
+            hoje,
+            podeLerPrevistas: pode(permissoes, "cursos", "ler"),
+          })
+        : Promise.resolve(null),
+    ]);
   /*
    * Spec 024 (RP-4): semana publicada — o papel de HOJE (só o salvo, montado com o mesmo «hoje» do retrato) ainda é o
    * publicado? Só se lê quando a semana está travada: é a única situação em que a pergunta tem resposta.
@@ -457,6 +475,27 @@ export default async function SemanaDoDsa({
       ),
     };
   }
+  /*
+   * Bloco 18 (spec 033, FR-008.1): Palestras e APOINST no DSA — o acompanhamento da turma, SÓ LEITURA.
+   * ⚠️ O «HOJE» É O DE HOJE (`hojeNaCiaara`), não o fim da semana mostrada (achado da revisão do Bloco 18): as duas abas
+   *    contam TODOS os lançamentos salvos da turma — é o acompanhamento dela, o mesmo veredito da ficha —, e o «situação
+   *    em DD/MM/AAAA» com o fim da semana diria uma data que os números não respeitam (a APOINST concluída por lançamento
+   *    de semana posterior, a *Atrasada* de uma semana futura). O corte pela semana é das abas Disciplinas e Avaliações.
+   */
+  const contextoDoAcompanhamento: ContextoDaTurmaNasAbas = {
+    turmaId,
+    turmaCodigo: codigo,
+    cursoId,
+    curriculoId: (turma.curriculo_id as string | null) ?? null,
+    anoLetivo: Number(turma.ano_letivo),
+    dataTermino: (turma.data_termino as string | null) ?? null,
+    hoje,
+    arquivada,
+    ead: false,
+    permissoes,
+    somenteLeitura: true,
+    valores,
+  };
   const quadros = quadrosDaSemana({
     execucao: extras.execucao,
     ocupacao: lida.ocupacaoAcumulada,
@@ -780,6 +819,7 @@ export default async function SemanaDoDsa({
               subtipos={lida.subtipos}
               idsDeEstudoIndividual={[...lida.idsDeEstudoIndividual]}
               podeAtividadeGlobal={pode(permissoes, "atividades_globais", "criar")}
+              {...(opcoesDaAtividade ? { opcoesDaAtividade } : {})}
               lancar={lancar}
               mover={mover}
               atualizar={atualizar}
@@ -807,8 +847,10 @@ export default async function SemanaDoDsa({
                   aviso={acompanhamentoDeAvaliacoes.aviso}
                   rotuloDaSemana={rotuloDaSemana(lida.dias)}
                 />
-              ) : abaDoAcompanhamento === "apoinst" || abaDoAcompanhamento === "palestras" ? (
-                <EmBreve slot="acompanhamento-em-breve" />
+              ) : abaDoAcompanhamento === "apoinst" ? (
+                <AcompanhamentoDeApoinst contexto={contextoDoAcompanhamento} />
+              ) : abaDoAcompanhamento === "palestras" ? (
+                <AcompanhamentoDePalestras contexto={contextoDoAcompanhamento} />
               ) : (
                 <PainelDeSituacao
                   quadros={quadros}

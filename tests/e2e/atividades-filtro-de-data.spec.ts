@@ -112,7 +112,7 @@ test("menu Atividades → Filtros → a data no calendário: URL em ISO e a list
   await expect(page.locator('[data-slot="tabela-de-atividades"]')).toContainText("12/05/2026");
 });
 
-test("Bloco 17 · itens 5 e 6: o Estudo Individual sai da lista, do filtro e da contagem; a aba Palestras diz «Em breve»", async ({
+test("Bloco 17 · itens 5 e 6: o Estudo Individual sai da lista, do filtro e da contagem; a aba Palestras mostra as palestras do ano", async ({
   page,
 }) => {
   test.setTimeout(90_000);
@@ -133,10 +133,19 @@ test("Bloco 17 · itens 5 e 6: o Estudo Individual sai da lista, do filtro e da 
   await expect(page.getByRole("option", { name: "Estudo Individual" })).toHaveCount(0);
   await page.keyboard.press("Escape");
 
-  /* Item 5: Atividades · Calendário · Palestras — a última em branco. */
+  /*
+   * Item 5, emendado pelo Bloco 18 (spec 033, D-14 e FR-006.5): Atividades · Palestras · APOINST · Calendário (a ordem do
+   * pedido), e a aba Palestras saiu do «Em breve» — as AEC previstas e as avulsas do ano.
+   */
   const abas = page.getByRole("tablist", { name: "Seções de Atividades" });
-  await expect(abas.getByRole("tab")).toHaveText(["Atividades", "Calendário", "Palestras"]);
+  await expect(abas.getByRole("tab")).toHaveText([
+    "Atividades",
+    "Palestras",
+    "APOINST",
+    "Calendário",
+  ]);
   await abas.getByRole("tab", { name: "Palestras" }).click();
   await expect.poll(() => new URL(page.url()).searchParams.get("aba")).toBe("palestras");
-  await expect(page.locator('[data-slot="aba-palestras-em-breve"]')).toHaveText("Em breve");
+  await expect(page.locator('[data-slot="contagem-de-palestras"]')).toBeVisible();
+  await expect(page.locator('[data-slot="aba-palestras-em-breve"]')).toHaveCount(0);
 });

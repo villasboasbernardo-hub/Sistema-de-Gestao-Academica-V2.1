@@ -17,12 +17,18 @@
  * Função pura: nada de `supabase`, `next` nem `react` (imposto por ESLint).
  */
 
-/* Spec 023 (Bloco 8, FR-013): o Calendário entrou por último. */
+/*
+ * Spec 023 (Bloco 8, FR-013): o Calendário entrou por último.
+ * Bloco 18 (spec 033, RA-8, FR-009): as Atividades entram ANTES do Calendário — a AEC obrigatória não cumprida perto do
+ *    fim da turma e a APOINST atrasada. ⚠️ O aviso de teto de AEC/TAD/TR continua no módulo Turmas (`turmas:teto_*`,
+ *    D-12): mudá-lo de módulo trocaria a chave e faria todo navegador pulsar de novo pelo mesmo fato.
+ */
 export const MODULOS_DE_AVISO = [
   "cursos",
   "turmas",
   "avaliacoes",
   "instrutores",
+  "atividades",
   "calendario",
 ] as const;
 export type ModuloDeAviso = (typeof MODULOS_DE_AVISO)[number];
@@ -32,6 +38,7 @@ export const ROTULO_DO_MODULO: Readonly<Record<ModuloDeAviso, string>> = {
   turmas: "Turmas",
   avaliacoes: "Avaliações",
   instrutores: "Instrutores",
+  atividades: "Atividades",
   calendario: "Calendário",
 };
 

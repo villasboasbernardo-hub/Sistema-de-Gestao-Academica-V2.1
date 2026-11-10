@@ -145,7 +145,17 @@ test("US2 · Recepção aos alunos conta como TAD; o externo é o «Outro respon
   await abrirCelula(page, "2:4");
   await page.locator('[data-tipo="TAD"]').click();
   await page.locator("#dsa-subtipo").selectOption({ label: "Recepção aos alunos" });
-  await expect(page.locator('[data-slot="categoria-do-tipo"]')).toHaveText("Conta como: TAD");
+  /*
+   * Bloco 18 (RA-4, FR-003.2): o «Conta como» virou campo, com o padrão do tipo (TAD) e as quatro opções — e o texto
+   * só leitura (`categoria-do-tipo`) ficou para o Estudo Individual e o Apoio, que não trocam (caso acima).
+   */
+  await expect(page.locator("#dsa-conta-como")).toHaveValue("TAD");
+  await expect(page.locator("#dsa-conta-como option")).toHaveText([
+    "TA da disciplina",
+    "AEC",
+    "TAD",
+    "TR",
+  ]);
   await expect(page.locator('label[for="dsa-responsavel-externo"]')).toHaveText(ROTULO_NOME_LIVRE);
   await page.locator("#dsa-responsavel-externo").fill("DOEP");
   await page.locator("#dsa-descricao").fill(descricao);
@@ -164,7 +174,14 @@ test("US3 · a AEC de TODAS AS TURMAS aparece no DSA de outra turma; o Operador 
 }) => {
   const descricao = `Palestra geral ${MARCA}`;
   await abrirASemana(page, ADMIN, S.turmaComRelogio, SEGUNDA_DA_GLOBAL, SEMANA_DA_GLOBAL);
-  await abrirCelula(page, "0:0");
+  /*
+   * ⚠️ A SEXTA, E NÃO A SEGUNDA (medido em 03/11/2026): a amostra do DSA lança a aula «à frente» DUAS semanas depois de
+   *    hoje, na segunda, tempos 1 e 2 (`DATA_A_FRENTE`, `dsa-de-teste.ts`). Entre 02 e 08/11/2026 essa semana é a 47, a
+   *    desta global, e a célula 0:0 (1º tempo da segunda) abre o cartão da aula em vez do formulário — reprovação que
+   *    depende do dia em que se roda. A chave da célula é `<tempo>:<dia>` (`chaveDe`, `lista-navegavel.tsx`): «0:4» é o
+   *    1º tempo da SEXTA, que a semente não ocupa.
+   */
+  await abrirCelula(page, "0:4");
   await page.locator('[data-tipo="AEC"]').click();
   await page.locator("#dsa-subtipo").selectOption({ label: "Apoio à Instrução" });
   await page.locator('[data-slot="atividade-de-todas-as-turmas"]').check();

@@ -107,8 +107,12 @@ test.describe("`FR-004` da spec 016 · filtros recolhidos com o número fora do 
     await conferirRecolhidoELimpo(page);
 
     await abrirPainelDeFiltros(page);
-    await page.getByLabel("Tipo", { exact: true }).fill("Palestra");
-    await escolherOpcao(page, "Categoria", /^AEC/);
+    /*
+     * Bloco 18 (spec 033, FR-006.2): o Tipo deixou de ser texto livre — é escolha do catálogo, pelo rótulo, com o valor
+     * na URL —, e a «Categoria» virou «Classificação» (como a linha CONTA, com o «TA da disciplina»).
+     */
+    await escolherOpcao(page, "Tipo", /^Palestra$/);
+    await escolherOpcao(page, "Classificação", /^AEC$/);
     await expect.poll(() => numeroDeFiltrosAtivos(page), { timeout: 10_000 }).toBe("2");
     await limparEConferir(page);
   });
@@ -122,7 +126,7 @@ test.describe("`FR-004` da spec 016 · filtros recolhidos com o número fora do 
     await entrar(page, EMAIL, "/inicio");
     await irPeloMenu(page, "Atividades", "/atividades");
     await abrirPainelDeFiltros(page);
-    await escolherOpcao(page, "Categoria", /^AEC/);
+    await escolherOpcao(page, "Classificação", /^AEC$/);
     await expect.poll(() => numeroDeFiltrosAtivos(page), { timeout: 10_000 }).toBe("1");
 
     await page.route(

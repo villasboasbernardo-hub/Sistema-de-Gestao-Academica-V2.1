@@ -37,6 +37,11 @@ const SEM_ARQUIVAMENTO = [
   "lib/dominio/selecao-no-ano.ts",
   "lib/dominio/indicadores-instrutor.ts",
   "lib/dominio/graficos-instrutor.ts",
+  // Bloco 18 (spec 033, RA-9): as estatísticas de Atividades contam a arquivada no ano dela (RT-8).
+  "lib/dominio/atividades/estatisticas.ts",
+  "lib/dominio/atividades/lista.ts",
+  "lib/dominio/atividades/limites-das-turmas.ts",
+  "app/(app)/atividades/EstatisticasDeAtividades.tsx",
 ] as const;
 
 /** Tudo por onde uma tela sabe que a turma está arquivada — a view, a tabela, a função do banco e o módulo de domínio. */

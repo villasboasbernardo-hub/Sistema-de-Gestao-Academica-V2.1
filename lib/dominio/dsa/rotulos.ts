@@ -26,6 +26,8 @@
  * ⚠️ **TypeScript puro: sem `next`, sem `react`, sem `supabase`** (Princípio II, imposto por ESLint).
  */
 
+import { externoComOm } from "@/lib/dominio/atividades/responsavel";
+
 /** O rótulo que distingue a vista da aplicação — em caixa alta, como o documento assinado. */
 export const ROTULO_DA_VISTA_DE_PROVA = "VISTA DE PROVA";
 
@@ -103,15 +105,20 @@ export function tecnicaDaVistaDeProva(
  * ⚠️ **O BANCO PROÍBE OS DOIS JUNTOS** (`CHECK ativ_responsavel_exclusivo`, medido em 05/10/2026).
  * A precedência do instrutor só decide algo se a restrição cair um dia; até lá ela é a leitura
  * honesta do `ou`: o externo é de quem **não** está no cadastro.
+ *
+ * ⚠️ **O EXTERNO SAI «Nome (OM)»** (RA-4, Bloco 18, spec 033): *"Responsável/Palestrante (instrutor cadastrado OU texto
+ *    livre com nome e OM para externo)"* — Bernardo Villas Boas, 03/11/2026. É ESTE o único lugar onde a grade e o papel
+ *    compõem o par (`externoComOm`); sem OM, só o nome, como antes do Bloco 18 — e por isso nenhuma semana já publicada
+ *    muda (a OM é coluna nova, nula em todo lançamento anterior).
  */
 export function responsavelDoFato(
   instrutor: string | null | undefined,
   responsavelExterno: string | null | undefined,
+  omDoExterno?: string | null | undefined,
 ): string | null {
   const doCadastro = limpo(instrutor);
   if (doCadastro !== "") return doCadastro;
-  const externo = limpo(responsavelExterno);
-  return externo === "" ? null : externo;
+  return externoComOm(responsavelExterno, omDoExterno);
 }
 
 /**

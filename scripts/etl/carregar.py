@@ -630,6 +630,14 @@ SEQUENCIAS_DE_CODIGO: tuple[tuple[str, str, str], ...] = (
     # A do Bloco 16 (spec 031, ajuste D): o ajuste manual da situação e das datas de uma avaliação (AJA-), só pela tela.
     ("app.ajustes_de_avaliacao_codigo_seq", "ajustes_de_avaliacao",
      "case when codigo ~ '^AJA-[0-9]+$' then substring(codigo from 5)::bigint end"),
+    # As três do Bloco 18 (spec 033, M1): a AEC prevista do currículo (AEP-), a APOINST planejada (APO-) e a marcação à
+    # mão (MAT-) — as previstas vêm da tela e da carga autorizada do passo 0; as outras duas, só da tela.
+    ("app.aec_previstas_curriculo_codigo_seq", "aec_previstas_curriculo",
+     "case when codigo ~ '^AEP-[0-9]+$' then substring(codigo from 5)::bigint end"),
+    ("app.apoinst_planejadas_codigo_seq", "apoinst_planejadas",
+     "case when codigo ~ '^APO-[0-9]+$' then substring(codigo from 5)::bigint end"),
+    ("app.marcacoes_de_atividade_codigo_seq", "marcacoes_de_atividade",
+     "case when codigo ~ '^MAT-[0-9]+$' then substring(codigo from 5)::bigint end"),
 )
 
 

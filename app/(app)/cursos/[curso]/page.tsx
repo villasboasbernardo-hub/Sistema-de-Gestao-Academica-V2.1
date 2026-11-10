@@ -61,13 +61,13 @@ import {
   type CurriculoDaPagina,
 } from "./consulta";
 import type { LinhaDoLimite } from "./BlocoDeLimites";
-import { AbaAtividades } from "./AbaAtividades";
+import { AbaAtividades, type TipoDaAbaDeAtividades } from "./AbaAtividades";
+import { lerAecPrevistasDoCurriculo } from "./consulta-de-aec-previstas";
 import { AbaHorarios } from "./AbaHorarios";
 import { lerHorariosDoCurso, type HorariosDoCurso } from "./consulta-de-horarios";
 import { RegimesDoCurso } from "./RegimesDoCurso";
 import { GradeDeDisciplinas } from "../../disciplinas/GradeDeDisciplinas";
 import { lerGradeDeDisciplinas } from "../../disciplinas/consulta";
-import type { TipoDeAtividade } from "@/lib/dominio/categoria-pelo-tipo";
 import { limiteMaximo } from "@/lib/dominio/limite-maximo";
 import { parametroDoAno } from "../../turmas/[turma]/tetos";
 
@@ -284,6 +284,7 @@ export default async function PaginaDoCurso({
     tiposRes,
     consultaRes,
     impedimentosRes,
+    previstasRes,
   ] = await Promise.all([
     aba === "avaliacoes"
       ? lerAvaliacoesDoCurso({
@@ -306,7 +307,7 @@ export default async function PaginaDoCurso({
     aba === "atividades" || naConsulta
       ? supabase
           .from("config_listas")
-          .select("id, valor, ativo, metadados")
+          .select("id, valor, rotulo_exibicao, ativo, metadados")
           .eq("lista", "tipos_atividade")
           .order("ordem")
       : Promise.resolve({ data: [] }),
@@ -339,11 +340,15 @@ export default async function PaginaDoCurso({
             .select("carga_horaria_tempos")
             .eq("curriculo_id", consultadoId)
             .eq("status", "ativo"),
+          /* Bloco 18 (spec 033, RA-2): as AEC previstas do currículo consultado, só para ler. */
+          lerAecPrevistasDoCurriculo(consultadoId, true),
         ])
       : Promise.resolve(null),
     aba === "turmas" && podeExcluirTurma && idsDaLista.length > 0
       ? supabase.rpc("impedimentos_de_exclusao_das_turmas", { p_turmas: idsDaLista })
       : Promise.resolve(null),
+    /* Bloco 18 (spec 033, RA-2, FR-002.3): as AEC previstas do currículo mostrado, na aba *Atividades*. */
+    aba === "atividades" ? lerAecPrevistasDoCurriculo(curriculoId, true) : Promise.resolve(null),
   ]);
   /* Sem resposta do banco, cada turma fica com o *Excluir* desabilitado (D-13): a chave ausente diz "não lido". */
   const exclusaoDasTurmas = estadosPorRegistro(
@@ -583,7 +588,8 @@ export default async function PaginaDoCurso({
                 anoDosLimites,
               ),
             }}
-            tipos={(tiposRes.data ?? []) as unknown as TipoDeAtividade[]}
+            tipos={(tiposRes.data ?? []) as unknown as TipoDaAbaDeAtividades[]}
+            previstas={previstasRes}
           />
         }
         horarios={
@@ -660,7 +666,8 @@ export default async function PaginaDoCurso({
                             anoDosLimites,
                           ),
                         }}
-                        tipos={(tiposRes.data ?? []) as unknown as TipoDeAtividade[]}
+                        tipos={(tiposRes.data ?? []) as unknown as TipoDaAbaDeAtividades[]}
+                        previstas={consultaRes[5]}
                       />
                     ),
                   }

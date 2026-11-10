@@ -294,19 +294,36 @@ test.describe("Bloco 17 · a ficha da turma: situação, CH restante, dias útei
     await expect(campo(page, "semana-de-aula")).toContainText("uma semana de aula = 40 TA");
   });
 
-  test("item 4: as abas APOINST e Palestras da turma, por clique, com «Em breve» e a aba na URL", async ({
+  /*
+   * Bloco 18 (spec 033, FR-007.1 e FR-007.2): as abas passam a Ficha · Avaliações · Atividades · APOINST · Palestras, e
+   * APOINST e Palestras saem do «Em breve». ⚠️ A turma da semente é do ANO DE HOJE (PEND-019-3): antes do ano inicial da
+   * APOINST (`apoinst.ano_inicial`, parâmetro) a aba diz por que não tem; dele em diante, mostra o quadro — as duas
+   * formas valem, e nenhuma é o «Em breve».
+   */
+  test("item 4: as abas APOINST e Palestras da turma, por clique, com o conteúdo e a aba na URL", async ({
     page,
   }) => {
     await irAFichaDaTurma(page, EMAIL, PANORAMA.turmaSemCapacidade);
     const abas = page.getByRole("tablist", { name: "Seções da turma" });
-    await expect(abas.getByRole("tab")).toHaveText(["Ficha", "Avaliações", "APOINST", "Palestras"]);
+    await expect(abas.getByRole("tab")).toHaveText([
+      "Ficha",
+      "Avaliações",
+      "Atividades",
+      "APOINST",
+      "Palestras",
+    ]);
 
     await abas.getByRole("tab", { name: "APOINST" }).click();
     await expect.poll(() => new URL(page.url()).searchParams.get("aba")).toBe("apoinst");
-    await expect(page.locator('[data-slot="aba-apoinst-em-breve"]')).toHaveText("Em breve");
+    await expect(
+      page.locator('[data-slot="apoinst-da-turma"], [data-slot="apoinst-nao-se-aplica"]'),
+    ).toBeVisible();
+    await expect(page.locator('[data-slot="aba-apoinst-em-breve"]')).toHaveCount(0);
 
     await abas.getByRole("tab", { name: "Palestras" }).click();
     await expect.poll(() => new URL(page.url()).searchParams.get("aba")).toBe("palestras");
-    await expect(page.locator('[data-slot="aba-palestras-em-breve"]')).toHaveText("Em breve");
+    await expect(page.locator('[data-slot="palestras-da-turma"]')).toBeVisible();
+    await expect(page.locator('[data-slot="resumo-das-palestras"]')).toBeVisible();
+    await expect(page.locator('[data-slot="aba-palestras-em-breve"]')).toHaveCount(0);
   });
 });

@@ -264,6 +264,104 @@ describe("`RF-EXTRA-01` e `Q-8` · a atividade não letiva", () => {
       "Leitura dirigida",
     );
   });
+
+  /*
+   * RA-4 (Bloco 18, spec 033): o «Conta como», o vínculo «Cumpre» e a OM do responsável de fora. Os irmãos no banco são
+   * `ativ_conta_como_*`, `ativ_um_vinculo`, `ativ_vinculo_so_de_turma` e `ativ_om_so_do_externo` (pgTAP 156).
+   */
+  describe("RA-4 · Conta como, Cumpre e a OM", () => {
+    const PREVISTA = "44444444-4444-4444-8444-444444444444";
+    const APOINST = "55555555-5555-4555-8555-555555555555";
+
+    it("sem os campos novos, chegam NULOS — o padrão do tipo e nenhum vínculo (efeito zero)", () => {
+      const r = esquemaDoBloco.safeParse(atividadeBase);
+      expect(r.success && r.data.tipo === "atividade" ? r.data : null).toMatchObject({
+        contaComo: null,
+        atividadePrevistaId: null,
+        apoinstId: null,
+        responsavelExternoOm: null,
+      });
+    });
+
+    it("as quatro classificações passam; qualquer outra é recusada com a frase", () => {
+      for (const c of ["CHD", "AEC", "TAD", "TR"]) {
+        expect(recusa({ ...atividadeBase, contaComo: c })).toBeNull();
+      }
+      expect(recusa({ ...atividadeBase, contaComo: "Estudo_Individual" })).toBe(
+        "Escolha como a atividade conta: TA da disciplina, AEC, TAD ou TR.",
+      );
+    });
+
+    it("um vínculo de cada vez — a AEC prevista OU a APOINST", () => {
+      expect(recusa({ ...atividadeBase, atividadePrevistaId: PREVISTA })).toBeNull();
+      expect(recusa({ ...atividadeBase, apoinstId: APOINST })).toBeNull();
+      expect(recusa({ ...atividadeBase, atividadePrevistaId: PREVISTA, apoinstId: APOINST })).toBe(
+        "A atividade cumpre uma AEC prevista OU uma APOINST, não as duas.",
+      );
+    });
+
+    it("a atividade de TODAS as turmas não cumpre vínculo de uma turma", () => {
+      expect(recusa({ ...atividadeBase, turmaId: null, apoinstId: APOINST })).toBe(
+        "A atividade de todas as turmas não cumpre AEC prevista nem APOINST de uma turma.",
+      );
+    });
+
+    it("a OM só com o nome de fora; aparada, e vazia vira nula", () => {
+      expect(recusa({ ...atividadeBase, responsavelExternoOm: "CIAARA-30" })).toBe(
+        "A OM é do responsável de fora: escreva o nome junto.",
+      );
+      const r = esquemaDoBloco.safeParse({
+        ...atividadeBase,
+        responsavelExterno: "Palestrante convidado",
+        responsavelExternoOm: "  DHN  ",
+      });
+      expect(
+        r.success && r.data.tipo === "atividade" ? r.data.responsavelExternoOm : "não chegou",
+      ).toBe("DHN");
+      const vazia = esquemaDoBloco.safeParse({
+        ...atividadeBase,
+        responsavelExterno: "Palestrante convidado",
+        responsavelExternoOm: "   ",
+      });
+      expect(
+        vazia.success && vazia.data.tipo === "atividade" ? vazia.data.responsavelExternoOm : "x",
+      ).toBeNull();
+      expect(
+        recusa({
+          ...atividadeBase,
+          responsavelExterno: "Palestrante",
+          responsavelExternoOm: "O".repeat(121),
+        }),
+      ).toBe("A OM vai até 120 letras.");
+    });
+
+    it("na edição: ausente não mexe, nulo apaga, e os dois vínculos juntos são recusados", () => {
+      const ausente = esquemaDaAtualizacao.safeParse({
+        origem: "atividade_nao_letiva",
+        fatoId: ID,
+      });
+      expect(ausente.success ? ausente.data.contaComo : "x").toBeUndefined();
+      const nulo = esquemaDaAtualizacao.safeParse({
+        origem: "atividade_nao_letiva",
+        fatoId: ID,
+        contaComo: null,
+        atividadePrevistaId: null,
+      });
+      expect(nulo.success ? [nulo.data.contaComo, nulo.data.atividadePrevistaId] : "x").toEqual([
+        null,
+        null,
+      ]);
+      const dois = esquemaDaAtualizacao.safeParse({
+        origem: "atividade_nao_letiva",
+        fatoId: ID,
+        atividadePrevistaId: PREVISTA,
+        apoinstId: APOINST,
+      });
+      expect(dois.success ? null : dois.error.issues[0]?.message).toBe(
+        "A atividade cumpre uma AEC prevista OU uma APOINST, não as duas.",
+      );
+    });
+  });
 });
 
 describe("`Q-7` · o Estudo Individual da semana", () => {

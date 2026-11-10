@@ -42,6 +42,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import type { EscalaDeAntiguidade } from "@/lib/dominio/antiguidade";
+import type { OpcoesDaAtividade } from "@/lib/dominio/atividades/lancamento-de-atividade";
 import type { Semana } from "@/lib/dominio/dsa/grade";
 import type { GradeDoPapel } from "@/lib/dominio/dsa/grade-do-papel";
 import type { InstrumentoOferecido } from "@/lib/dominio/dsa/instrumento-da-prova";
@@ -101,6 +102,8 @@ export type PainelDeLancamentoProps = {
   readonly idsDeEstudoIndividual?: readonly string[];
   /** Quem tem `atividades_globais.criar` vê a caixa «todas as turmas» (spec 014, FR-014). */
   readonly podeAtividadeGlobal?: boolean;
+  /** RA-4 (Bloco 18): as salas do «Local» e o «Cumpre» da atividade — o formulário e o cartão. */
+  readonly opcoesDaAtividade?: OpcoesDaAtividade;
   readonly lancar: (entrada: unknown) => Promise<ResultadoDaAcao>;
   /** As três do PR 4 — ausentes, a grade fica só de leitura. */
   readonly mover?: (entrada: unknown) => Promise<ResultadoDaAcao>;
@@ -193,6 +196,7 @@ export function PainelDeLancamento({
   subtipos,
   idsDeEstudoIndividual = [],
   podeAtividadeGlobal = false,
+  opcoesDaAtividade,
   lancar,
   mover,
   atualizar,
@@ -336,6 +340,7 @@ export function PainelDeLancamento({
               escala={escala}
               tecnicas={tecnicas}
               instrumentos={instrumentos}
+              {...(opcoesDaAtividade ? { opcoesDaAtividade } : {})}
               atualizar={atualizar}
               excluir={excluir}
               aoFechar={() => definirFato(null)}
@@ -386,6 +391,7 @@ export function PainelDeLancamento({
               instrumentos={instrumentos}
               subtipos={subtipos}
               podeAtividadeGlobal={podeAtividadeGlobal}
+              {...(opcoesDaAtividade ? { opcoesDaAtividade } : {})}
               lancar={lancar}
               aoFechar={() => definirCelula(null)}
             />

@@ -199,7 +199,7 @@ export async function lerDadosDaPlanilha(
     lerTodasAsPaginas((f) =>
       supabase
         .from("atividades_nao_letivas")
-        .select("id, codigo, categoria_normativa, disciplina_id", contagemNaPrimeira(f))
+        .select("id, codigo, categoria_normativa, disciplina_id, conta_como", contagemNaPrimeira(f))
         .or(`turma_id.eq.${turmaId},turma_id.is.null`)
         .eq("status", "ativo")
         .eq("salvo", true)
@@ -247,6 +247,7 @@ export async function lerDadosDaPlanilha(
     codigo: string;
     categoria_normativa: CategoriaNormativa;
     disciplina_id: string | null;
+    conta_como: string | null;
   }>(atividades, "códigos das atividades", erros);
   if (erros.length > 0) throw new FalhaNaLeituraDaPlanilha(erros);
 
@@ -319,6 +320,8 @@ export async function lerDadosDaPlanilha(
       unidadeNumero: null,
       tipoAvaliacao: null,
       categoria: n?.categoria_normativa ?? null,
+      /* RA-4 (Bloco 18): o «TA da disciplina» muda a chave (`chaveDoLancamento`). */
+      contaComo: n?.conta_como ?? null,
     };
   };
 

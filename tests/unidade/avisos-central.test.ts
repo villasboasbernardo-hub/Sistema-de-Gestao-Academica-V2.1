@@ -12,7 +12,9 @@ import {
   chaveDoAviso,
   haAvisoNovo,
   juntarVistas,
+  MODULOS_DE_AVISO,
   naoVistos,
+  ROTULO_DO_MODULO,
   rotuloDoSininho,
   type Aviso,
 } from "@/lib/dominio/avisos/central";
@@ -52,6 +54,28 @@ describe("agruparPorModulo", () => {
 
   it("sem aviso, nenhum grupo", () => {
     expect(agruparPorModulo([])).toEqual([]);
+  });
+
+  it("Bloco 18 (RA-8): as Atividades vêm depois dos Instrutores e antes do Calendário", () => {
+    expect(MODULOS_DE_AVISO).toEqual([
+      "cursos",
+      "turmas",
+      "avaliacoes",
+      "instrutores",
+      "atividades",
+      "calendario",
+    ]);
+    expect(ROTULO_DO_MODULO.atividades).toBe("Atividades");
+    const grupos = agruparPorModulo([
+      aviso("calendario", "dia_bloqueado_com_lancamento", "FER-000001"),
+      aviso("atividades", "apoinst_atrasada", "APO-000001"),
+      aviso("instrutores", "sem_nip", "12"),
+    ]);
+    expect(grupos.map((g) => [g.modulo, g.rotulo])).toEqual([
+      ["instrutores", "Instrutores"],
+      ["atividades", "Atividades"],
+      ["calendario", "Calendário"],
+    ]);
   });
 });
 

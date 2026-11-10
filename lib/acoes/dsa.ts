@@ -46,12 +46,20 @@ import {
 } from "@/lib/dominio/dsa/dia-bloqueado";
 import { recusaForaDaEtapa } from "@/lib/dominio/dsa/etapa-presencial";
 import {
+  categoriaEfetiva,
   categoriaPeloTipo,
+  contaComoDoBanco,
   recusaDaDescricaoNaEdicao,
   recusaPelaCategoria,
   type CategoriaDeAtividade,
+  type ContaComo,
   type TipoDeAtividade,
 } from "@/lib/dominio/categoria-pelo-tipo";
+import {
+  classificacaoNaEdicao,
+  contaComoParaGravar,
+  recusaDoVinculo,
+} from "@/lib/dominio/atividades/lancamento-de-atividade";
 import { avisoDoEmpurrao, empurrarEmCascata, ultimoTempoDoDia } from "@/lib/dominio/dsa/empurrar";
 import { responsavelNaEdicao } from "@/lib/dominio/dsa/responsavel-na-edicao";
 import { idDoLancamento } from "@/lib/dominio/dsa/posicao-herdada";
@@ -781,13 +789,17 @@ export async function lancar(entrada: unknown): Promise<ResultadoDoLancamento> {
    * categoria pela mesma regra do banco e confere as regras que dependem dela antes de gravar.
    */
   let categoriaDaAtividade: CategoriaDeAtividade | null = null;
+  /* RA-4 (Bloco 18): o «Conta como» que se grava — a escolha igual ao padrão do tipo vira nula (nula = o padrão). */
+  let contaComoDaAtividade: ContaComo | null = null;
   if (bloco.tipo === "atividade") {
-    const { data: tipoLido } = await supabase
+    const { data: tipoLido, error: erroDoTipo } = await supabase
       .from("config_listas")
       .select("id, valor, ativo, metadados")
       .eq("id", bloco.tipoAtividadeId)
       .eq("lista", "tipos_atividade")
       .maybeSingle();
+    /* «Não li» não é «não existe» (RN-DEG-01): a falha da leitura chega como falha, e não como tipo inválido. */
+    if (erroDoTipo) return falha(traduzirRecusa(erroDoTipo as ErroDoBanco));
     categoriaDaAtividade =
       tipoLido === null || tipoLido.ativo === false
         ? null
@@ -796,14 +808,28 @@ export async function lancar(entrada: unknown): Promise<ResultadoDoLancamento> {
       return falha("Escolha um tipo de atividade da lista.", "tipoAtividadeId");
     }
     /* Spec 029, FR-002: a descrição vai junto — só o Estudo Individual a dispensa, e o esquema não sabe a categoria. */
+    /*
+     * RA-4 (Bloco 18, spec 033): a categoria do TIPO é o padrão; o «Conta como» troca para AEC, TAD ou TR, ou faz a
+     * atividade contar como «TA da disciplina» (que exige a disciplina). A recusa é a mesma função, com a escolha.
+     */
+    contaComoDaAtividade = contaComoParaGravar(categoriaDaAtividade, bloco.contaComo);
     const recusa = recusaPelaCategoria({
       categoria: categoriaDaAtividade,
       turmaId: bloco.turmaId,
       disciplinaId: bloco.disciplinaId,
       quantidadeAlunos: bloco.quantidadeAlunos,
       descricao: bloco.descricao,
+      contaComo: contaComoDaAtividade,
     });
     if (recusa !== null) return falha(recusa.mensagem, recusa.campo);
+    /* FR-003.3: o vínculo «Cumpre», no máximo um, só na atividade de turma de AEC/TAD/TR. O banco confere o alvo. */
+    const doVinculo = recusaDoVinculo({
+      categoriaDoTipo: categoriaDaAtividade,
+      turmaId: bloco.turmaId,
+      atividadePrevistaId: bloco.atividadePrevistaId,
+      apoinstId: bloco.apoinstId,
+    });
+    if (doVinculo !== null) return falha(doVinculo.mensagem, doVinculo.campo);
     /*
      * ⚠️ `RN-RESP-1` (15/10/2026): o «outro responsável (nome livre)» só onde a regra da CATEGORIA o aceita — e quem
      *    confere é o servidor, não a tela (a regra de negócio nunca mora só na UI). Hoje toda categoria aceita.
@@ -1125,11 +1151,21 @@ export async function lancar(entrada: unknown): Promise<ResultadoDoLancamento> {
     return { ok: true, id, avisos: comAviso([], sobreposicao) };
   }
 
+  /* A categoria que vale: a do tipo, ou a AEC/TAD/TR escolhida no «Conta como» (o «TA da disciplina» fica com a do tipo). */
+  const categoriaGravada =
+    categoriaDaAtividade === null
+      ? null
+      : categoriaEfetiva(categoriaDaAtividade, contaComoDaAtividade);
   const erro = await gravarBloco("atividades_nao_letivas", {
     id,
     codigo: `${marca}-N`,
-    /* O banco deriva de novo pelo tipo (`app.categoria_pelo_tipo`); aqui vai a mesma. */
-    categoria_normativa: categoriaDaAtividade,
+    /*
+     * O banco deriva de novo pelo tipo e pelo «Conta como» (`app.categoria_pelo_tipo`, M2 do Bloco 18); aqui vai a
+     * mesma, pela função espelho.
+     */
+    categoria_normativa: categoriaGravada,
+    /* RA-4 (Bloco 18): como a atividade conta — nulo é o padrão do tipo. */
+    conta_como: contaComoDaAtividade,
     tipo_atividade_id: bloco.tipoAtividadeId,
     escopo: bloco.turmaId === null ? "global" : "turma",
     turma_id: bloco.turmaId,
@@ -1146,10 +1182,21 @@ export async function lancar(entrada: unknown): Promise<ResultadoDoLancamento> {
     instrutor_id: categoriaDaAtividade === "Estudo_Individual" ? null : bloco.instrutorId,
     responsavel_externo:
       categoriaDaAtividade === "Estudo_Individual" ? null : bloco.responsavelExterno,
-    /* A disciplina OPCIONAL da AEC (item 1b, 08/10/2026); o banco confere que é do curso da turma. */
+    /* RA-4 (Bloco 18): a OM do palestrante de fora — só com o nome (o esquema recusa a OM sozinha). */
+    responsavel_externo_om:
+      categoriaDaAtividade === "Estudo_Individual" || bloco.responsavelExterno === null
+        ? null
+        : bloco.responsavelExternoOm,
+    /*
+     * A disciplina OPCIONAL da AEC (item 1b, 08/10/2026), ou a OBRIGATÓRIA do «TA da disciplina» (RA-4); o banco confere
+     * que é do curso da turma.
+     */
     disciplina_id: bloco.disciplinaId,
     quantidade_alunos: bloco.quantidadeAlunos,
     outros_instrutores: bloco.outrosInstrutores,
+    /* FR-003.3: o vínculo «Cumpre» (no máximo um); o banco confere que o alvo é do currículo ou da turma. */
+    atividade_prevista_id: bloco.atividadePrevistaId,
+    apoinst_id: bloco.apoinstId,
   });
   if (erro !== null) return falha(erro);
   revalidar();
@@ -1363,6 +1410,18 @@ type FatoDoBanco = {
   readonly instrutorId?: string | null;
   /** Os instrutores adicionais da AULA (RD-9: o par final de cada um); nas demais origens, ausente. */
   readonly instrutoresAdicionais?: readonly string[];
+  /**
+   * RA-4 (Bloco 18): a classificação e o vínculo da ATIVIDADE como valem — os da sombra do rascunho, quando há (como o
+   * par da aula). ⚠️ A disciplina da atividade mora AQUI e não em `disciplinaId`: lá ela ligaria o porteiro de habilitação
+   *    da troca de instrutor, e a atividade não exige habilitado (D-2 da spec 033).
+   */
+  readonly atividade?: {
+    readonly categoriaDoTipo: CategoriaDeAtividade | null;
+    readonly contaComo: ContaComo | null;
+    readonly disciplinaId: string | null;
+    readonly atividadePrevistaId: string | null;
+    readonly apoinstId: string | null;
+  };
 };
 
 async function lerFato(
@@ -1583,20 +1642,48 @@ async function lerFato(
   const { data } = await supabase
     .from("atividades_nao_letivas")
     .select(
-      "data, ta_inicial, tempos_consumidos, turma_id, categoria_normativa, origem_migracao_v1, editado_em",
+      "data, ta_inicial, tempos_consumidos, turma_id, categoria_normativa, origem_migracao_v1, editado_em, salvo, conta_como, disciplina_id, atividade_prevista_id, apoinst_id, tipo:config_listas!atividades_nao_letivas_tipo_atividade_id_fkey(id, valor, ativo, metadados)",
     )
     .eq("id", fatoId)
     .maybeSingle();
   if (!data) return null;
-  const l = data as {
+  type ClassificacaoDaLinha = {
+    categoria_normativa: CategoriaDeAtividade | null;
+    conta_como: string | null;
+    disciplina_id: string | null;
+    atividade_prevista_id: string | null;
+    apoinst_id: string | null;
+  };
+  const l = data as unknown as ClassificacaoDaLinha & {
     data: string;
     ta_inicial: number | null;
     tempos_consumidos: number | null;
     turma_id: string | null;
-    categoria_normativa: CategoriaDeAtividade | null;
     origem_migracao_v1: string | null;
     editado_em: string | null;
+    salvo: boolean | null;
+    tipo: TipoDeAtividade | TipoDeAtividade[] | null;
   };
+  /*
+   * ⚠️ **A CLASSIFICAÇÃO PENDENTE MORA NA SOMBRA** (o mesmo cuidado do par da aula): com o id de um SALVO que já tem
+   *    rascunho de edição, `gravar_rascunho_do_dsa` grava na sombra — e o «Conta como», a disciplina e o vínculo que
+   *    valem depois da edição são os dela.
+   */
+  const sombra: ClassificacaoDaLinha | null =
+    l.salvo === true
+      ? ((
+          await supabase
+            .from("atividades_nao_letivas")
+            .select(
+              "categoria_normativa, conta_como, disciplina_id, atividade_prevista_id, apoinst_id",
+            )
+            .eq("rascunho_de", fatoId)
+            .eq("status", "ativo")
+            .maybeSingle()
+        ).data as ClassificacaoDaLinha | null)
+      : null;
+  const vale = sombra ?? l;
+  const tipo = Array.isArray(l.tipo) ? (l.tipo[0] ?? null) : l.tipo;
   return {
     data: l.data,
     taInicial: l.ta_inicial,
@@ -1607,7 +1694,14 @@ async function lerFato(
     disciplinaId: null,
     unidadeEnsinoId: null,
     herdado: l.origem_migracao_v1 !== null && l.editado_em === null,
-    categoria: l.categoria_normativa,
+    categoria: vale.categoria_normativa,
+    atividade: {
+      categoriaDoTipo: tipo === null ? null : categoriaPeloTipo(tipo),
+      contaComo: contaComoDoBanco(vale.conta_como),
+      disciplinaId: vale.disciplina_id,
+      atividadePrevistaId: vale.atividade_prevista_id,
+      apoinstId: vale.apoinst_id,
+    },
   };
 }
 
@@ -1781,8 +1875,36 @@ async function aplicarAtualizacao(a: Atualizacao): Promise<ResultadoDoLancamento
     categoria: fato.categoria,
     instrutorId: ehEstudoIndividual ? undefined : a.instrutorId,
     responsavelExterno: ehEstudoIndividual ? undefined : a.responsavelExterno,
+    /* RA-4 (Bloco 18): a OM anda com o nome de fora — apagar o nome apaga a OM (`ativ_om_so_do_externo`). */
+    responsavelExternoOm: ehEstudoIndividual ? undefined : a.responsavelExternoOm,
   });
   if (!responsavel.ok) return falha(responsavel.mensagem, responsavel.campo);
+
+  /*
+   * RA-4 (Bloco 18, spec 033): na ATIVIDADE, o «Conta como», a disciplina e o vínculo «Cumpre» — pela mesma regra do
+   *    lançar (`recusaPelaCategoria`, `recusaDoVinculo`), conferida sobre o que valerá depois da edição. Nas demais
+   *    origens, mandar um deles é recusado: não há onde gravar.
+   */
+  const daClassificacao =
+    a.origem === "atividade_nao_letiva" && fato.atividade !== undefined
+      ? classificacaoNaEdicao({
+          categoriaDoTipo: fato.atividade.categoriaDoTipo,
+          categoriaGravada: fato.categoria,
+          turmaId: fato.turmaId,
+          gravado: fato.atividade,
+          contaComo: a.contaComo,
+          disciplinaId: a.disciplinaId,
+          atividadePrevistaId: a.atividadePrevistaId,
+          apoinstId: a.apoinstId,
+        })
+      : ({ ok: true, colunas: {} } as const);
+  if (!daClassificacao.ok) return falha(daClassificacao.mensagem, daClassificacao.campo);
+  if (
+    a.origem !== "atividade_nao_letiva" &&
+    (a.contaComo !== undefined || a.atividadePrevistaId !== undefined || a.apoinstId !== undefined)
+  ) {
+    return falha("«Conta como» e «Cumpre» só existem na atividade.", "contaComo");
+  }
 
   /*
    * ⚠️ **SPEC 029, FR-002: APAGAR O «O QUE É» SÓ VALE NO ESTUDO INDIVIDUAL.** `conteudo: null` é «apague» (o cartão o
@@ -1953,6 +2075,8 @@ async function aplicarAtualizacao(a: Atualizacao): Promise<ResultadoDoLancamento
     if (a.tecnica !== undefined) campos["metodologia"] = a.tecnica;
   } else if (a.origem === "atividade_nao_letiva") {
     if (a.conteudo !== undefined) campos["descricao"] = a.conteudo;
+    /* RA-4 (Bloco 18): `conta_como`, `disciplina_id` e o vínculo — as colunas que `classificacaoNaEdicao` decidiu. */
+    Object.assign(campos, daClassificacao.colunas);
   }
   /*
    * ⚠️ QUEM RESPONDE (`RN-RESP-1`, FR-043): as colunas saem de `responsavelNaEdicao` — quem ministra, o aplicador da

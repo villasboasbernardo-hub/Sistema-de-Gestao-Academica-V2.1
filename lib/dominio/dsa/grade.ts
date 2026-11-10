@@ -109,6 +109,21 @@ export type ValoresGravados = {
   readonly avaliacaoCurriculoId?: string | null;
   /** Os instrutores adicionais da AULA (Bloco 16, RD-9) — só a aula os tem; ausentes valem nenhum. */
   readonly instrutoresAdicionais?: readonly string[];
+  /*
+   * RA-4 (Bloco 18, spec 033): o que o cartão de edição da ATIVIDADE reabre — só a atividade os tem; ausentes valem
+   * nulo. A classificação do TIPO (o padrão do «Conta como») vem junto, porque a categoria gravada pode ser a escolhida.
+   */
+  /** A OM do responsável de fora (`responsavel_externo_om`). */
+  readonly responsavelExternoOm?: string | null;
+  /** `conta_como`: `CHD` («TA da disciplina»), `AEC`, `TAD`, `TR`, ou nulo (o padrão do tipo). */
+  readonly contaComo?: string | null;
+  /** A classificação do TIPO da atividade (`metadados.categoria`), ou nula quando o tipo não é da lista ativa. */
+  readonly categoriaDoTipo?: string | null;
+  /** O vínculo «Cumpre»: a AEC prevista ou a APOINST planejada (no máximo um). */
+  readonly atividadePrevistaId?: string | null;
+  readonly apoinstId?: string | null;
+  /** A atividade é de TODAS as turmas (`turma_id` nulo): sem disciplina, sem «TA da disciplina», sem vínculo. */
+  readonly global?: boolean;
 };
 
 export type BlocoNaGrade = FatoDaSemana & {

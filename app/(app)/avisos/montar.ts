@@ -7,7 +7,8 @@
  *
  * ⚠️ **AQUI NÃO SE DECIDE AVISO NENHUM.** Quem decide são os predicados de sempre — `avisosDoCurso`, `tetosExcedidos`,
  *    `andamentoDaTurma` (pelo panorama), `alertasDeVista`, `painelDeTurmas`, `avisosDaTurma`, `avisosDoCadastro`,
- *    `alertaAcimaDaFaixa` e `alertaSemCapacitacao` —, chamados por `leitura.ts` com as mesmas leituras dos quadros. Esta
+ *    `alertaAcimaDaFaixa`, `alertaSemCapacitacao` e, desde o Bloco 18, `avisosDeAtividades` —, chamados por
+ *    `leitura.ts` com as mesmas leituras dos quadros. Esta
  *    função só dá a cada resultado o módulo, o sujeito (pelo CÓDIGO), a frase e o endereço onde ele se resolve. A tabela
  *    da §6 da spec é esta função, linha a linha.
  * ⚠️ **O MESMO FATO, UM AVISO SÓ**: a janela incompleta era dita pelo painel de `/turmas` e pelo quadro da ficha da
@@ -15,6 +16,8 @@
  * ⚠️ **SEM I/O** (nada de `supabase`): a prova de que nenhum aviso se perde é de unidade, sobre a saída dos predicados.
  */
 import { chaveDoAviso, type Aviso } from "@/lib/dominio/avisos/central";
+import type { AecPendente, ApoinstAtrasada } from "@/lib/dominio/atividades/avisos";
+import { SIGLA_APOINST } from "@/lib/dominio/atividades/grupos";
 import type { AlertaDeVista } from "@/lib/dominio/avaliacoes/alertas-de-vista";
 import type { AvisoDeCadastro } from "@/lib/dominio/avisos-cadastro-instrutor";
 import type { AvisoDaTurma } from "@/lib/dominio/avisos-da-turma";
@@ -23,6 +26,7 @@ import type { AlertaDoInstrutor } from "@/lib/dominio/alertas-instrutor";
 import { TITULO_DO_AVISO, type AvisoDeTurma } from "@/lib/dominio/painel-de-turmas";
 import { dataParaLeitura } from "@/lib/formato/data";
 import {
+  enderecoDaAbaDaTurma,
   enderecoDaAbaDoCurso,
   enderecoDaEdicaoDoCurso,
   enderecoDaSecaoDeDisciplinas,
@@ -72,7 +76,24 @@ export type EntradaDaCentral = {
     readonly descricao: string;
     readonly lancamentos: number;
   }[];
+  /**
+   * Bloco 18 (spec 033, RA-8, FR-009.1): a AEC obrigatória do currículo ainda não cumprida perto do fim da turma ativa, e
+   * a APOINST atrasada — o veredito é de `avisosDeAtividades` (`lib/dominio/atividades/avisos.ts`). Opcional, como o
+   * calendário: ausente, nenhum aviso de atividades.
+   */
+  readonly atividades?: {
+    readonly aecPendentes: readonly AecPendente[];
+    readonly apoinstAtrasadas: readonly ApoinstAtrasada[];
+  };
 };
+
+/** Quanto falta para o término, na frase do aviso da AEC: o número, «hoje», ou que já passou. */
+function prazoDoTermino(dias: number): string {
+  if (dias > 1) return `faltam ${dias} dias`;
+  if (dias === 1) return "falta 1 dia";
+  if (dias === 0) return "termina hoje";
+  return "o término já passou";
+}
 
 /** Os avisos do curso que se resolvem nos dados do currículo; o do limite, na lista de turmas do curso. */
 const DO_CURRICULO = new Set(["sem_duracao_semanas", "sem_proposito"]);
@@ -185,6 +206,30 @@ export function montarAvisos(entrada: EntradaDaCentral): readonly Aviso[] {
         destino: enderecoDoInstrutor(i.codigo),
       });
     }
+  }
+
+  /*
+   * Bloco 18 (RA-8): o sujeito é o CÓDIGO — a turma e o código da AEC prevista (o mesmo `AEP-` vale para todas as turmas
+   * do currículo, por isso a turma entra na chave), e o código da APOINST, que já é de uma turma só.
+   */
+  for (const a of entrada.atividades?.aecPendentes ?? []) {
+    avisos.push({
+      chave: chaveDoAviso("atividades", "aec_obrigatoria_pendente", `${a.turmaCodigo}:${a.codigo}`),
+      modulo: "atividades",
+      titulo: `${a.turmaCodigo}: AEC obrigatória não cumprida`,
+      detalhe: `«${a.nome}» é obrigatória no currículo e ainda não foi cumprida; a turma termina em ${dataParaLeitura(a.termino)} (${prazoDoTermino(a.dias)}).`,
+      destino: enderecoDaAbaDaTurma(a.turmaCodigo, "palestras"),
+    });
+  }
+
+  for (const a of entrada.atividades?.apoinstAtrasadas ?? []) {
+    avisos.push({
+      chave: chaveDoAviso("atividades", "apoinst_atrasada", a.codigo),
+      modulo: "atividades",
+      titulo: `${a.turmaCodigo}: ${SIGLA_APOINST} atrasada`,
+      detalhe: `«${a.nome}» passou do fim previsto (${dataParaLeitura(a.fimPrevisto)}) sem concluir.`,
+      destino: enderecoDaAbaDaTurma(a.turmaCodigo, "apoinst"),
+    });
   }
 
   for (const d of entrada.calendario ?? []) {

@@ -199,14 +199,17 @@ select is(
   array['turma_id', 'turma_codigo', 'curso_id', 'curso_codigo', 'nome_curso', 'ano_letivo', 'status_turma',
         'chr_curricular', 'ta_aula', 'ta_extraclasse', 'ta_avaliacao', 'ta_vista_prova', 'chd_executada', 'ta_aec',
         'ta_tad', 'ta_tr', 'ta_estudo_individual', 'cht_executada', 'ta_apoio_individualizado', 'ta_dias_parados',
-        'ta_fora_do_dsa'],
-  'vw_carga_horaria_turma: as 20 de antes e ta_fora_do_dsa no fim'
+        'ta_fora_do_dsa', 'ta_atividade_na_disciplina'],
+  -- REGRA DOS VALORES ESPERADOS: (a), 03/11/2026 — o Bloco 18 (spec 033, M2) acrescentou, no FIM, o «Conta como TA da
+  -- disciplina» (RA-4). As de antes continuam na mesma ordem: é o que esta asserção protege.
+  'vw_carga_horaria_turma: as 20 de antes, ta_fora_do_dsa e (Bloco 18) ta_atividade_na_disciplina no fim'
 );
 select is(
   (select array_agg(attname::text order by attnum) from pg_attribute
     where attrelid = 'public.vw_disciplinas_execucao'::regclass and attnum > 18 and not attisdropped),
-  array['ta_fora_do_dsa', 'nome_no_dsa'],
-  'vw_disciplinas_execucao: as duas colunas novas no fim'
+  array['ta_fora_do_dsa', 'nome_no_dsa', 'ta_atividade_executados'],
+  -- REGRA DOS VALORES ESPERADOS: (a), 03/11/2026 — o Bloco 18 (spec 033, M2) acrescentou ta_atividade_executados no fim.
+  'vw_disciplinas_execucao: as duas colunas novas no fim, e a do Bloco 18 depois delas'
 );
 select is(
   pg_temp.recusa($$update public.disciplinas set nome_no_dsa = repeat('A', 61)

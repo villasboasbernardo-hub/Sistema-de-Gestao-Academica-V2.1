@@ -74,6 +74,13 @@ export function chaveDoLancamento(fato: FatoDoInsumo): {
     case "vista_prova":
       return { cod: disciplina, item: ITEM.vista };
     case "atividade_nao_letiva": {
+      /*
+       * ⚠️ RA-4 (Bloco 18): a atividade que CONTA COMO TA DA DISCIPLINA entra na CH da disciplina — a chave é a da aula
+       *    sem UE (`SEM UE`, que conta na CH), a mesma soma que o papel faz pela disciplina que `vw_ocupacao_ta` lhe dá.
+       *    Sem disciplina (o banco não deixa: `ativ_conta_como_chd_com_disciplina`), cai na categoria, como antes.
+       */
+      if (fato.contaComo === "CHD" && disciplina !== "")
+        return { cod: disciplina, item: ITEM.semUe };
       const categoria = fato.categoria ?? "AEC";
       if (categoria === "AEC" && disciplina !== "") return { cod: disciplina, item: ITEM.aec };
       return { cod: CATEGORIA_NO_COD[categoria], item: ITEM.nenhum };

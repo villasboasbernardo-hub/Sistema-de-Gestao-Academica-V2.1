@@ -11,12 +11,19 @@
  * ⚠️ **"NÃO PUDE LER" É DITO, NUNCA ZERO** (gotcha 4): a leitura que falha entra em `naoLidos`, com o módulo, e a página
  *    diz que não pôde ler — o que falhou não vira "nenhum aviso".
  */
+import {
+  lerApoinstDasTurmas,
+  lerPalestrasDasTurmas,
+  type TurmaDoPlanejado,
+} from "../atividades/leitura-do-planejado";
 import { lerContagemPresencial } from "../turmas/contagem-presencial";
 import { lerRegimesDasSemanas } from "../turmas/regimes-das-semanas";
 import { lerDiasBloqueadosAFrente } from "../turmas/dias-bloqueados";
 import { COLUNAS_DA_ABRANGENCIA, linhasComAbrangencia } from "@/lib/calendario/abrangencia";
 import { diasBloqueadosComLancamento } from "@/lib/dominio/calendario";
 import { idsArquivados } from "@/lib/dominio/arquivamento-da-turma";
+import { avisosDeAtividades, type TurmaParaAviso } from "@/lib/dominio/atividades/avisos";
+import { ehEadPuro } from "@/lib/dominio/dsa/ead-puro";
 import { STATUS_DE_AVALIACAO_VIVA } from "@/lib/dominio/avaliacao-viva";
 import { alertasDeVista } from "@/lib/dominio/avaliacoes/alertas-de-vista";
 import { naturezaPeloTipo } from "@/lib/dominio/avaliacoes/quadro-da-turma";
@@ -97,6 +104,8 @@ type TurmaLida = TurmaDoPanorama & {
   readonly data_inicio: string | null;
   readonly sala_alocada: string | null;
   readonly alunos: number | null;
+  /** Bloco 18 (RA-3): o currículo DA TURMA, de onde vêm as AEC previstas que ela herda. */
+  readonly curriculo_id: string | null;
   readonly curriculo: { readonly duracao_semanas: number | null } | null;
 };
 
@@ -164,6 +173,87 @@ async function lerAvisosDoCalendario(
   );
 }
 
+/** O que a leitura das atividades entrega à montagem — `null` quando alguma leitura falhou. */
+type AtividadesLidas = {
+  readonly turmas: readonly TurmaParaAviso[];
+  readonly obrigatoriasPendentes: ReadonlyMap<
+    string,
+    readonly { readonly codigo: string; readonly nome: string }[]
+  >;
+  readonly apoinstAtrasadas: ReadonlyMap<
+    string,
+    readonly { readonly codigo: string; readonly nome: string; readonly fimPrevisto: string }[]
+  >;
+};
+
+/**
+ * Bloco 18 (spec 033, RA-8, FR-009.1): as AEC previstas e a APOINST das turmas ATIVAS do alcance — sem a arquivada e sem
+ * a EAD pura (RT-8; a EAD não tem DSA) —, pelo leitor ÚNICO do planejado (`leitura-do-planejado.ts`), com o cliente da
+ * sessão. O veredito (cumprida, atrasada) é das funções puras de `lib/dominio/atividades/`, que o leitor já aplicou.
+ *
+ * ⚠️ **ENCADEADA NAS PROMESSAS DAS TURMAS**, que a rodada grande também espera: as duas leituras dependem dos ids e do
+ *    currículo de cada turma, e começam assim que eles chegam, em paralelo com o resto — nenhuma rodada a mais no fim.
+ * ⚠️ **"NÃO LI" É `null`** (gotcha 4): a turma que não pôde ser lida não vira "nenhuma AEC pendente".
+ */
+async function lerAtividadesDosAvisos(
+  supabase: Cliente,
+  hoje: string,
+  turmasPromessa: PromiseLike<{ readonly data: unknown; readonly error: unknown }>,
+  arquivadasPromessa: PromiseLike<{ readonly data: unknown; readonly error: unknown }>,
+): Promise<AtividadesLidas | null> {
+  const [turmasRes, arquivadasRes] = await Promise.all([turmasPromessa, arquivadasPromessa]);
+  if (turmasRes.error || arquivadasRes.error) return null;
+  const arquivadas = idsArquivados((arquivadasRes.data ?? []) as { turma_id: string | null }[]);
+  const ativas = ((turmasRes.data ?? []) as TurmaLida[]).filter(
+    (t) => t.status === "ativa" && !arquivadas.has(t.id) && !ehEadPuro(t.modalidade),
+  );
+  if (ativas.length === 0) {
+    return { turmas: [], obrigatoriasPendentes: new Map(), apoinstAtrasadas: new Map() };
+  }
+  const doPlanejado: TurmaDoPlanejado[] = ativas.map((t) => ({
+    id: t.id,
+    codigo: t.codigo,
+    curriculoId: t.curriculo_id ?? null,
+  }));
+  const [palestras, apoinst] = await Promise.all([
+    lerPalestrasDasTurmas(doPlanejado, supabase),
+    lerApoinstDasTurmas(doPlanejado, hoje, supabase),
+  ]);
+  if (palestras.erro !== null || apoinst.erro !== null) return null;
+
+  const obrigatoriasPendentes = new Map<string, { codigo: string; nome: string }[]>();
+  for (const [turmaId, quadro] of palestras.quadros) {
+    obrigatoriasPendentes.set(
+      turmaId,
+      quadro.obrigatoriasPendentes.map((p) => ({ codigo: p.codigo, nome: p.nome })),
+    );
+  }
+  const apoinstAtrasadas = new Map<
+    string,
+    { codigo: string; nome: string; fimPrevisto: string }[]
+  >();
+  for (const linha of apoinst.quadro.linhas) {
+    /* A desativada aparece na lista da tela, mas não conta — nem no aviso. */
+    if (!linha.ativa || linha.situacao !== "atrasada") continue;
+    apoinstAtrasadas.set(linha.turmaId, [
+      ...(apoinstAtrasadas.get(linha.turmaId) ?? []),
+      { codigo: linha.codigo, nome: linha.nome, fimPrevisto: linha.fimPrevisto },
+    ]);
+  }
+  return {
+    turmas: ativas.map((t) => ({
+      id: t.id,
+      codigo: t.codigo,
+      termino: t.data_termino ?? null,
+      ativa: true,
+      arquivada: false,
+      eadPura: false,
+    })),
+    obrigatoriasPendentes,
+    apoinstAtrasadas,
+  };
+}
+
 export async function lerAvisos(
   supabase: Cliente,
   hoje: string,
@@ -174,6 +264,26 @@ export async function lerAvisos(
   /* Começa já, em paralelo com a leitura grande (nenhum `await` em laço). */
   const calendarioPromessa = lerAvisosDoCalendario(supabase, ano, comCalendario);
   const semana = semanaDoPainel(hoje);
+  /*
+   * Bloco 18 (RA-8): as turmas e as arquivadas viram promessas antes da rodada grande, porque as atividades as esperam
+   * também — `Promise.resolve` dispara cada consulta UMA vez (o construtor do PostgREST consulta a cada `then`).
+   */
+  const turmasPromessa = Promise.resolve(
+    supabase
+      .from("turmas")
+      .select(
+        "id, codigo, status, curso_id, ano_letivo, data_inicio, data_termino, modalidade, sala_alocada, alunos, curriculo_id, regime:regimes_de_horario!turmas_regime_do_proprio_curso_fk(regime_tempos), curriculo:curriculos!turmas_curriculo_do_proprio_curso_fk(duracao_semanas)",
+      ),
+  );
+  const arquivadasPromessa = Promise.resolve(
+    supabase.from("vw_turmas_arquivadas").select("turma_id"),
+  );
+  const atividadesPromessa = lerAtividadesDosAvisos(
+    supabase,
+    hoje,
+    turmasPromessa,
+    arquivadasPromessa,
+  );
 
   const [
     cursosRes,
@@ -196,18 +306,15 @@ export async function lerAvisos(
     presenciais,
     semanasDasTurmas,
     diasBloqueados,
+    atividadesLidas,
   ] = await Promise.all([
     supabase
       .from("cursos")
       .select(
         "id, codigo, classificacao, modalidade, limite_turmas_ano, status, curriculos:curriculos!curriculos_curso_id_fkey(versao, vigente_de, status, arquivado_em, proposito, duracao_semanas)",
       ),
-    supabase
-      .from("turmas")
-      .select(
-        "id, codigo, status, curso_id, ano_letivo, data_inicio, data_termino, modalidade, sala_alocada, alunos, regime:regimes_de_horario!turmas_regime_do_proprio_curso_fk(regime_tempos), curriculo:curriculos!turmas_curriculo_do_proprio_curso_fk(duracao_semanas)",
-      ),
-    supabase.from("vw_turmas_arquivadas").select("turma_id"),
+    turmasPromessa,
+    arquivadasPromessa,
     supabase
       .from("vw_carga_horaria_turma")
       .select(
@@ -243,7 +350,12 @@ export async function lerAvisos(
     supabase
       .from("config_parametros")
       .select("chave, valor")
-      .in("chave", ["avaliacao.prazo_vista_dias", "avaliacao.vence_em_breve_dias"])
+      /* Bloco 18 (RA-8, regra 8): as semanas de antecedência do aviso da AEC obrigatória vêm na mesma leitura. */
+      .in("chave", [
+        "avaliacao.prazo_vista_dias",
+        "avaliacao.vence_em_breve_dias",
+        "atividades.aviso_aec_semanas",
+      ])
       .eq("status", "ativo"),
     lerTodasAsPaginas((f) =>
       supabase
@@ -296,6 +408,8 @@ export async function lerAvisos(
     lerRegimesDasSemanas(supabase, { hoje }),
     /* Bloco 17 (`RN-SALDO-01`): os dias bloqueados no DSA não contam como dia útil do saldo. */
     lerDiasBloqueadosAFrente(supabase, hoje),
+    /* Bloco 18 (RA-8): as AEC previstas e a APOINST das turmas ativas, encadeadas nas turmas acima. */
+    atividadesPromessa,
   ]);
 
   const naoLidos = new Set<ModuloDeAviso>();
@@ -588,11 +702,32 @@ export async function lerAvisos(
     };
   });
 
+  // ── Atividades: a AEC obrigatória perto do fim e a APOINST atrasada (Bloco 18, RA-8) ─────────────────
+  /*
+   * ⚠️ AS SEMANAS SÃO PARÂMETRO (regra 8), sem número de reserva: sem ele, o aviso da AEC não sai — e a página diz que
+   *    não pôde ler as atividades, em vez de dizer que nenhuma está pendente (RN-DEG-01). A APOINST atrasada não
+   *    depende dele e sai assim mesmo.
+   */
+  const valorDasSemanas = parametrosDaVistaRes.error
+    ? null
+    : ((parametrosDaVistaRes.data ?? []).find((p) => p.chave === "atividades.aviso_aec_semanas")
+        ?.valor ?? null);
+  const semanasDeAviso =
+    valorDasSemanas === null || !Number.isFinite(Number(valorDasSemanas))
+      ? null
+      : Number(valorDasSemanas);
+  if (atividadesLidas === null || semanasDeAviso === null) naoLidos.add("atividades");
+  const atividades =
+    atividadesLidas === null
+      ? { aecPendentes: [], apoinstAtrasadas: [] }
+      : avisosDeAtividades({ ...atividadesLidas, hoje, semanasDeAviso });
+
   const calendario = await calendarioPromessa;
   if (calendario === null) naoLidos.add("calendario");
 
   return {
     avisos: montarAvisos({
+      atividades,
       calendario: calendario ?? [],
       cursos: doCurso,
       tetos,

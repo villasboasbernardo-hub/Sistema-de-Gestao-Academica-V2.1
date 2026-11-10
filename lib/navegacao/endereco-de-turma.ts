@@ -143,7 +143,18 @@ export function enderecoDaEdicaoDoCurso(sigla: string, versao?: number, parte?: 
  * @example enderecoDaTurmaGravada("C-Ap-FR 2026", "situacao") → "/turmas/C-Ap-FR%202026?gravada=situacao"
  */
 export type GravacaoNaFicha =
-  "turma" | "situacao" | "arquivada" | "desarquivada" | "ta-fora" | "ta-fora-desfeito";
+  | "turma"
+  | "situacao"
+  | "arquivada"
+  | "desarquivada"
+  | "ta-fora"
+  | "ta-fora-desfeito"
+  // Bloco 18 (RA-5, RA-6): a marcação à mão e a APOINST planejada.
+  | "marcacao"
+  | "marcacao-desfeita"
+  | "apoinst"
+  | "apoinst-desativada"
+  | "apoinst-reativada";
 
 export function enderecoDaTurmaGravada(codigo: string, oQue: GravacaoNaFicha): string {
   return `${enderecoDaTurma(codigo)}?gravada=${oQue}`;
@@ -214,6 +225,26 @@ export const ANCORA_DAS_ABAS_DA_TURMA = "abas-da-turma";
  */
 export function enderecoDasAvaliacoesDaTurma(codigo: string): string {
   return `${enderecoDaTurma(codigo)}?aba=avaliacoes#${ANCORA_DAS_ABAS_DA_TURMA}`;
+}
+
+/**
+ * Bloco 18 (spec 033): as abas «Atividades», «Palestras» e «APOINST» da ficha da turma — destino dos avisos do sininho
+ * (RA-8) e dos links do módulo Atividades. A mesma âncora das Avaliações (as abas abertas E à vista).
+ */
+export function enderecoDaAbaDaTurma(
+  codigo: string,
+  aba: "atividades" | "palestras" | "apoinst",
+): string {
+  return `${enderecoDaTurma(codigo)}?aba=${aba}#${ANCORA_DAS_ABAS_DA_TURMA}`;
+}
+
+/** A ficha com a confirmação da gravação E a aba aberta (a marcação à mão e a APOINST gravam pela aba). */
+export function enderecoDaAbaDaTurmaGravada(
+  codigo: string,
+  aba: "atividades" | "palestras" | "apoinst",
+  oQue: GravacaoNaFicha,
+): string {
+  return `${enderecoDaTurma(codigo)}?aba=${aba}&gravada=${oQue}#${ANCORA_DAS_ABAS_DA_TURMA}`;
 }
 
 export function enderecoDoDsa(

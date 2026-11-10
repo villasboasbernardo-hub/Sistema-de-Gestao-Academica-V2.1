@@ -76,6 +76,10 @@ import { lerContagemPresencial } from "../contagem-presencial";
 import { lerRegimesDasSemanas } from "../regimes-das-semanas";
 import { AvisoDoRegimeNaoLido } from "../AvisoDoRegimeNaoLido";
 import { AbasDaTurma } from "./AbasDaTurma";
+import { ApoinstDaTurma } from "./ApoinstDaTurma";
+import { AtividadesDaTurma } from "./AtividadesDaTurma";
+import type { ContextoDaTurmaNasAbas } from "./contexto-das-abas";
+import { PalestrasDaTurma } from "./PalestrasDaTurma";
 import { ArquivarTurma } from "./ArquivarTurma";
 import { AvaliacoesDaTurma } from "./AvaliacoesDaTurma";
 import { type AutoriaDoPrevisto } from "./CardsDeTetos";
@@ -489,6 +493,21 @@ export default async function FichaDaTurma({
   const ead = ehEadPuro(turma.modalidade as string | null);
   const texto = (v: string | number | null) => (v === null || v === "" ? "—" : String(v));
   const confirmacao = CONFIRMACAO[String(valores.gravada)];
+  /* Bloco 18 (spec 033): o contexto das abas Atividades, APOINST e Palestras — só a aberta é desenhada (e lida). */
+  const contextoDasAbas: ContextoDaTurmaNasAbas = {
+    turmaId,
+    turmaCodigo: turma.codigo as string,
+    cursoId,
+    curriculoId: curriculoDaTurma?.id ?? null,
+    anoLetivo: ano,
+    dataTermino,
+    hoje,
+    arquivada,
+    ead,
+    permissoes,
+    somenteLeitura: false,
+    valores,
+  };
 
   return (
     <section className="flex flex-col gap-5">
@@ -656,6 +675,13 @@ export default async function FichaDaTurma({
            *Avaliações*, o quadro por disciplina. A URL é dona da aba (`aba`).
       */}
       <AbasDaTurma
+        atividades={
+          valores.aba === "atividades" ? <AtividadesDaTurma contexto={contextoDasAbas} /> : null
+        }
+        apoinst={valores.aba === "apoinst" ? <ApoinstDaTurma contexto={contextoDasAbas} /> : null}
+        palestras={
+          valores.aba === "palestras" ? <PalestrasDaTurma contexto={contextoDasAbas} /> : null
+        }
         avaliacoes={
           avaliacoes ? (
             <AvaliacoesDaTurma

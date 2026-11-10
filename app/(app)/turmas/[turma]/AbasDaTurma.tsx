@@ -13,7 +13,6 @@
 import * as React from "react";
 
 import { cn } from "cn";
-import { EmBreve } from "@/components/ciaara/em-breve";
 import {
   ANCORA_DAS_ABAS_DA_TURMA,
   ROTA_DA_FICHA_DA_TURMA,
@@ -23,7 +22,9 @@ import { useParametro } from "@/lib/navegacao/usar-parametro";
 const ABAS = [
   { valor: "ficha", rotulo: "Ficha" },
   { valor: "avaliacoes", rotulo: "Avaliações" },
-  /* Bloco 17 (item 4): em branco, com «Em breve». */
+  /* Bloco 18 (spec 033, D-9): a aba Atividades, com os filtros e as estatísticas da turma. */
+  { valor: "atividades", rotulo: "Atividades" },
+  /* Bloco 17 (item 4) — e, desde o Bloco 18 (FR-007.2), com o acompanhamento da turma (RA-5, RA-6). */
   { valor: "apoinst", rotulo: "APOINST" },
   { valor: "palestras", rotulo: "Palestras" },
 ] as const;
@@ -33,9 +34,16 @@ type Aba = (typeof ABAS)[number]["valor"];
 export function AbasDaTurma({
   ficha,
   avaliacoes,
+  atividades,
+  apoinst,
+  palestras,
 }: {
   readonly ficha: React.ReactNode;
   readonly avaliacoes: React.ReactNode;
+  /** Bloco 18: o conteúdo das três abas novas — a página desenha SÓ o da aba aberta (as outras chegam nulas). */
+  readonly atividades: React.ReactNode;
+  readonly apoinst: React.ReactNode;
+  readonly palestras: React.ReactNode;
 }) {
   const [aba, definirAba] = useParametro(ROTA_DA_FICHA_DA_TURMA, "aba");
   const atual: Aba = ABAS.some((a) => a.valor === aba) ? (aba as Aba) : "ficha";
@@ -91,13 +99,15 @@ export function AbasDaTurma({
         aria-labelledby={`aba-${atual}`}
         className="flex flex-col gap-5"
       >
-        {atual === "avaliacoes" ? (
-          avaliacoes
-        ) : atual === "apoinst" || atual === "palestras" ? (
-          <EmBreve slot={`aba-${atual}-em-breve`} />
-        ) : (
-          ficha
-        )}
+        {atual === "avaliacoes"
+          ? avaliacoes
+          : atual === "atividades"
+            ? atividades
+            : atual === "apoinst"
+              ? apoinst
+              : atual === "palestras"
+                ? palestras
+                : ficha}
       </div>
     </div>
   );

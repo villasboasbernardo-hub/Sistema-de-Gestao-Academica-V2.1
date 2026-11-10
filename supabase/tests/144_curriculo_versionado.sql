@@ -99,7 +99,8 @@ select ok(
   'os gatilhos ficam fechados; o currículo padrão da turma, só para authenticated');
 select is(
   (select count(*)::int from pg_trigger where tgname like 'trg_%_curriculo_em_uso' and not tgisinternal),
-  7, 'RC-6 · a correção do currículo em uso guarda as sete tabelas do conteúdo, os horários incluídos (PR 2; 145 e 146)');
+  -- REGRA DOS VALORES ESPERADOS: (a), 03/11/2026 — o Bloco 18 (spec 033, RA-2) pôs as AEC previstas sob a RC-6: 7 + 1.
+  8, 'RC-6 · a correção do currículo em uso guarda as oito tabelas do conteúdo, os horários e as AEC previstas incluídos (PR 2; 145, 146 e 156)');
 
 -- ── a amostra: um curso, que nasce com o currículo 1 e o conteúdo da RC-1 ──
 select public.criar_curso_com_regime(

@@ -52,6 +52,125 @@ export type Database = {
         }
         Relationships: []
       }
+      aec_previstas_curriculo: {
+        Row: {
+          codigo: string
+          criado_em: string
+          criado_por: string | null
+          curriculo_id: string
+          curso_id: string
+          disciplina_id: string | null
+          editado_em: string | null
+          editado_por: string | null
+          fonte_arquivo: string | null
+          fonte_pagina: string | null
+          id: string
+          linhagem_id: string
+          nome: string
+          obrigatoria: boolean
+          observacao: string | null
+          ordem: number
+          origem_migracao_v1: string | null
+          status: Database["public"]["Enums"]["status_registro"]
+          ta_previstos: number | null
+          tipo_atividade_id: string
+        }
+        Insert: {
+          codigo?: string
+          criado_em?: string
+          criado_por?: string | null
+          curriculo_id: string
+          curso_id: string
+          disciplina_id?: string | null
+          editado_em?: string | null
+          editado_por?: string | null
+          fonte_arquivo?: string | null
+          fonte_pagina?: string | null
+          id?: string
+          linhagem_id?: string
+          nome: string
+          obrigatoria?: boolean
+          observacao?: string | null
+          ordem?: number
+          origem_migracao_v1?: string | null
+          status?: Database["public"]["Enums"]["status_registro"]
+          ta_previstos?: number | null
+          tipo_atividade_id: string
+        }
+        Update: {
+          codigo?: string
+          criado_em?: string
+          criado_por?: string | null
+          curriculo_id?: string
+          curso_id?: string
+          disciplina_id?: string | null
+          editado_em?: string | null
+          editado_por?: string | null
+          fonte_arquivo?: string | null
+          fonte_pagina?: string | null
+          id?: string
+          linhagem_id?: string
+          nome?: string
+          obrigatoria?: boolean
+          observacao?: string | null
+          ordem?: number
+          origem_migracao_v1?: string | null
+          status?: Database["public"]["Enums"]["status_registro"]
+          ta_previstos?: number | null
+          tipo_atividade_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "aec_previstas_curriculo_curso_id_fkey"
+            columns: ["curso_id"]
+            isOneToOne: false
+            referencedRelation: "cursos"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "aec_previstas_curriculo_curso_id_fkey"
+            columns: ["curso_id"]
+            isOneToOne: false
+            referencedRelation: "vw_cursos_regime_vigente"
+            referencedColumns: ["curso_id"]
+          },
+          {
+            foreignKeyName: "aec_previstas_curriculo_disciplina_id_fkey"
+            columns: ["disciplina_id"]
+            isOneToOne: false
+            referencedRelation: "disciplinas"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "aec_previstas_curriculo_disciplina_id_fkey"
+            columns: ["disciplina_id"]
+            isOneToOne: false
+            referencedRelation: "vw_disciplinas_execucao"
+            referencedColumns: ["disciplina_id"]
+          },
+          {
+            foreignKeyName: "aec_previstas_curriculo_disciplina_id_fkey"
+            columns: ["disciplina_id"]
+            isOneToOne: false
+            referencedRelation: "vw_instrutor_carga_prevista"
+            referencedColumns: ["disciplina_id"]
+          },
+          {
+            foreignKeyName: "aec_previstas_curriculo_tipo_atividade_id_fkey"
+            columns: ["tipo_atividade_id"]
+            isOneToOne: false
+            referencedRelation: "config_listas"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "aec_previstas_do_curriculo_do_curso_fk"
+            columns: ["curriculo_id", "curso_id"]
+            isOneToOne: false
+            referencedRelation: "curriculos"
+            referencedColumns: ["id", "curso_id"]
+          },
+        ]
+      }
       ajustes_de_avaliacao: {
         Row: {
           autor_nome: string | null
@@ -173,6 +292,155 @@ export type Database = {
           },
         ]
       }
+      apoinst_planejadas: {
+        Row: {
+          codigo: string
+          criado_em: string
+          criado_por: string | null
+          disciplina_id: string
+          editado_em: string | null
+          editado_por: string | null
+          fim_previsto: string
+          id: string
+          inicio_previsto: string
+          instrutor_id: string
+          nome: string
+          observacao: string | null
+          origem_migracao_v1: string | null
+          status: Database["public"]["Enums"]["status_registro"]
+          ta_previstos: number
+          turma_id: string
+        }
+        Insert: {
+          codigo?: string
+          criado_em?: string
+          criado_por?: string | null
+          disciplina_id: string
+          editado_em?: string | null
+          editado_por?: string | null
+          fim_previsto: string
+          id?: string
+          inicio_previsto: string
+          instrutor_id: string
+          nome: string
+          observacao?: string | null
+          origem_migracao_v1?: string | null
+          status?: Database["public"]["Enums"]["status_registro"]
+          ta_previstos: number
+          turma_id: string
+        }
+        Update: {
+          codigo?: string
+          criado_em?: string
+          criado_por?: string | null
+          disciplina_id?: string
+          editado_em?: string | null
+          editado_por?: string | null
+          fim_previsto?: string
+          id?: string
+          inicio_previsto?: string
+          instrutor_id?: string
+          nome?: string
+          observacao?: string | null
+          origem_migracao_v1?: string | null
+          status?: Database["public"]["Enums"]["status_registro"]
+          ta_previstos?: number
+          turma_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "apoinst_planejadas_disciplina_id_fkey"
+            columns: ["disciplina_id"]
+            isOneToOne: false
+            referencedRelation: "disciplinas"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "apoinst_planejadas_disciplina_id_fkey"
+            columns: ["disciplina_id"]
+            isOneToOne: false
+            referencedRelation: "vw_disciplinas_execucao"
+            referencedColumns: ["disciplina_id"]
+          },
+          {
+            foreignKeyName: "apoinst_planejadas_disciplina_id_fkey"
+            columns: ["disciplina_id"]
+            isOneToOne: false
+            referencedRelation: "vw_instrutor_carga_prevista"
+            referencedColumns: ["disciplina_id"]
+          },
+          {
+            foreignKeyName: "apoinst_planejadas_instrutor_id_fkey"
+            columns: ["instrutor_id"]
+            isOneToOne: false
+            referencedRelation: "instrutores"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "apoinst_planejadas_instrutor_id_fkey"
+            columns: ["instrutor_id"]
+            isOneToOne: false
+            referencedRelation: "vw_instrutor_carga_anual"
+            referencedColumns: ["instrutor_id"]
+          },
+          {
+            foreignKeyName: "apoinst_planejadas_instrutor_id_fkey"
+            columns: ["instrutor_id"]
+            isOneToOne: false
+            referencedRelation: "vw_instrutor_dados_pessoais"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "apoinst_planejadas_instrutor_id_fkey"
+            columns: ["instrutor_id"]
+            isOneToOne: false
+            referencedRelation: "vw_instrutores"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "apoinst_planejadas_turma_id_fkey"
+            columns: ["turma_id"]
+            isOneToOne: false
+            referencedRelation: "turmas"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "apoinst_planejadas_turma_id_fkey"
+            columns: ["turma_id"]
+            isOneToOne: false
+            referencedRelation: "vw_carga_horaria_turma"
+            referencedColumns: ["turma_id"]
+          },
+          {
+            foreignKeyName: "apoinst_planejadas_turma_id_fkey"
+            columns: ["turma_id"]
+            isOneToOne: false
+            referencedRelation: "vw_carga_presencial_turma"
+            referencedColumns: ["turma_id"]
+          },
+          {
+            foreignKeyName: "apoinst_planejadas_turma_id_fkey"
+            columns: ["turma_id"]
+            isOneToOne: false
+            referencedRelation: "vw_conformidade_tetos"
+            referencedColumns: ["turma_id"]
+          },
+          {
+            foreignKeyName: "apoinst_planejadas_turma_id_fkey"
+            columns: ["turma_id"]
+            isOneToOne: false
+            referencedRelation: "vw_disciplinas_execucao"
+            referencedColumns: ["turma_id"]
+          },
+          {
+            foreignKeyName: "apoinst_planejadas_turma_id_fkey"
+            columns: ["turma_id"]
+            isOneToOne: false
+            referencedRelation: "vw_turmas_rotulo"
+            referencedColumns: ["turma_id"]
+          },
+        ]
+      }
       arquivo_avaliacoes_v1: {
         Row: {
           arquivado_em: string
@@ -259,10 +527,13 @@ export type Database = {
       }
       atividades_nao_letivas: {
         Row: {
+          apoinst_id: string | null
+          atividade_prevista_id: string | null
           bloqueia_aula: boolean
           categoria_normativa: Database["public"]["Enums"]["categoria_normativa"]
           codigo: string
           compoe_cht: boolean | null
+          conta_como: string | null
           criado_em: string
           criado_por: string | null
           data: string
@@ -281,6 +552,7 @@ export type Database = {
           rascunho_de: string | null
           rascunho_exclui: boolean
           responsavel_externo: string | null
+          responsavel_externo_om: string | null
           salvo: boolean
           status: Database["public"]["Enums"]["status_registro"]
           subtipo: string | null
@@ -293,10 +565,13 @@ export type Database = {
           turma_id: string | null
         }
         Insert: {
+          apoinst_id?: string | null
+          atividade_prevista_id?: string | null
           bloqueia_aula?: boolean
           categoria_normativa: Database["public"]["Enums"]["categoria_normativa"]
           codigo: string
           compoe_cht?: boolean | null
+          conta_como?: string | null
           criado_em?: string
           criado_por?: string | null
           data: string
@@ -315,6 +590,7 @@ export type Database = {
           rascunho_de?: string | null
           rascunho_exclui?: boolean
           responsavel_externo?: string | null
+          responsavel_externo_om?: string | null
           salvo?: boolean
           status?: Database["public"]["Enums"]["status_registro"]
           subtipo?: string | null
@@ -327,10 +603,13 @@ export type Database = {
           turma_id?: string | null
         }
         Update: {
+          apoinst_id?: string | null
+          atividade_prevista_id?: string | null
           bloqueia_aula?: boolean
           categoria_normativa?: Database["public"]["Enums"]["categoria_normativa"]
           codigo?: string
           compoe_cht?: boolean | null
+          conta_como?: string | null
           criado_em?: string
           criado_por?: string | null
           data?: string
@@ -349,6 +628,7 @@ export type Database = {
           rascunho_de?: string | null
           rascunho_exclui?: boolean
           responsavel_externo?: string | null
+          responsavel_externo_om?: string | null
           salvo?: boolean
           status?: Database["public"]["Enums"]["status_registro"]
           subtipo?: string | null
@@ -361,6 +641,20 @@ export type Database = {
           turma_id?: string | null
         }
         Relationships: [
+          {
+            foreignKeyName: "atividades_nao_letivas_apoinst_id_fkey"
+            columns: ["apoinst_id"]
+            isOneToOne: false
+            referencedRelation: "apoinst_planejadas"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "atividades_nao_letivas_atividade_prevista_id_fkey"
+            columns: ["atividade_prevista_id"]
+            isOneToOne: false
+            referencedRelation: "aec_previstas_curriculo"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "atividades_nao_letivas_disciplina_id_fkey"
             columns: ["disciplina_id"]
@@ -2848,6 +3142,117 @@ export type Database = {
           },
         ]
       }
+      marcacoes_de_atividade: {
+        Row: {
+          apoinst_id: string | null
+          atividade_prevista_id: string | null
+          autor_nome: string | null
+          codigo: string
+          criado_em: string
+          criado_por: string | null
+          data_realizada: string | null
+          editado_em: string | null
+          editado_por: string | null
+          id: string
+          justificativa: string
+          origem_migracao_v1: string | null
+          situacao: string
+          status: Database["public"]["Enums"]["status_registro"]
+          turma_id: string
+        }
+        Insert: {
+          apoinst_id?: string | null
+          atividade_prevista_id?: string | null
+          autor_nome?: string | null
+          codigo?: string
+          criado_em?: string
+          criado_por?: string | null
+          data_realizada?: string | null
+          editado_em?: string | null
+          editado_por?: string | null
+          id?: string
+          justificativa: string
+          origem_migracao_v1?: string | null
+          situacao: string
+          status?: Database["public"]["Enums"]["status_registro"]
+          turma_id: string
+        }
+        Update: {
+          apoinst_id?: string | null
+          atividade_prevista_id?: string | null
+          autor_nome?: string | null
+          codigo?: string
+          criado_em?: string
+          criado_por?: string | null
+          data_realizada?: string | null
+          editado_em?: string | null
+          editado_por?: string | null
+          id?: string
+          justificativa?: string
+          origem_migracao_v1?: string | null
+          situacao?: string
+          status?: Database["public"]["Enums"]["status_registro"]
+          turma_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "marcacoes_de_atividade_apoinst_id_fkey"
+            columns: ["apoinst_id"]
+            isOneToOne: false
+            referencedRelation: "apoinst_planejadas"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "marcacoes_de_atividade_atividade_prevista_id_fkey"
+            columns: ["atividade_prevista_id"]
+            isOneToOne: false
+            referencedRelation: "aec_previstas_curriculo"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "marcacoes_de_atividade_turma_id_fkey"
+            columns: ["turma_id"]
+            isOneToOne: false
+            referencedRelation: "turmas"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "marcacoes_de_atividade_turma_id_fkey"
+            columns: ["turma_id"]
+            isOneToOne: false
+            referencedRelation: "vw_carga_horaria_turma"
+            referencedColumns: ["turma_id"]
+          },
+          {
+            foreignKeyName: "marcacoes_de_atividade_turma_id_fkey"
+            columns: ["turma_id"]
+            isOneToOne: false
+            referencedRelation: "vw_carga_presencial_turma"
+            referencedColumns: ["turma_id"]
+          },
+          {
+            foreignKeyName: "marcacoes_de_atividade_turma_id_fkey"
+            columns: ["turma_id"]
+            isOneToOne: false
+            referencedRelation: "vw_conformidade_tetos"
+            referencedColumns: ["turma_id"]
+          },
+          {
+            foreignKeyName: "marcacoes_de_atividade_turma_id_fkey"
+            columns: ["turma_id"]
+            isOneToOne: false
+            referencedRelation: "vw_disciplinas_execucao"
+            referencedColumns: ["turma_id"]
+          },
+          {
+            foreignKeyName: "marcacoes_de_atividade_turma_id_fkey"
+            columns: ["turma_id"]
+            isOneToOne: false
+            referencedRelation: "vw_turmas_rotulo"
+            referencedColumns: ["turma_id"]
+          },
+        ]
+      }
       migracao_log: {
         Row: {
           acao: Database["public"]["Enums"]["acao_migracao"]
@@ -5255,6 +5660,7 @@ export type Database = {
           status_turma: Database["public"]["Enums"]["status_turma"] | null
           ta_aec: number | null
           ta_apoio_individualizado: number | null
+          ta_atividade_na_disciplina: number | null
           ta_aula: number | null
           ta_avaliacao: number | null
           ta_dias_parados: number | null
@@ -5382,6 +5788,7 @@ export type Database = {
           origem_periodo: Database["public"]["Enums"]["origem_periodo"] | null
           previsao_inicio_efetiva: string | null
           previsao_termino_efetiva: string | null
+          ta_atividade_executados: number | null
           ta_aula_executados: number | null
           ta_avaliacao_executados: number | null
           ta_executados: number | null

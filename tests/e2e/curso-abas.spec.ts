@@ -191,7 +191,17 @@ test.describe("Spec 018 · FR-006 · as abas, por clique (sete desde a spec 021)
     for (const parte of ["disciplinas", "avaliacoes", "horarios", "atividades"]) {
       await expect(consulta.locator(`[data-slot="consulta-${parte}"]`)).toBeVisible();
     }
-    for (const acao of ["nova-disciplina", "novo-regime", "acoes-do-arbitrado", "editar-limite"]) {
+    /* Bloco 18 (spec 033, FR-002.3): as AEC previstas também só para ler — incluir, editar e desativar são da edição. */
+    await expect(consulta.locator('[data-slot="aec-previstas-do-curso"]')).toBeVisible();
+    for (const acao of [
+      "nova-disciplina",
+      "novo-regime",
+      "acoes-do-arbitrado",
+      "editar-limite",
+      "nova-aec-prevista",
+      "editar-aec-prevista",
+      "desativar-aec-prevista",
+    ]) {
       await expect(
         consulta.locator(`[data-slot="${acao}"]`),
         `a consulta ofereceu ${acao}`,

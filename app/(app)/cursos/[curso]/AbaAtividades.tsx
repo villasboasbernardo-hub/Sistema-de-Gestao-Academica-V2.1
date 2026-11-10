@@ -8,6 +8,11 @@
  *    Individual é **informativa** (não compõe a CHT, `RN-EVT-01`); o catálogo de tipos é o mesmo que o DSA oferece, e
  *    o tipo decide a categoria (`RF-EXTRA-01`).
  * ⚠️ **O TÍTULO DIZ "previstas no currículo"** para não se confundir com o menu *Atividades* (as da turma, em breve).
+ * ⚠️ **AS AEC PREVISTAS DO CURRÍCULO, DESDE O BLOCO 18** (spec 033, RA-2, FR-002.3): as palestras e visitas que o
+ *    currículo nomeia, só para ler (`AecPrevistasDoCurso`) — editam-se em *Editar curso*. Sem a leitura (`null`), a
+ *    seção não aparece.
+ * ⚠️ **O TIPO PELO RÓTULO, NUNCA PELO VALOR** (spec 033, FR-001.2): «Atividade Extraclasse», e não o valor
+ *    «Atividade Extracurricular» que o gatilho e a carga casam.
  * ⚠️ SEM MARCADOR DE CLIENTE.
  */
 import {
@@ -17,8 +22,14 @@ import {
   type CategoriaDeAtividade,
   type TipoDeAtividade,
 } from "@/lib/dominio/categoria-pelo-tipo";
+import { rotuloDoTipo } from "@/lib/dominio/atividades/grupos";
 
+import { AecPrevistasDoCurso } from "./AecPrevistasDoCurso";
 import { LimitesDoCurso, type LinhaDoLimite } from "./BlocoDeLimites";
+import type { AecPrevistasLidas } from "./consulta-de-aec-previstas";
+
+/** O tipo do catálogo com o rótulo de exibição (spec 033, FR-001.2). */
+export type TipoDaAbaDeAtividades = TipoDeAtividade & { readonly rotulo_exibicao?: string | null };
 
 const n = (v: number) => v.toLocaleString("pt-BR", { maximumFractionDigits: 2 });
 
@@ -27,6 +38,7 @@ export function AbaAtividades({
   ano,
   estudoIndividual,
   tipos,
+  previstas = null,
 }: {
   readonly limites: readonly LinhaDoLimite[];
   readonly ano: number;
@@ -35,13 +47,18 @@ export function AbaAtividades({
     readonly comEstudoObrigatorio: number | null;
     readonly semEstudoObrigatorio: number | null;
   };
-  readonly tipos: readonly TipoDeAtividade[];
+  readonly tipos: readonly TipoDaAbaDeAtividades[];
+  /** Bloco 18 (RA-2): as AEC previstas do currículo mostrado; `null` quando não foram lidas. */
+  readonly previstas?: AecPrevistasLidas | null;
 }) {
   const porCategoria = new Map<CategoriaDeAtividade, string[]>();
   for (const t of tipos) {
     const categoria = t.ativo ? categoriaPeloTipo(t) : null;
     if (categoria === null) continue;
-    porCategoria.set(categoria, [...(porCategoria.get(categoria) ?? []), t.valor]);
+    porCategoria.set(categoria, [
+      ...(porCategoria.get(categoria) ?? []),
+      rotuloDoTipo({ valor: t.valor, rotulo: t.rotulo_exibicao ?? null }),
+    ]);
   }
   const referencia = (v: number | null) => (v === null ? "não cadastrada" : `${n(v)} %`);
 
@@ -62,6 +79,8 @@ export function AbaAtividades({
       </div>
 
       <LimitesDoCurso linhas={limites} ano={ano} />
+
+      {previstas ? <AecPrevistasDoCurso previstas={previstas} /> : null}
 
       <section className="flex flex-col gap-1" data-slot="referencia-do-estudo-individual">
         <h3 className="text-texto text-sm font-semibold">Estudo Individual</h3>
