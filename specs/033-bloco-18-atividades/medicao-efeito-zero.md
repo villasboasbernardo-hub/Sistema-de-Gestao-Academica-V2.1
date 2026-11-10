@@ -26,3 +26,31 @@ Conferido depois, na mesma cópia: `ta_atividade_na_disciplina` (nova em `vw_car
 `ta_atividade_executados` (nova em `vw_disciplinas_execucao`) valem **0** em todas as linhas; as **6** views recriadas
 têm `security_invoker=true`; **19** tipos com categoria (eram 15); o rótulo «Atividade Extraclasse» no valor «Atividade
 Extracurricular»; o recurso `planejamento_de_atividades` permitido a **3** perfis; **0** policies de `DELETE`.
+
+## Remedição de 10/11/2026, antes do remoto — com as correções da revisão
+
+**Artefato medido** (regra 9.2): a cópia `remoto-20261110-201931.sql`, tirada às 20:19 de 10/11/2026 e restaurada no
+banco **local** por `python -m scripts.manutencao.dado_do_remoto` com as migrations até `20261031151628` (as duas do
+bloco fora da pasta durante a restauração); depois, `supabase migration up --local` aplicou a M1 e a M2 **na forma
+corrigida pela revisão adversarial** (o porteiro do vínculo, a recategorização que pula a turma arquivada e a guarda da
+AEC prevista). Mesmo instrumento, com a data das duas funções trocada para o dia (`2026-11-10`).
+
+| Objeto | Linhas | md5 antes | md5 depois | Igual? |
+|---|---|---|---|---|
+| `vw_ocupacao_ta` | 3574 | `7d3ea84176a2e6c9402ee842ccf27557` | `7d3ea84176a2e6c9402ee842ccf27557` | sim |
+| `vw_ocupacao_do_dsa` | 3576 | `e659a8ef44863ca4d3be7b21d7739d1c` | `e659a8ef44863ca4d3be7b21d7739d1c` | sim |
+| `vw_chd_por_fato` | 2736 | `d161bec5d022272176098ff264ea8c35` | `d161bec5d022272176098ff264ea8c35` | sim |
+| `vw_carga_horaria_turma` | 30 | `244357159ad156ad93615d8e3c04fbdb` | `244357159ad156ad93615d8e3c04fbdb` | sim |
+| `vw_disciplinas_execucao` | 230 | `729ab19e55a497ddcce92d0a0b0d7ab9` | `729ab19e55a497ddcce92d0a0b0d7ab9` | sim |
+| `vw_instrutor_carga_anual` | 182 | `076918cbf242b038a974c38f05269245` | `076918cbf242b038a974c38f05269245` | sim |
+| `vw_conformidade_tetos` | 90 | `d812cc7910c77908659338a65af760b7` | `d812cc7910c77908659338a65af760b7` | sim |
+| `chd_da_turma_ate(2026-11-10)` | 12 | `b2c3c8ef07a190ad1d83ed1ff62528e2` | `b2c3c8ef07a190ad1d83ed1ff62528e2` | sim |
+| `execucao_por_disciplina_ate(2026-11-10)` | 109 | `9e72a129c2edc22b7e1cc76efba0dc28` | `9e72a129c2edc22b7e1cc76efba0dc28` | sim |
+| `atividades (categoria, subtipo, tipo)` | 1594 | `7604b784e8d13e1ef8aca0cf676f0f63` | `7604b784e8d13e1ef8aca0cf676f0f63` | sim |
+
+**Resultado: efeito ZERO de novo** — `diff` vazio entre as duas leituras. Na mesma cópia, depois: as colunas novas valem
+**0** em todas as linhas (`0 / 0`), as **6** views recriadas têm `security_invoker=true`, **0** policies de `DELETE`,
+**19** tipos com categoria, o rótulo «Atividade Extraclasse», o recurso `planejamento_de_atividades` para **3** perfis,
+**0** lançamentos com «Conta como» e **0** retratos publicados com «Atividade Extracurricular». ⚠️ Os md5 diferem dos de
+03/11 porque o dado do remoto andou (13 linhas a mais em `vw_ocupacao_ta`, por exemplo) — a comparação que vale é
+antes × depois **sobre a mesma cópia**.

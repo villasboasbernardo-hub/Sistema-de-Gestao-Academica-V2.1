@@ -28,10 +28,13 @@
 
 ## Fase 4 — remoto e cargas
 
-- [ ] T030 Rito do remoto das duas migrations
+- [X] T030 Rito do remoto das duas migrations
   - ✅ **Reversão provada antes do remoto (09/11/2026, banco local limpo):** com as duas migrations, **2.929 objetos,
     `da3197bf…`**; depois de `reversao.sql`, **2.781 objetos, `315a6f87…`** — a impressão digital do remoto antes do
     bloco. Com uma AEC prevista gravada, o bloco 0 **recusa** («há dado nas colunas ou tabelas novas») e o esquema
     continua em 2.929 objetos.
-- [ ] T031 A carga das 48 AEC previstas (item 6) e a dos 24 PDFs (item 7), com backup e conferência só de leitura
+  - ✅ **Aplicado no remoto em 10/11/2026** — backup `remoto-20261110-202159.sql`, 105 e 105, `da3197bf…` igual nos dois
+    bancos; e as duas cargas (48 AEC previstas com trilha, backup `remoto-20261110-203845.sql`; 24 PDFs). Registro em
+    [`plano-de-aplicacao-no-remoto.md`](plano-de-aplicacao-no-remoto.md).
+- [X] T031 A carga das 48 AEC previstas (item 6) e a dos 24 PDFs (item 7), com backup e conferência só de leitura
 - [X] T032 Regras RA no `CLAUDE.md`, no documento 04 e no plano de correções (`PEND-033-*`); o roteiro de conferência

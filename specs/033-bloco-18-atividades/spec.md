@@ -234,8 +234,8 @@ PARAR**.
   **dez** objetos (as seis views, `vw_conformidade_tetos`, `chd_da_turma_ate`, `execucao_por_disciplina_ate` e a tabela de
   atividades) com o **mesmo md5** antes e depois da M1 e da M2; as colunas novas das views valem 0 em todas as linhas.
   As três correções da revisão (o porteiro do vínculo, a recategorização e a guarda da AEC prevista) mexem só em
-  função de gatilho que nenhuma migration executa — o efeito sobre o dado continua zero, e a remedição sobre o backup do
-  rito confirma (§ relatório do PR).
+  função de gatilho que nenhuma migration executa — o efeito sobre o dado continua zero, e a remedição de 10/11/2026 sobre
+  `remoto-20261110-201931.sql`, com as migrations corrigidas, deu o mesmo md5 nos dez objetos.
 - **Semana publicada:** nenhum retrato em `dsa_eventos_da_semana` contém «Atividade Extracurricular» (0) — mostrar o rótulo
   novo não faz semana publicada acusar «alterado» (RP-4).
 - **As cargas, ensaiadas na cópia local:** 48 AEC previstas incluídas, todas com trilha, e a segunda rodada 0 (48 puladas);
